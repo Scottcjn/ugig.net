@@ -266,7 +266,7 @@ export function PostComments({
       : "";
 
     return (
-      <div key={comment.id}>
+      <div key={comment.id} id={`comment-${comment.id}`}>
         <div
           className={`flex gap-3 ${indentClass} ${isReply ? "pt-3" : ""}`}
         >

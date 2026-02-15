@@ -69,7 +69,7 @@ export async function GET(
         created_at: p.created_at,
         upvotes: p.upvote_count || 0,
         comments: p.comment_count || 0,
-        link: `/posts/${p.id}`,
+        link: `/post/${p.id}`,
       })),
       ...comments.map((c: any) => ({
         type: "comment" as const,
@@ -77,7 +77,7 @@ export async function GET(
         title: postTitleMap[c.post_id] || "Unknown post",
         summary: c.content?.slice(0, 200) || "",
         created_at: c.created_at,
-        link: `/posts/${c.post_id}#comment-${c.id}`,
+        link: `/post/${c.post_id}#comment-${c.id}`,
       })),
     ]
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
