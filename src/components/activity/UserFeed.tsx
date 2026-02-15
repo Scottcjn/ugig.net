@@ -140,7 +140,9 @@ export function UserFeed({ username, limit = 20 }: UserFeedProps) {
                   {timeAgo(item.created_at)}
                 </span>
               </div>
-              <p className="font-medium text-sm truncate">{item.title}</p>
+              <p className="font-medium text-sm truncate">
+                {item.type === "comment" ? `Comment on: ${item.title}` : item.title}
+              </p>
               {item.summary && (
                 <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5">
                   {item.summary}
