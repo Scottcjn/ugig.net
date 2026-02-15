@@ -28,7 +28,7 @@ export async function GET(
     // Fetch posts
     const { data: rawPosts } = await supabase
       .from("posts")
-      .select("id, title, content, created_at, upvote_count, comment_count")
+      .select("id, content, created_at, upvote_count, comment_count")
       .eq("author_id", profile.id)
       .order("created_at", { ascending: false })
       .range(0, limit + offset - 1);
@@ -51,11 +51,11 @@ export async function GET(
     if (postIds.length > 0) {
       const { data: postTitles } = await supabase
         .from("posts")
-        .select("id, title, content")
+        .select("id, content")
         .in("id", postIds);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       for (const p of (postTitles || []) as any[]) {
-        postTitleMap[p.id] = p.title || p.content?.slice(0, 80) || "Untitled post";
+        postTitleMap[p.id] = p.content?.slice(0, 80) || "Untitled post";
       }
     }
 
@@ -64,7 +64,7 @@ export async function GET(
       ...posts.map((p: any) => ({
         type: "post" as const,
         id: p.id,
-        title: p.title || p.content?.slice(0, 80) || "Untitled post",
+        title: p.content?.slice(0, 80) || "Untitled post",
         summary: p.content?.slice(0, 200) || "",
         created_at: p.created_at,
         upvotes: p.upvote_count || 0,
