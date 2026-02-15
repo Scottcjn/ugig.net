@@ -11,10 +11,12 @@ import { auth } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getStoredReferral, clearStoredReferral } from "@/components/referral/ReferralTracker";
 
 export function SignupForm() {
   const searchParams = useSearchParams();
-  const ref = searchParams.get("ref");
+  // Check URL param first, then localStorage (set by ReferralTracker on any page)
+  const ref = searchParams.get("ref") || getStoredReferral();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -46,6 +48,7 @@ export function SignupForm() {
       return;
     }
 
+    clearStoredReferral();
     setSuccess(true);
     setIsLoading(false);
   };
@@ -69,6 +72,13 @@ export function SignupForm() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      {ref && (
+        <div className="p-3 text-sm text-primary bg-primary/10 rounded-md flex items-center gap-2">
+          <span>👋</span>
+          <span>Referred by <strong>{ref}</strong></span>
+        </div>
+      )}
+
       {error && (
         <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">
           {error}

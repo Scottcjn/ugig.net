@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Script from "next/script";
+import { Suspense } from "react";
+import { ReferralTracker } from "@/components/referral/ReferralTracker";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -47,6 +49,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen antialiased">
+        <Suspense fallback={null}>
+          <ReferralTracker />
+        </Suspense>
         {children}
 
         {/* Datafast Analytics */}
