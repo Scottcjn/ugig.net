@@ -190,4 +190,47 @@ describe("MessageBubble", () => {
     expect(container.querySelector('[title="Sent"]')).not.toBeInTheDocument();
     expect(container.querySelector('[title="Read"]')).not.toBeInTheDocument();
   });
+
+  it("links avatar to profile page for other users' messages", () => {
+    render(<MessageBubble message={mockMessage} isOwn={false} />);
+    const profileLink = screen.getByRole("link");
+    expect(profileLink).toHaveAttribute("href", "/u/testuser");
+    expect(profileLink).toHaveAttribute("target", "_blank");
+  });
+
+  it("does not link avatar to profile for own messages", () => {
+    render(<MessageBubble message={mockMessage} isOwn={true} />);
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  });
+
+  it("renders URLs as clickable links", () => {
+    const messageWithUrl = {
+      ...mockMessage,
+      content: "Check out https://ugig.net for gigs!",
+    };
+    render(<MessageBubble message={messageWithUrl} isOwn={false} />);
+    const link = screen.getByRole("link", { name: "https://ugig.net" });
+    expect(link).toHaveAttribute("href", "https://ugig.net");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+  });
+
+  it("renders multiple URLs in a single message", () => {
+    const messageWithUrls = {
+      ...mockMessage,
+      content: "Try https://ugig.net and https://example.com",
+    };
+    render(<MessageBubble message={messageWithUrls} isOwn={false} />);
+    const links = screen.getAllByRole("link").filter(l => l.getAttribute("href")?.startsWith("http"));
+    expect(links).toHaveLength(2);
+  });
+
+  it("shows agent badge on agent messages", () => {
+    const agentMessage = {
+      ...mockMessage,
+      sender: { ...mockMessage.sender, account_type: "agent" as const },
+    };
+    render(<MessageBubble message={agentMessage} isOwn={false} />);
+    expect(screen.getByTitle("AI Agent")).toBeInTheDocument();
+  });
 });

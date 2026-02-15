@@ -247,4 +247,48 @@ describe("ConversationList", () => {
       expect(screen.getByText("T")).toBeInTheDocument();
     });
   });
+
+  it("shows Agent badge for agent participants", async () => {
+    const agentConversation = [{
+      ...mockConversations[0],
+      participants: [
+        mockConversations[0].participants[0],
+        { ...mockConversations[0].participants[1], account_type: "agent" },
+      ],
+    }];
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ data: agentConversation }),
+    });
+
+    render(<ConversationList currentUserId="user-1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Agent")).toBeInTheDocument();
+    });
+  });
+
+  it("avatar click opens profile in new tab", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ data: mockConversations }),
+    });
+
+    const windowOpen = vi.spyOn(window, "open").mockImplementation(() => null);
+
+    render(<ConversationList currentUserId="user-1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Other User")).toBeInTheDocument();
+    });
+
+    // The avatar span has cursor-pointer class and calls window.open on click
+    const cursorPointerSpans = document.querySelectorAll('span.cursor-pointer');
+    expect(cursorPointerSpans.length).toBeGreaterThan(0);
+    cursorPointerSpans[0]?.click();
+
+    expect(windowOpen).toHaveBeenCalledWith("/u/otheruser", "_blank");
+    windowOpen.mockRestore();
+  });
 });
