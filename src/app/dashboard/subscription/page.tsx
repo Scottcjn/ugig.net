@@ -5,8 +5,6 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
 import { subscriptions as subscriptionsApi } from "@/lib/api";
 import { PLANS } from "@/lib/stripe";
 import {
@@ -174,7 +172,7 @@ function SubscriptionPageContent() {
 
   if (isLoading) {
     return (
-      <div className="container max-w-3xl py-8">
+      <div className="container mx-auto px-4 py-8 max-w-2xl">
         <div className="flex items-center gap-4 mb-8">
           <Skeleton className="h-8 w-8" />
           <Skeleton className="h-8 w-48" />
@@ -193,7 +191,7 @@ function SubscriptionPageContent() {
   const isCanceling = subscription?.cancel_at_period_end;
 
   return (
-    <div className="container max-w-3xl py-8">
+    <div className="container mx-auto px-4 py-8 max-w-2xl">
       <div className="flex items-center gap-4 mb-8">
         <Button variant="ghost" size="icon" asChild>
           <Link href="/dashboard">
@@ -410,7 +408,7 @@ function SubscriptionPageContent() {
 
 function SubscriptionPageLoading() {
   return (
-    <div className="container max-w-3xl py-8">
+    <div className="container mx-auto px-4 py-8 max-w-2xl">
       <div className="flex items-center gap-4 mb-8">
         <Skeleton className="h-8 w-8" />
         <Skeleton className="h-8 w-48" />
@@ -425,14 +423,8 @@ function SubscriptionPageLoading() {
 
 export default function SubscriptionPage() {
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-1">
-        <Suspense fallback={<SubscriptionPageLoading />}>
-          <SubscriptionPageContent />
-        </Suspense>
-      </main>
-      <Footer />
-    </div>
+    <Suspense fallback={<SubscriptionPageLoading />}>
+      <SubscriptionPageContent />
+    </Suspense>
   );
 }

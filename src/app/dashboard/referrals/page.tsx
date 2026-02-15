@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Copy, Send, Users, UserCheck, TrendingUp } from "lucide-react";
-import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
 
 interface Referral {
   id: string;
@@ -123,9 +121,7 @@ export default function ReferralsPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl space-y-8">
+    <div className="container mx-auto px-4 py-8 max-w-2xl space-y-8">
       <div>
         <h1 className="text-2xl font-bold">Invite Friends</h1>
         <p className="text-muted-foreground mt-1">
@@ -247,8 +243,6 @@ export default function ReferralsPage() {
           </div>
         )}
       </div>
-          </main>
-      <Footer />
-    </div>
+        </div>
   );
 }
