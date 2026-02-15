@@ -179,7 +179,8 @@ describe("POST /api/auth/confirmed", () => {
 
       // Should have called update on profiles to store the DID
       expect(mockUpdate).toHaveBeenCalled();
-      const updateArg = mockUpdate.mock.calls[0][0];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const updateArg = (mockUpdate.mock.calls as any)[0]?.[0] as Record<string, unknown>;
       expect(updateArg).toHaveProperty("did");
       expect(updateArg.did).toMatch(/^did:key:z/);
 
@@ -195,7 +196,8 @@ describe("POST /api/auth/confirmed", () => {
 
       await POST(makeRequest(confirmationPayload()));
 
-      const did = mockUpdate.mock.calls[0][0].did;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const did = ((mockUpdate.mock.calls as any)[0]?.[0] as Record<string, unknown>)?.did as string;
       // did:key:z<base58btc-encoded multicodec>
       expect(did).toMatch(/^did:key:z[1-9A-HJ-NP-Za-km-z]+$/);
     });

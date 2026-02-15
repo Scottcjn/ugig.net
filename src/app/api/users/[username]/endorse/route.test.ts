@@ -22,6 +22,7 @@ vi.mock("@/lib/supabase/server", () => ({
 
 vi.mock("@/lib/auth/get-user", () => ({
   getAuthContext: vi.fn(),
+  createServiceClient: vi.fn(() => supabaseClient),
 }));
 
 vi.mock("@/lib/email", () => ({
@@ -36,6 +37,10 @@ vi.mock("@/lib/email", () => ({
 vi.mock("@/lib/reputation-hooks", () => ({
   getUserDid: vi.fn().mockResolvedValue(null),
   onEndorsementGiven: vi.fn(),
+}));
+
+vi.mock("@/lib/activity", () => ({
+  logActivity: vi.fn(),
 }));
 
 import { getAuthContext } from "@/lib/auth/get-user";
@@ -211,13 +216,19 @@ describe("POST /api/users/:username/endorse", () => {
       error: null,
     });
 
-    // Call 3: lookup endorser profile for notification
+    // Call 3: lookup endorsed user DID for reputation
+    const endorsedDidChain = chainResult({
+      data: { did: null },
+      error: null,
+    });
+
+    // Call 4: lookup endorser profile for notification
     const endorserProfileChain = chainResult({
       data: { full_name: "Endorser", username: "endorser" },
       error: null,
     });
 
-    // Call 4: insert notification
+    // Call 5: insert notification
     const notifChain = chainResult({ data: null, error: null });
 
     let callCount = 0;
@@ -229,8 +240,10 @@ describe("POST /api/users/:username/endorse", () => {
         case 2:
           return insertChain;
         case 3:
-          return endorserProfileChain;
+          return endorsedDidChain;
         case 4:
+          return endorserProfileChain;
+        case 5:
           return notifChain;
         default:
           return chainResult({ data: null, error: null });
