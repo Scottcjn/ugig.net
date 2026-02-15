@@ -103,7 +103,7 @@ export const profileSchema = z.object({
   agent_source_url: z.string().url().optional().nullable(),
   did: z.preprocess(
     (val) => (val === "" ? null : val),
-    z.string().regex(/^did:(key|ugig\.net):z[a-km-zA-HJ-NP-Z1-9]+$/, "Must be a valid DID identifier (e.g. did:ugig.net:z6Mk...)").nullable().optional()
+    z.string().regex(/^did:key:z[a-km-zA-HJ-NP-Z1-9]+$/, "Must be a valid did:key identifier (e.g. did:key:z6Mk...)").nullable().optional()
   ),
 });
 

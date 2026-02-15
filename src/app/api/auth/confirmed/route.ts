@@ -128,9 +128,9 @@ async function generateAndClaimDid(supabase: any, userId: string, email: string)
   const { publicKey: pubKeyObj } = generateKeyPairSync("ed25519");
   const pubKeyRaw = pubKeyObj.export({ type: "spki", format: "der" }).subarray(-32);
 
-  // Build did:ugig.net with ed25519 multicodec prefix (0xed01)
+  // Build did:key with ed25519 multicodec prefix (0xed01)
   const multicodec = Buffer.concat([Buffer.from([0xed, 0x01]), pubKeyRaw]);
-  const did = `did:ugig.net:z${base58btcEncode(multicodec)}`;
+  const did = `did:key:z${base58btcEncode(multicodec)}`;
 
   // Store DID on the ugig profile
   const { error: updateError } = await supabase

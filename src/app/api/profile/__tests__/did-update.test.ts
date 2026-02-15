@@ -15,12 +15,12 @@ describe('DID validation in profileSchema', () => {
   it('accepts a valid did:ugig.net identifier', () => {
     const result = profileSchema.safeParse({
       ...baseProfile,
-      did: 'did:ugig.net:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK',
+      did: 'did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK',
     });
     expect(result.success).toBe(true);
   });
 
-  it('accepts a valid did:key identifier (backwards compat)', () => {
+  it('accepts another valid did:key identifier', () => {
     const result = profileSchema.safeParse({
       ...baseProfile,
       did: 'did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK',
