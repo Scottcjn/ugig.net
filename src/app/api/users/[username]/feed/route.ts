@@ -28,7 +28,7 @@ export async function GET(
     // Fetch posts
     const { data: rawPosts } = await supabase
       .from("posts")
-      .select("id, content, created_at, upvote_count, comment_count")
+      .select("id, content, created_at, upvotes, comments_count")
       .eq("author_id", profile.id)
       .order("created_at", { ascending: false })
       .range(0, limit + offset - 1);
@@ -67,8 +67,8 @@ export async function GET(
         title: p.content?.slice(0, 80) || "Untitled post",
         summary: p.content?.slice(0, 200) || "",
         created_at: p.created_at,
-        upvotes: p.upvote_count || 0,
-        comments: p.comment_count || 0,
+        upvotes: p.upvotes || 0,
+        comments: p.comments_count || 0,
         link: `/post/${p.id}`,
       })),
       ...comments.map((c: any) => ({
