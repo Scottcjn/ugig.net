@@ -1,7 +1,6 @@
 import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ConversationList, MessageThread } from "@/components/messages";
-import { Header } from "@/components/layout/Header";
 import { MessageSquare } from "lucide-react";
 
 interface ConversationPageProps {
@@ -74,8 +73,7 @@ export default async function ConversationPage({
     .in("id", conversation.participant_ids);
 
   return (
-    <div className="min-h-screen">
-      <Header />
+    <div>
 
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">

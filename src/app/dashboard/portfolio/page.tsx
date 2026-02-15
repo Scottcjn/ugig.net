@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { Header } from "@/components/layout/Header";
 import { PortfolioGrid } from "@/components/portfolio/PortfolioGrid";
 import Link from "next/link";
 
@@ -21,8 +20,7 @@ export default async function DashboardPortfolioPage() {
   }
 
   return (
-    <div className="min-h-screen">
-      <Header />
+    <div>
 
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">

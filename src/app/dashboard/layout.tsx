@@ -1,11 +1,6 @@
 import { Header } from "@/components/layout/Header";
 
-export const metadata = {
-  title: "Invite Friends | ugig.net",
-  description: "Invite friends and earn rewards",
-};
-
-export default function ReferralsLayout({
+export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;

@@ -1,4 +1,3 @@
-import { Header } from "@/components/layout/Header";
 import { NotificationsList } from "@/components/notifications/NotificationsList";
 
 export const metadata = {
@@ -8,8 +7,7 @@ export const metadata = {
 
 export default function NotificationsPage() {
   return (
-    <div className="min-h-screen">
-      <Header />
+    <div>
       <main className="container mx-auto px-4 py-8 max-w-3xl">
         <NotificationsList />
       </main>

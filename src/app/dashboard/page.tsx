@@ -3,7 +3,6 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { ProfileCompletion } from "@/components/profile/ProfileCompletion";
-import { Header } from "@/components/layout/Header";
 import {
   Briefcase,
   FileText,
@@ -110,8 +109,7 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen">
-      <Header />
+    <div>
 
       <main className="container mx-auto px-4 py-8">
         {/* Welcome */}

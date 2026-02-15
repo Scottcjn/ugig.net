@@ -3,7 +3,6 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Header } from "@/components/layout/Header";
 import { ArrowLeft, ExternalLink, Clock, DollarSign, Calendar, FileText } from "lucide-react";
 
 export const metadata = {
@@ -77,8 +76,7 @@ export default async function MyApplicationsPage() {
     ) || [];
 
   return (
-    <div className="min-h-screen">
-      <Header />
+    <div>
 
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
