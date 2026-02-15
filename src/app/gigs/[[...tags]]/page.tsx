@@ -6,7 +6,6 @@ import { GigFiltersWithTags } from "@/components/gigs/GigFiltersWithTags";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
 import { Briefcase } from "lucide-react";
 
 interface GigsPageProps {
@@ -249,7 +248,6 @@ export default async function GigsPage({ params, searchParams }: GigsPageProps) 
         </div>
       </main>
 
-      <Footer />
     </div>
   );
 }

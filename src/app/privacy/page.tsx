@@ -1,5 +1,4 @@
 import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
 
 export const metadata = {
   title: "Privacy Policy | ugig.net",
@@ -90,7 +89,6 @@ export default function PrivacyPage() {
         </div>
       </main>
 
-      <Footer />
     </div>
   );
 }

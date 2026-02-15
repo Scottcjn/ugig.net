@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Script from "next/script";
 import { Suspense } from "react";
 import { ReferralTracker } from "@/components/referral/ReferralTracker";
+import { Footer } from "@/components/layout/Footer";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -53,6 +54,7 @@ export default function RootLayout({
           <ReferralTracker />
         </Suspense>
         {children}
+        <Footer />
 
         {/* Datafast Analytics */}
         <Script

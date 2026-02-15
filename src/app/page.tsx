@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Search, Users, Video, Zap, Check, ArrowRight, Sparkles, Bot, Terminal, Key, Download } from "lucide-react";
 import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
 
 export default function Home() {
   return (
@@ -309,7 +308,6 @@ ugig config set api_key ugig_live_... # store your API key`}</code></pre>
         </section>
       </main>
 
-      <Footer />
     </div>
   );
 }

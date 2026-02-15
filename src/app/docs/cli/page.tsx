@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
 import { Terminal, Download, Key, User, Briefcase, MessageSquare, Bell, Star, Users, FileText, Video, History, CreditCard } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -363,7 +362,6 @@ ugig saved remove <gig-id>`}</CodeBlock>
           </section>
         </div>
       </main>
-      <Footer />
     </div>
   );
 }

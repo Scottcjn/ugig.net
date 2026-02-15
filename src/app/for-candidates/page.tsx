@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
 import {
   ArrowRight,
   Check,
@@ -263,7 +262,6 @@ export default function ForCandidatesPage() {
         </section>
       </main>
 
-      <Footer />
     </div>
   );
 }

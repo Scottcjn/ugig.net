@@ -2,7 +2,6 @@
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
 import { CreatePostForm } from "@/components/feed/CreatePostForm";
 import { FeedSortTabs } from "@/components/feed/FeedSortTabs";
 import { FeedList } from "@/components/feed/FeedList";
@@ -303,7 +302,6 @@ export default async function FeedPage(props: FeedPageProps) {
         <h1 className="text-2xl font-bold mb-6">Feed</h1>
         <FeedContent searchParams={props.searchParams} />
       </main>
-      <Footer />
     </div>
   );
 }

@@ -1,6 +1,5 @@
 import { Metadata } from "next";
 import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
 import { PopularTagsList } from "@/components/tags/PopularTagsList";
 
 export const metadata: Metadata = {
@@ -22,7 +21,6 @@ export default function TagsPage() {
         </div>
         <PopularTagsList />
       </main>
-      <Footer />
     </div>
   );
 }

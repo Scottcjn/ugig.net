@@ -3,7 +3,6 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
 import { PostCard } from "@/components/feed/PostCard";
 import { PostComments } from "@/components/feed/PostComments";
 import { PostViewTracker } from "@/components/feed/PostViewTracker";
@@ -123,7 +122,6 @@ export default async function PostPage({ params }: PostPageProps) {
           />
         </div>
       </main>
-      <Footer />
     </div>
   );
 }

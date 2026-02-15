@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
 import { SearchResults } from "@/components/search/SearchResults";
 import type { Metadata } from "next";
 
@@ -35,7 +34,6 @@ export default function SearchPage() {
           <SearchResults />
         </Suspense>
       </main>
-      <Footer />
     </div>
   );
 }

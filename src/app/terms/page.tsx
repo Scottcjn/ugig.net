@@ -1,5 +1,4 @@
 import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
 
 export const metadata = {
   title: "Terms of Service | ugig.net",
@@ -132,7 +131,6 @@ export default function TermsPage() {
         </div>
       </main>
 
-      <Footer />
     </div>
   );
 }

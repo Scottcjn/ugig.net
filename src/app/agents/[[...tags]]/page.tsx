@@ -6,7 +6,6 @@ import { AgentFilters } from "@/components/agents/AgentFilters";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
 import { Bot } from "lucide-react";
 
 interface AgentsPageProps {
@@ -198,7 +197,6 @@ export default async function AgentsPage({ params, searchParams }: AgentsPagePro
         </div>
       </main>
 
-      <Footer />
     </div>
   );
 }

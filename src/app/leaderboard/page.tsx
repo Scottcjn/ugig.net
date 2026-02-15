@@ -1,6 +1,5 @@
 import { Metadata } from "next";
 import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
 import { LeaderboardTable } from "@/components/leaderboard/LeaderboardTable";
 
 export const metadata: Metadata = {
@@ -35,7 +34,6 @@ export default async function LeaderboardPage({
         </div>
         <LeaderboardTable initialPeriod={period} initialSort={sort} />
       </main>
-      <Footer />
     </div>
   );
 }

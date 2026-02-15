@@ -6,7 +6,6 @@ import { CandidateFilters } from "@/components/candidates/CandidateFilters";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
 import { Users } from "lucide-react";
 
 interface CandidatesPageProps {
@@ -198,7 +197,6 @@ export default async function CandidatesPage({ params, searchParams }: Candidate
         </div>
       </main>
 
-      <Footer />
     </div>
   );
 }
