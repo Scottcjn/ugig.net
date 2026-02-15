@@ -35,7 +35,7 @@ vi.mock("@/lib/email", () => ({
 const mockSubmitReputationAction = vi.fn().mockResolvedValue({});
 vi.mock("@/lib/reputation", () => ({
   submitReputationAction: (...args: unknown[]) => mockSubmitReputationAction(...args),
-  UGIG_PLATFORM_DID: "did:key:z6MkTestPlatformDid",
+  UGIG_PLATFORM_DID: "did:ugig.net:z6MkTestPlatformDid",
 }));
 
 // ── Fetch mock (for CoinPayPortal DID register) ────────────────────
@@ -181,7 +181,7 @@ describe("POST /api/auth/confirmed", () => {
       expect(mockUpdate).toHaveBeenCalled();
       const updateArg = mockUpdate.mock.calls[0][0];
       expect(updateArg).toHaveProperty("did");
-      expect(updateArg.did).toMatch(/^did:key:z/);
+      expect(updateArg.did).toMatch(/^did:ugig.net:z/);
 
       // Should have called eq with the user ID
       expect(mockUpdateEq).toHaveBeenCalledWith("id", "user-123");
@@ -196,8 +196,8 @@ describe("POST /api/auth/confirmed", () => {
       await POST(makeRequest(confirmationPayload()));
 
       const did = mockUpdate.mock.calls[0][0].did;
-      // did:key:z<base58btc-encoded multicodec>
-      expect(did).toMatch(/^did:key:z[1-9A-HJ-NP-Za-km-z]+$/);
+      // did:ugig.net:z<base58btc-encoded multicodec>
+      expect(did).toMatch(/^did:ugig.net:z[1-9A-HJ-NP-Za-km-z]+$/);
     });
 
     it("skips DID generation when user already has a DID", async () => {
@@ -206,7 +206,7 @@ describe("POST /api/auth/confirmed", () => {
           username: "existinguser",
           full_name: "Existing",
           account_type: "human",
-          did: "did:key:zExistingDid",
+          did: "did:ugig.net:zExistingDid",
         },
         error: null,
       });
@@ -243,7 +243,7 @@ describe("POST /api/auth/confirmed", () => {
         expect.objectContaining({
           action_category: "identity.profile_update",
           action_type: "email_confirmed",
-          agent_did: expect.stringMatching(/^did:key:z/),
+          agent_did: expect.stringMatching(/^did:ugig.net:z/),
         })
       );
     });
@@ -268,7 +268,7 @@ describe("POST /api/auth/confirmed", () => {
           headers: expect.objectContaining({
             Authorization: "Bearer test-api-key",
           }),
-          body: expect.stringContaining("did:key:z"),
+          body: expect.stringContaining("did:ugig.net:z"),
         })
       );
 

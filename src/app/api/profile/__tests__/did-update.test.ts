@@ -12,7 +12,15 @@ describe('DID validation in profileSchema', () => {
     wallet_addresses: [],
   };
 
-  it('accepts a valid did:key identifier', () => {
+  it('accepts a valid did:ugig.net identifier', () => {
+    const result = profileSchema.safeParse({
+      ...baseProfile,
+      did: 'did:ugig.net:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts a valid did:key identifier (backwards compat)', () => {
     const result = profileSchema.safeParse({
       ...baseProfile,
       did: 'did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK',
@@ -26,12 +34,9 @@ describe('DID validation in profileSchema', () => {
       did: 'not-a-did',
     });
     expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues[0].message).toContain('did:key');
-    }
   });
 
-  it('rejects did:web (only did:key allowed)', () => {
+  it('rejects did:web', () => {
     const result = profileSchema.safeParse({
       ...baseProfile,
       did: 'did:web:example.com',
