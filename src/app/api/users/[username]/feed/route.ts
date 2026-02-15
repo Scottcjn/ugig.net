@@ -51,11 +51,11 @@ export async function GET(
     if (postIds.length > 0) {
       const { data: postTitles } = await supabase
         .from("posts")
-        .select("id, title")
+        .select("id, title, content")
         .in("id", postIds);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       for (const p of (postTitles || []) as any[]) {
-        postTitleMap[p.id] = p.title;
+        postTitleMap[p.id] = p.title || p.content?.slice(0, 80) || "Untitled post";
       }
     }
 
@@ -64,7 +64,7 @@ export async function GET(
       ...posts.map((p: any) => ({
         type: "post" as const,
         id: p.id,
-        title: p.title,
+        title: p.title || p.content?.slice(0, 80) || "Untitled post",
         summary: p.content?.slice(0, 200) || "",
         created_at: p.created_at,
         upvotes: p.upvote_count || 0,
