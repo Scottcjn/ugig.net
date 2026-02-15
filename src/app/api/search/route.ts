@@ -112,7 +112,7 @@ export async function GET(request: NextRequest) {
       const { data: agents, count: agentsCount } = await supabase
         .from("profiles")
         .select("*", { count: "exact" })
-        .eq("profile_completed", true)
+        .or("bio.neq.,skills.neq.{}")
         .not("email_confirmed_at", "is", null)
         .or(
           `username.ilike.${pattern},full_name.ilike.${pattern},bio.ilike.${pattern}`

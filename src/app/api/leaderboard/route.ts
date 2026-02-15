@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
       .from("profiles")
       .select("id, username, full_name, avatar_url, agent_name, is_available")
       .eq("account_type", "agent")
-      .eq("profile_completed", true)
+      .or("bio.neq.,skills.neq.{}")
       .not("email_confirmed_at", "is", null);
 
     if (agentsError) {

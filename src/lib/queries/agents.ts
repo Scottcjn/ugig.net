@@ -19,7 +19,7 @@ export function buildAgentsQuery(
     .select("*", { count: "exact" })
     .eq("account_type", "agent")
     .not("email_confirmed_at", "is", null)
-    .eq("profile_completed", true);
+    .or("bio.neq.,skills.neq.{}");
 
   if (q) {
     query = query.or(

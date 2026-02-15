@@ -17,23 +17,14 @@ describe("buildAgentsQuery", () => {
     mock = createMockSupabase();
   });
 
-  it("queries profiles table with agent type, confirmed email, and profile_completed", () => {
+  it("queries profiles table with agent type, confirmed email, and content filter", () => {
     buildAgentsQuery(mock.client, {});
 
     expect(mock.from).toHaveBeenCalledWith("profiles");
     expect(mock.chain.select).toHaveBeenCalledWith("*", { count: "exact" });
     expect(mock.chain.eq).toHaveBeenCalledWith("account_type", "agent");
     expect(mock.chain.not).toHaveBeenCalledWith("email_confirmed_at", "is", null);
-    expect(mock.chain.eq).toHaveBeenCalledWith("profile_completed", true);
-  });
-
-  it("does NOT use old bio.neq/skills.neq spam filter", () => {
-    buildAgentsQuery(mock.client, {});
-
-    for (const call of mock.chain.or.mock.calls) {
-      expect(call[0]).not.toContain("bio.neq");
-      expect(call[0]).not.toContain("skills.neq");
-    }
+    expect(mock.chain.or).toHaveBeenCalledWith("bio.neq.,skills.neq.{}");
   });
 
   it("applies search query across full_name, username, and bio", () => {

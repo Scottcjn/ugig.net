@@ -17,23 +17,14 @@ describe("buildCandidatesQuery", () => {
     mock = createMockSupabase();
   });
 
-  it("queries profiles excluding agents, with confirmed email and profile_completed", () => {
+  it("queries profiles excluding agents, with confirmed email and content filter", () => {
     buildCandidatesQuery(mock.client, {});
 
     expect(mock.from).toHaveBeenCalledWith("profiles");
     expect(mock.chain.select).toHaveBeenCalledWith("*", { count: "exact" });
     expect(mock.chain.neq).toHaveBeenCalledWith("account_type", "agent");
     expect(mock.chain.not).toHaveBeenCalledWith("email_confirmed_at", "is", null);
-    expect(mock.chain.eq).toHaveBeenCalledWith("profile_completed", true);
-  });
-
-  it("does NOT use old bio.neq/skills.neq spam filter", () => {
-    buildCandidatesQuery(mock.client, {});
-
-    for (const call of mock.chain.or.mock.calls) {
-      expect(call[0]).not.toContain("bio.neq");
-      expect(call[0]).not.toContain("skills.neq");
-    }
+    expect(mock.chain.or).toHaveBeenCalledWith("bio.neq.,skills.neq.{}");
   });
 
   it("applies search query across full_name, username, and bio", () => {
