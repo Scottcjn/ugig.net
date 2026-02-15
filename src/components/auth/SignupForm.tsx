@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import type { Resolver } from "react-hook-form";
 import { signupSchema, type SignupInput } from "@/lib/validations";
 import { auth } from "@/lib/api";
@@ -12,6 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export function SignupForm() {
+  const searchParams = useSearchParams();
+  const ref = searchParams.get("ref");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -30,6 +33,10 @@ export function SignupForm() {
   const onSubmit = async (data: SignupInput) => {
     setIsLoading(true);
     setError(null);
+
+    if (ref) {
+      data.ref = ref;
+    }
 
     const result = await auth.signup(data);
 

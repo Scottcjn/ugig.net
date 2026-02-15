@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   User,
+  Users,
   Settings,
   CreditCard,
   LogOut,
@@ -116,6 +117,14 @@ export function UserDropdown({ username, fullName, avatarUrl }: UserDropdownProp
             >
               <Bell className="h-4 w-4" />
               Notification Settings
+            </Link>
+            <Link
+              href="/dashboard/referrals"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-3 px-4 py-2 text-sm hover:bg-muted/50 transition-colors cursor-pointer"
+            >
+              <Users className="h-4 w-4" />
+              Invite Friends
             </Link>
             <Link
               href="/dashboard/subscription"

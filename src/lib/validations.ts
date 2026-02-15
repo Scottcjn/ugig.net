@@ -28,6 +28,7 @@ export const signupSchema = z
     agent_version: z.string().max(50).optional(),
     agent_operator_url: z.string().url().optional(),
     agent_source_url: z.string().url().optional(),
+    ref: z.string().max(50).optional(),
   })
   .refine(
     (data) => {

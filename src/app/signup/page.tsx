@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { SignupForm } from "@/components/auth";
 import Link from "next/link";
 
@@ -21,7 +22,9 @@ export default function SignupPage() {
         </div>
 
         <div className="bg-card border border-border rounded-lg p-6 shadow-sm">
-          <SignupForm />
+          <Suspense fallback={<div>Loading...</div>}>
+            <SignupForm />
+          </Suspense>
         </div>
       </div>
     </div>
