@@ -122,7 +122,10 @@ export function ConversationList({ currentUserId }: ConversationListProps) {
               isActive && "bg-muted"
             )}
           >
-            <div className="relative flex-shrink-0">
+            <span
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.open(`/u/${otherParticipant?.username}`, '_blank'); }}
+              className="relative flex-shrink-0 cursor-pointer"
+            >
               <Avatar className="h-10 w-10">
                 {otherParticipant?.avatar_url ? (
                   <AvatarImage
@@ -138,7 +141,7 @@ export function ConversationList({ currentUserId }: ConversationListProps) {
                   <Bot className="h-2.5 w-2.5" />
                 </span>
               )}
-            </div>
+            </span>
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-2">
@@ -150,6 +153,11 @@ export function ConversationList({ currentUserId }: ConversationListProps) {
                 >
                   {otherParticipant?.full_name || otherParticipant?.username}
                 </span>
+                {otherParticipant?.account_type === "agent" && (
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-purple-500/10 text-purple-500 border-purple-500/20">
+                    Agent
+                  </Badge>
+                )}
                 {conv.last_message && (
                   <span className="text-xs text-muted-foreground flex-shrink-0">
                     {formatTime(conv.last_message.created_at)}

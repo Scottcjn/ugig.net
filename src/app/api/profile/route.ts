@@ -82,9 +82,9 @@ export async function PUT(request: NextRequest) {
 
     // Check if profile is complete
     const isComplete = Boolean(
-      validationResult.data.full_name &&
-        validationResult.data.bio &&
-        validationResult.data.skills.length > 0
+      validationResult.data.full_name ||
+        validationResult.data.bio ||
+        (validationResult.data.skills && validationResult.data.skills.length > 0)
     );
 
     const updateData = {

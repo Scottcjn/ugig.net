@@ -218,8 +218,9 @@ describe("ConversationList", () => {
 
     await waitFor(() => {
       const links = screen.getAllByRole("link");
-      expect(links[0]).toHaveAttribute("href", "/dashboard/messages/conv-1");
-      expect(links[1]).toHaveAttribute("href", "/dashboard/messages/conv-2");
+      const convLinks = links.filter(l => l.getAttribute("href")?.startsWith("/dashboard/messages/"));
+      expect(convLinks[0]).toHaveAttribute("href", "/dashboard/messages/conv-1");
+      expect(convLinks[1]).toHaveAttribute("href", "/dashboard/messages/conv-2");
     });
   });
 

@@ -18,6 +18,20 @@ export function MessageBubble({
   showAvatar = true,
   otherParticipantId,
 }: MessageBubbleProps) {
+  const linkifyText = (text: string) => {
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const parts = text.split(urlRegex);
+    return parts.map((part, i) =>
+      urlRegex.test(part) ? (
+        <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-400 underline" onClick={(e) => e.stopPropagation()}>
+          {part}
+        </a>
+      ) : (
+        part
+      )
+    );
+  };
+
   const sender = message.sender;
   const isAgent = sender.account_type === "agent";
   const initials = (sender.full_name || sender.username || "U")
@@ -43,23 +57,48 @@ export function MessageBubble({
       )}
     >
       {showAvatar && (
-        <div className="relative flex-shrink-0">
-          <Avatar className="h-8 w-8">
-            {sender.avatar_url ? (
-              <AvatarImage
-                src={sender.avatar_url}
-                alt={sender.full_name || sender.username}
-              />
-            ) : (
-              <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+        !isOwn ? (
+          <a
+            href={`/u/${sender.username}`}
+            target="_blank"
+            onClick={(e) => e.stopPropagation()}
+            className="relative flex-shrink-0"
+          >
+            <Avatar className="h-8 w-8">
+              {sender.avatar_url ? (
+                <AvatarImage
+                  src={sender.avatar_url}
+                  alt={sender.full_name || sender.username}
+                />
+              ) : (
+                <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+              )}
+            </Avatar>
+            {isAgent && (
+              <span className="absolute -bottom-0.5 -right-0.5 bg-purple-500 text-white rounded-full p-0.5" title="AI Agent">
+                <Bot className="h-2.5 w-2.5" />
+              </span>
             )}
-          </Avatar>
-          {isAgent && (
-            <span className="absolute -bottom-0.5 -right-0.5 bg-purple-500 text-white rounded-full p-0.5" title="AI Agent">
-              <Bot className="h-2.5 w-2.5" />
-            </span>
-          )}
-        </div>
+          </a>
+        ) : (
+          <div className="relative flex-shrink-0">
+            <Avatar className="h-8 w-8">
+              {sender.avatar_url ? (
+                <AvatarImage
+                  src={sender.avatar_url}
+                  alt={sender.full_name || sender.username}
+                />
+              ) : (
+                <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+              )}
+            </Avatar>
+            {isAgent && (
+              <span className="absolute -bottom-0.5 -right-0.5 bg-purple-500 text-white rounded-full p-0.5" title="AI Agent">
+                <Bot className="h-2.5 w-2.5" />
+              </span>
+            )}
+          </div>
+        )
       )}
       {!showAvatar && <div className="w-8 flex-shrink-0" />}
 
@@ -72,7 +111,7 @@ export function MessageBubble({
               : "bg-muted text-foreground"
           )}
         >
-          <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{message.content}</p>
+          <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{linkifyText(message.content)}</p>
         </div>
         <div className="flex items-center gap-1 mt-1">
           <span className="text-xs text-muted-foreground">
