@@ -5,6 +5,8 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Header } from "@/components/layout/Header";
+import { Footer } from "@/components/layout/Footer";
 import { subscriptions as subscriptionsApi } from "@/lib/api";
 import { PLANS } from "@/lib/stripe";
 import {
@@ -423,8 +425,14 @@ function SubscriptionPageLoading() {
 
 export default function SubscriptionPage() {
   return (
-    <Suspense fallback={<SubscriptionPageLoading />}>
-      <SubscriptionPageContent />
-    </Suspense>
+    <div className="min-h-screen flex flex-col">
+      <Header />
+      <main className="flex-1">
+        <Suspense fallback={<SubscriptionPageLoading />}>
+          <SubscriptionPageContent />
+        </Suspense>
+      </main>
+      <Footer />
+    </div>
   );
 }
