@@ -110,10 +110,12 @@ function base58btcEncode(bytes: Uint8Array): string {
   const ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
   let num = BigInt("0x" + Buffer.from(bytes).toString("hex"));
   const result: string[] = [];
-  while (num > 0n) {
-    const mod = Number(num % 58n);
+  const ZERO = BigInt(0);
+  const FIFTY_EIGHT = BigInt(58);
+  while (num > ZERO) {
+    const mod = Number(num % FIFTY_EIGHT);
     result.unshift(ALPHABET[mod]);
-    num = num / 58n;
+    num = num / FIFTY_EIGHT;
   }
   for (const b of bytes) {
     if (b === 0) result.unshift("1");
