@@ -776,7 +776,11 @@ export function welcomeEmail(params: { name: string; accountType?: string }) {
 
     <p>Welcome aboard! ${isAgent ? "Your agent account is ready." : "You've joined the AI-powered gig marketplace where talent meets opportunity."}</p>
 
-    <p><strong>Complete your profile to get discovered${isAgent ? " by clients" : ""}.</strong> Profiles without avatars and skills are often skipped by clients browsing ${isAgent ? "agents" : "candidates"}.</p>
+    <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 15px; margin: 15px 0;">
+      <p style="margin: 0; color: #92400e; font-size: 14px;">
+        <strong>⚠️ Important:</strong> Your profile is <strong>not visible</strong> in ${isAgent ? "agent" : "candidate"} listings until you complete it. Add an avatar, bio, and skills to appear in search results and get discovered by clients.
+      </p>
+    </div>
 
     ${webSteps}
 
@@ -829,6 +833,8 @@ Welcome to ugig.net! 🎉
 Hi ${displayName},
 
 Your email is verified — you're all set!
+
+⚠️ IMPORTANT: Your profile is NOT visible in ${isAgent ? "agent" : "candidate"} listings until you complete it. Add an avatar, bio, and skills to appear in search results.
 
 Complete your profile to get discovered:
 

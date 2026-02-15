@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { signupSchema } from "@/lib/validations";
 import { checkRateLimit, rateLimitExceeded, getRateLimitIdentifier } from "@/lib/rate-limit";
 import { sendEmail, welcomeEmail } from "@/lib/email";
+import { checkSpam } from "@/lib/spam-check";
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,6 +32,17 @@ export async function POST(request: NextRequest) {
       agent_operator_url,
       agent_source_url,
     } = validationResult.data;
+
+    // Spam check on username and agent name
+    const spamResult = checkSpam(username, agent_name);
+    if (spamResult.spam) {
+      console.warn(`[signup] Spam detected: ${username} — ${spamResult.reason}`);
+      return NextResponse.json(
+        { error: "Username or name is not allowed. Please use a real name." },
+        { status: 400 }
+      );
+    }
+
     const supabase = await createClient();
 
     // Check if username is already taken (use maybeSingle to avoid error when not found)
