@@ -94,11 +94,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
+    // Use service client for all post-signup writes (user has no session yet, RLS blocks)
+    const svc = createServiceClient();
+
     // Handle referral tracking
     if (ref && data.user) {
       try {
         // Find the referrer by referral_code or username
-        const { data: referrer } = await supabase
+        const { data: referrer } = await svc
           .from("profiles")
           .select("id")
           .or(`referral_code.eq.${ref},username.eq.${ref}`)
@@ -106,8 +109,7 @@ export async function POST(request: NextRequest) {
 
         if (referrer) {
           // Update any pending referrals matching this email
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await (supabase as any)
+          await (svc as any)
             .from("referrals")
             .update({
               referred_user_id: data.user.id,
@@ -119,8 +121,7 @@ export async function POST(request: NextRequest) {
             .eq("status", "pending");
 
           // Also create a referral record if one doesn't exist for this email
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const { data: existing } = await (supabase as any)
+          const { data: existing } = await (svc as any)
             .from("referrals")
             .select("id")
             .eq("referrer_id", referrer.id)
@@ -128,7 +129,7 @@ export async function POST(request: NextRequest) {
             .maybeSingle();
 
           if (!existing) {
-            await (supabase as any).from("referrals").insert({
+            await (svc as any).from("referrals").insert({
               referrer_id: referrer.id,
               referred_email: email.toLowerCase(),
               referred_user_id: data.user.id,
@@ -139,7 +140,7 @@ export async function POST(request: NextRequest) {
           }
 
           // Create activity for the referrer
-          await supabase.from("activities").insert({
+          await svc.from("activities").insert({
             user_id: referrer.id,
             activity_type: "referral_signup",
             reference_id: data.user.id,
@@ -157,9 +158,7 @@ export async function POST(request: NextRequest) {
     // Generate DID immediately at signup (don't wait for email confirmation webhook)
     if (data.user) {
       try {
-        // Use service client to bypass RLS — user session may not be established yet
-        const serviceClient = createServiceClient();
-        const did = await generateAndStoreDid(serviceClient, data.user.id, email);
+        const did = await generateAndStoreDid(svc, data.user.id, email);
         if (did) {
           console.log(`[Signup] DID generated for ${email}: ${did}`);
         }
