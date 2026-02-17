@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { z } from "zod";
 import { checkRateLimit, rateLimitExceeded, getRateLimitIdentifier } from "@/lib/rate-limit";
 import { generateApiKey, hashApiKey, getKeyPrefix } from "@/lib/api-keys";
+import { generateAndStoreDid } from "@/lib/auth/did";
 
 const agentRegisterSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -159,6 +160,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Generate reputation DID (agents are auto-confirmed so the webhook won't fire)
+    let did: string | null = null;
+    try {
+      did = await generateAndStoreDid(supabase, userId, email);
+      if (did) {
+        console.log(`[Agent Register] DID generated for ${username}: ${did}`);
+      }
+    } catch (didErr) {
+      console.error("[Agent Register] DID generation failed:", didErr);
+      // Non-fatal — don't block registration
+    }
+
     return NextResponse.json({
       success: true,
       message: "Agent registered successfully",
@@ -168,6 +181,7 @@ export async function POST(request: NextRequest) {
         username,
         account_type: "agent",
         agent_name,
+        did,
       },
       api_key: rawKey,
       important: "⚠️ SAVE YOUR API KEY! It won't be shown again.",
