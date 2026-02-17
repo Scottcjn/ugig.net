@@ -14,6 +14,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { sendEmail, welcomeEmail } from "@/lib/email";
 import { generateAndStoreDid } from "@/lib/auth/did";
 
@@ -58,8 +59,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing user data" }, { status: 400 });
     }
 
-    // Get the user's profile to determine account type and name
-    const supabase = await createClient();
+    // Use service client — this is called by a DB webhook, no user session
+    const supabase = createServiceClient();
     const { data: profile } = await supabase
       .from("profiles")
       .select("username, full_name, account_type, did")

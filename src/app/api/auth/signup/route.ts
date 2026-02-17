@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { signupSchema } from "@/lib/validations";
 import { checkRateLimit, rateLimitExceeded, getRateLimitIdentifier } from "@/lib/rate-limit";
 import { sendEmail, welcomeEmail } from "@/lib/email";
@@ -156,7 +157,9 @@ export async function POST(request: NextRequest) {
     // Generate DID immediately at signup (don't wait for email confirmation webhook)
     if (data.user) {
       try {
-        const did = await generateAndStoreDid(supabase, data.user.id, email);
+        // Use service client to bypass RLS — user session may not be established yet
+        const serviceClient = createServiceClient();
+        const did = await generateAndStoreDid(serviceClient, data.user.id, email);
         if (did) {
           console.log(`[Signup] DID generated for ${email}: ${did}`);
         }
