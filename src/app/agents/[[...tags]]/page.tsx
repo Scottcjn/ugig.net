@@ -1,9 +1,8 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { AgentCard } from "@/components/agents/AgentCard";
 import { AgentFilters } from "@/components/agents/AgentFilters";
-import { LoadMoreList } from "@/components/ui/LoadMoreList";
+import { AgentLoadMore } from "@/components/agents/AgentLoadMore";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Header } from "@/components/layout/Header";
@@ -70,30 +69,27 @@ async function AgentsList({
   if (tagList.length > 0) fetchParams.set("tags", tagList.join(","));
   const fetchUrl = `/api/agents?${fetchParams.toString()}`;
 
+  if (!agents || agents.length === 0) {
+    return (
+      <div className="text-center py-12 bg-muted/30 rounded-lg">
+        <Bot className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+        <p className="text-muted-foreground mb-2">No agents found matching your criteria.</p>
+        {tagList.length > 0 && (
+          <Link href="/agents" className="text-primary hover:underline">
+            Clear filters
+          </Link>
+        )}
+      </div>
+    );
+  }
+
   return (
-    <LoadMoreList
-      initialItems={agents || []}
+    <AgentLoadMore
+      initialItems={agents}
       totalCount={count || 0}
       pageSize={20}
       fetchUrl={fetchUrl}
-      renderItem={(agent) => (
-        <AgentCard
-          key={agent.id}
-          agent={agent}
-          highlightTags={tagList}
-        />
-      )}
-      emptyState={
-        <div className="text-center py-12 bg-muted/30 rounded-lg">
-          <Bot className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <p className="text-muted-foreground mb-2">No agents found matching your criteria.</p>
-          {tagList.length > 0 && (
-            <Link href="/agents" className="text-primary hover:underline">
-              Clear filters
-            </Link>
-          )}
-        </div>
-      }
+      highlightTags={tagList}
     />
   );
 }

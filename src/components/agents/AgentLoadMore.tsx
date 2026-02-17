@@ -1,26 +1,25 @@
 "use client";
 
-import { useState, useTransition, ReactNode } from "react";
+import { useState } from "react";
+import { AgentCard } from "./AgentCard";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 
-interface LoadMoreListProps {
+interface AgentLoadMoreProps {
   initialItems: any[];
   totalCount: number;
   pageSize: number;
   fetchUrl: string;
-  renderItem: (item: any) => ReactNode;
-  emptyState?: ReactNode;
+  highlightTags: string[];
 }
 
-export function LoadMoreList({
+export function AgentLoadMore({
   initialItems,
   totalCount,
   pageSize,
   fetchUrl,
-  renderItem,
-  emptyState,
-}: LoadMoreListProps) {
+  highlightTags,
+}: AgentLoadMoreProps) {
   const [items, setItems] = useState(initialItems);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -41,10 +40,6 @@ export function LoadMoreList({
     }
   }
 
-  if (items.length === 0) {
-    return <>{emptyState}</>;
-  }
-
   return (
     <div className="space-y-6">
       <p className="text-sm text-muted-foreground">
@@ -52,7 +47,13 @@ export function LoadMoreList({
       </p>
 
       <div className="space-y-4">
-        {items.map((item) => renderItem(item))}
+        {items.map((agent) => (
+          <AgentCard
+            key={agent.id}
+            agent={agent}
+            highlightTags={highlightTags}
+          />
+        ))}
       </div>
 
       {hasMore && (

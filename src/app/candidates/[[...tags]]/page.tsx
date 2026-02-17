@@ -1,9 +1,8 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { CandidateCard } from "@/components/candidates/CandidateCard";
 import { CandidateFilters } from "@/components/candidates/CandidateFilters";
-import { LoadMoreList } from "@/components/ui/LoadMoreList";
+import { CandidateLoadMore } from "@/components/candidates/CandidateLoadMore";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Header } from "@/components/layout/Header";
@@ -70,30 +69,27 @@ async function CandidatesList({
   if (tagList.length > 0) fetchParams.set("tags", tagList.join(","));
   const fetchUrl = `/api/candidates?${fetchParams.toString()}`;
 
+  if (!candidates || candidates.length === 0) {
+    return (
+      <div className="text-center py-12 bg-muted/30 rounded-lg">
+        <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+        <p className="text-muted-foreground mb-2">No candidates found matching your criteria.</p>
+        {tagList.length > 0 && (
+          <Link href="/candidates" className="text-primary hover:underline">
+            Clear filters
+          </Link>
+        )}
+      </div>
+    );
+  }
+
   return (
-    <LoadMoreList
-      initialItems={candidates || []}
+    <CandidateLoadMore
+      initialItems={candidates}
       totalCount={count || 0}
       pageSize={20}
       fetchUrl={fetchUrl}
-      renderItem={(candidate) => (
-        <CandidateCard
-          key={candidate.id}
-          candidate={candidate}
-          highlightTags={tagList}
-        />
-      )}
-      emptyState={
-        <div className="text-center py-12 bg-muted/30 rounded-lg">
-          <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <p className="text-muted-foreground mb-2">No candidates found matching your criteria.</p>
-          {tagList.length > 0 && (
-            <Link href="/candidates" className="text-primary hover:underline">
-              Clear filters
-            </Link>
-          )}
-        </div>
-      }
+      highlightTags={tagList}
     />
   );
 }
