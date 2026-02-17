@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { AgentCard } from "@/components/agents/AgentCard";
 import { AgentFilters } from "@/components/agents/AgentFilters";
+import { LoadMoreList } from "@/components/ui/LoadMoreList";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Header } from "@/components/layout/Header";
@@ -49,7 +50,7 @@ async function AgentsList({
   // Parse tags from URL (comma-separated)
   const tagList = tags?.[0]?.split(",").map(decodeURIComponent) || [];
 
-  // Build query — always filter to agents only
+  // Build query — agents only, exclude spam
   const { buildAgentsQuery } = await import("@/lib/queries/agents");
   const query = buildAgentsQuery(supabase, {
     q: queryParams.q,
@@ -61,70 +62,39 @@ async function AgentsList({
 
   const { data: agents, count } = await query;
 
-  if (!agents || agents.length === 0) {
-    return (
-      <div className="text-center py-12 bg-muted/30 rounded-lg">
-        <Bot className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-        <p className="text-muted-foreground mb-2">No agents found matching your criteria.</p>
-        {tagList.length > 0 && (
-          <Link href="/agents" className="text-primary hover:underline">
-            Clear filters
-          </Link>
-        )}
-      </div>
-    );
-  }
-
-  const page = parseInt(queryParams.page || "1");
-  const limit = 20;
-  const totalPages = Math.ceil((count || 0) / limit);
-
-  // Build pagination URL helper
-  const buildPaginationUrl = (newPage: number) => {
-    const params = new URLSearchParams();
-    if (queryParams.q) params.set("q", queryParams.q);
-    if (queryParams.sort) params.set("sort", queryParams.sort);
-    if (queryParams.available) params.set("available", queryParams.available);
-    params.set("page", String(newPage));
-    const tagPath = tagList.length > 0 ? `/${tagList.map(encodeURIComponent).join(",")}` : "";
-    return `/agents${tagPath}?${params.toString()}`;
-  };
+  // Build fetch URL for Load More
+  const fetchParams = new URLSearchParams();
+  if (queryParams.q) fetchParams.set("q", queryParams.q);
+  if (queryParams.sort) fetchParams.set("sort", queryParams.sort);
+  if (queryParams.available) fetchParams.set("available", queryParams.available);
+  if (tagList.length > 0) fetchParams.set("tags", tagList.join(","));
+  const fetchUrl = `/api/agents?${fetchParams.toString()}`;
 
   return (
-    <div className="space-y-6">
-      <p className="text-sm text-muted-foreground">
-        Showing {agents.length} of {count} agents
-      </p>
-
-      <div className="space-y-4">
-        {agents.map((agent) => (
-          <AgentCard
-            key={agent.id}
-            agent={agent}
-            highlightTags={tagList}
-          />
-        ))}
-      </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex justify-center gap-2">
-          {page > 1 && (
-            <Link href={buildPaginationUrl(page - 1)}>
-              <Button variant="outline">Previous</Button>
-            </Link>
-          )}
-          <span className="flex items-center px-4 text-sm text-muted-foreground">
-            Page {page} of {totalPages}
-          </span>
-          {page < totalPages && (
-            <Link href={buildPaginationUrl(page + 1)}>
-              <Button variant="outline">Next</Button>
+    <LoadMoreList
+      initialItems={agents || []}
+      totalCount={count || 0}
+      pageSize={20}
+      fetchUrl={fetchUrl}
+      renderItem={(agent) => (
+        <AgentCard
+          key={agent.id}
+          agent={agent}
+          highlightTags={tagList}
+        />
+      )}
+      emptyState={
+        <div className="text-center py-12 bg-muted/30 rounded-lg">
+          <Bot className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <p className="text-muted-foreground mb-2">No agents found matching your criteria.</p>
+          {tagList.length > 0 && (
+            <Link href="/agents" className="text-primary hover:underline">
+              Clear filters
             </Link>
           )}
         </div>
-      )}
-    </div>
+      }
+    />
   );
 }
 

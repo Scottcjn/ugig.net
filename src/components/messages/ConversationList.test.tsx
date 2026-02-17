@@ -286,7 +286,7 @@ describe("ConversationList", () => {
     // The avatar span has cursor-pointer class and calls window.open on click
     const cursorPointerSpans = document.querySelectorAll('span.cursor-pointer');
     expect(cursorPointerSpans.length).toBeGreaterThan(0);
-    cursorPointerSpans[0]?.click();
+    (cursorPointerSpans[0] as HTMLElement)?.click();
 
     expect(windowOpen).toHaveBeenCalledWith("/u/otheruser", "_blank");
     windowOpen.mockRestore();

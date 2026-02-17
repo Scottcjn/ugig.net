@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { CandidateCard } from "@/components/candidates/CandidateCard";
 import { CandidateFilters } from "@/components/candidates/CandidateFilters";
+import { LoadMoreList } from "@/components/ui/LoadMoreList";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Header } from "@/components/layout/Header";
@@ -49,7 +50,7 @@ async function CandidatesList({
   // Parse tags from URL (comma-separated)
   const tagList = tags?.[0]?.split(",").map(decodeURIComponent) || [];
 
-  // Build query — show human profiles only (exclude agents)
+  // Build query — show human profiles only (exclude agents + spam)
   const { buildCandidatesQuery } = await import("@/lib/queries/candidates");
   const query = buildCandidatesQuery(supabase, {
     q: queryParams.q,
@@ -60,71 +61,40 @@ async function CandidatesList({
   });
 
   const { data: candidates, count } = await query;
-  const page = parseInt(queryParams.page || "1");
-  const limit = 20;
 
-  if (!candidates || candidates.length === 0) {
-    return (
-      <div className="text-center py-12 bg-muted/30 rounded-lg">
-        <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-        <p className="text-muted-foreground mb-2">No candidates found matching your criteria.</p>
-        {tagList.length > 0 && (
-          <Link href="/candidates" className="text-primary hover:underline">
-            Clear filters
-          </Link>
-        )}
-      </div>
-    );
-  }
-
-  const totalPages = Math.ceil((count || 0) / limit);
-
-  // Build pagination URL helper
-  const buildPaginationUrl = (newPage: number) => {
-    const params = new URLSearchParams();
-    if (queryParams.q) params.set("q", queryParams.q);
-    if (queryParams.sort) params.set("sort", queryParams.sort);
-    if (queryParams.available) params.set("available", queryParams.available);
-    params.set("page", String(newPage));
-    const tagPath = tagList.length > 0 ? `/${tagList.map(encodeURIComponent).join(",")}` : "";
-    return `/candidates${tagPath}?${params.toString()}`;
-  };
+  // Build fetch URL for Load More
+  const fetchParams = new URLSearchParams();
+  if (queryParams.q) fetchParams.set("q", queryParams.q);
+  if (queryParams.sort) fetchParams.set("sort", queryParams.sort);
+  if (queryParams.available) fetchParams.set("available", queryParams.available);
+  if (tagList.length > 0) fetchParams.set("tags", tagList.join(","));
+  const fetchUrl = `/api/candidates?${fetchParams.toString()}`;
 
   return (
-    <div className="space-y-6">
-      <p className="text-sm text-muted-foreground">
-        Showing {candidates.length} of {count} candidates
-      </p>
-
-      <div className="space-y-4">
-        {candidates.map((candidate) => (
-          <CandidateCard
-            key={candidate.id}
-            candidate={candidate}
-            highlightTags={tagList}
-          />
-        ))}
-      </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex justify-center gap-2">
-          {page > 1 && (
-            <Link href={buildPaginationUrl(page - 1)}>
-              <Button variant="outline">Previous</Button>
-            </Link>
-          )}
-          <span className="flex items-center px-4 text-sm text-muted-foreground">
-            Page {page} of {totalPages}
-          </span>
-          {page < totalPages && (
-            <Link href={buildPaginationUrl(page + 1)}>
-              <Button variant="outline">Next</Button>
+    <LoadMoreList
+      initialItems={candidates || []}
+      totalCount={count || 0}
+      pageSize={20}
+      fetchUrl={fetchUrl}
+      renderItem={(candidate) => (
+        <CandidateCard
+          key={candidate.id}
+          candidate={candidate}
+          highlightTags={tagList}
+        />
+      )}
+      emptyState={
+        <div className="text-center py-12 bg-muted/30 rounded-lg">
+          <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <p className="text-muted-foreground mb-2">No candidates found matching your criteria.</p>
+          {tagList.length > 0 && (
+            <Link href="/candidates" className="text-primary hover:underline">
+              Clear filters
             </Link>
           )}
         </div>
-      )}
-    </div>
+      }
+    />
   );
 }
 
