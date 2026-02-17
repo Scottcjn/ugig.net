@@ -6,7 +6,15 @@ export const metadata = {
   description: "Sign in to your ugig.net account",
 };
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const params = await searchParams;
+  const confirmed = params.confirmed === "true";
+  const error = typeof params.error === "string" ? params.error : null;
+
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md space-y-8">
@@ -19,6 +27,22 @@ export default function LoginPage() {
             Sign in to your account to continue
           </p>
         </div>
+
+        {confirmed && (
+          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 text-sm text-green-700 dark:text-green-300">
+            ✅ Email confirmed! You can now sign in.
+          </div>
+        )}
+
+        {error && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-sm text-red-700 dark:text-red-300">
+            {error === "invalid_confirmation_link"
+              ? "Invalid confirmation link. Please request a new one."
+              : error === "confirmation_failed"
+              ? "Email confirmation failed. The link may have expired."
+              : "An error occurred. Please try again."}
+          </div>
+        )}
 
         <div className="bg-card border border-border rounded-lg p-6 shadow-sm">
           <LoginForm />

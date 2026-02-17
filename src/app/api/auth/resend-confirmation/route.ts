@@ -26,9 +26,13 @@ export async function POST(request: NextRequest) {
     const { email } = validationResult.data;
     const supabase = await createClient();
 
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ugig.net";
     const { error } = await supabase.auth.resend({
       type: "signup",
       email,
+      options: {
+        emailRedirectTo: `${appUrl}/auth/confirm`,
+      },
     });
 
     if (error) {

@@ -71,10 +71,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Create the user with username and agent fields in metadata
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ugig.net";
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
+        emailRedirectTo: `${appUrl}/auth/confirm`,
         data: {
           username,
           account_type,
