@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { generateAndStoreDid } from "@/lib/auth/did";
 
 export async function POST(request: NextRequest) {
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const supabase = await createClient();
+  const supabase = createServiceClient();
 
   // Find users with confirmed email but no DID
   const { data: users, error } = await supabase
