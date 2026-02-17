@@ -15,7 +15,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { sendEmail, welcomeEmail } from "@/lib/email";
-import { generateKeyPairSync } from "crypto";
+import { generateAndStoreDid } from "@/lib/auth/did";
 
 export async function POST(request: NextRequest) {
   try {
@@ -70,9 +70,10 @@ export async function POST(request: NextRequest) {
     const accountType = profile?.account_type || "human";
 
     // Auto-generate a DID for the user if they don't have one
+    // (may already exist if generated at signup)
     if (!profile?.did) {
       try {
-        const did = await generateAndClaimDid(supabase, userId, email);
+        const did = await generateAndStoreDid(supabase, userId, email);
         if (did) {
           console.log(`[Auth Confirmed] DID claimed for ${email}: ${did}`);
         }
@@ -103,82 +104,4 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/**
- * Generate a did:key (ed25519), store on profile, and claim on CoinPayPortal
- */
-function base58btcEncode(bytes: Uint8Array): string {
-  const ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-  let num = BigInt("0x" + Buffer.from(bytes).toString("hex"));
-  const result: string[] = [];
-  const ZERO = BigInt(0);
-  const FIFTY_EIGHT = BigInt(58);
-  while (num > ZERO) {
-    const mod = Number(num % FIFTY_EIGHT);
-    result.unshift(ALPHABET[mod]);
-    num = num / FIFTY_EIGHT;
-  }
-  for (const b of bytes) {
-    if (b === 0) result.unshift("1");
-    else break;
-  }
-  return result.join("");
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function generateAndClaimDid(supabase: any, userId: string, email: string): Promise<string | null> {
-  // Generate ed25519 keypair
-  const { publicKey: pubKeyObj } = generateKeyPairSync("ed25519");
-  const pubKeyRaw = pubKeyObj.export({ type: "spki", format: "der" }).subarray(-32);
-
-  // Build did:key with ed25519 multicodec prefix (0xed01)
-  const multicodec = Buffer.concat([Buffer.from([0xed, 0x01]), pubKeyRaw]);
-  const did = `did:key:z${base58btcEncode(multicodec)}`;
-
-  // Store DID on the ugig profile
-  const { error: updateError } = await supabase
-    .from("profiles")
-    .update({ did })
-    .eq("id", userId);
-
-  if (updateError) {
-    console.error("[Auth Confirmed] Failed to store DID on profile:", updateError);
-    return null;
-  }
-
-  // Register the DID on CoinPayPortal and submit initial reputation action
-  const coinpayApi = process.env.COINPAYPORTAL_API_URL || "https://coinpayportal.com";
-  const coinpayKey = process.env.COINPAYPORTAL_REPUTATION_API_KEY;
-
-  if (coinpayKey) {
-    // Register the DID
-    try {
-      const publicKeyB64 = Buffer.from(pubKeyRaw).toString("base64url");
-      await fetch(`${coinpayApi}/api/reputation/did/register`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${coinpayKey}`,
-        },
-        body: JSON.stringify({
-          did,
-          public_key: publicKeyB64,
-          platform: "ugig.net",
-          email,
-        }),
-      });
-    } catch (err) {
-      console.warn("[Auth Confirmed] CoinPayPortal DID register failed:", err);
-    }
-  }
-
-  // Submit initial reputation action
-  const { submitReputationAction } = await import("@/lib/reputation");
-  await submitReputationAction({
-    agent_did: did,
-    action_category: "identity.profile_update",
-    action_type: "email_confirmed",
-    metadata: { platform: "ugig.net" },
-  });
-
-  return did;
-}
+// DID generation is now in @/lib/auth/did.ts (shared with signup route)

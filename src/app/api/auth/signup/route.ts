@@ -4,6 +4,7 @@ import { signupSchema } from "@/lib/validations";
 import { checkRateLimit, rateLimitExceeded, getRateLimitIdentifier } from "@/lib/rate-limit";
 import { sendEmail, welcomeEmail } from "@/lib/email";
 import { checkSpam } from "@/lib/spam-check";
+import { generateAndStoreDid } from "@/lib/auth/did";
 
 export async function POST(request: NextRequest) {
   try {
@@ -152,9 +153,21 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Welcome email is now sent after email confirmation via the
+    // Generate DID immediately at signup (don't wait for email confirmation webhook)
+    if (data.user) {
+      try {
+        const did = await generateAndStoreDid(supabase, data.user.id, email);
+        if (did) {
+          console.log(`[Signup] DID generated for ${email}: ${did}`);
+        }
+      } catch (didErr) {
+        // Non-fatal — don't block signup if DID generation fails
+        console.error("[Signup] DID generation failed:", didErr);
+      }
+    }
+
+    // Welcome email is sent after email confirmation via the
     // /api/auth/confirmed webhook (triggered by Supabase auth hook).
-    // This ensures only verified users receive onboarding instructions.
 
     return NextResponse.json({
       message: "Check your email to confirm your account",
