@@ -2,10 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 
 const REDIRECTS: Record<string, string> = {
-  "/api-docs": "/docs",
-  "/cli-docs": "/docs/cli",
-  "/openapi": "/api/openapi.json",
-  "/employers": "/for-employers",
+  // Pages now exist at /api-docs, /cli-docs, /openapi, /employers
 };
 
 function getClientIp(request: NextRequest): string {
