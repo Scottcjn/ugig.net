@@ -46,6 +46,11 @@ export default async function LoginPage({
 
         <div className="bg-card border border-border rounded-lg p-6 shadow-sm">
           <LoginForm />
+          <noscript>
+            <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg text-sm text-yellow-700 dark:text-yellow-300">
+              JavaScript is required to use the login form. Please enable JavaScript in your browser.
+            </div>
+          </noscript>
         </div>
       </div>
     </div>

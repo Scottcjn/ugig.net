@@ -1,5 +1,12 @@
-import { type NextRequest } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
+
+const REDIRECTS: Record<string, string> = {
+  "/api-docs": "/docs",
+  "/cli-docs": "/docs/cli",
+  "/openapi": "/api/openapi.json",
+  "/employers": "/for-employers",
+};
 
 function getClientIp(request: NextRequest): string {
   return (
@@ -14,6 +21,12 @@ export async function middleware(request: NextRequest) {
   const ip = getClientIp(request);
   const method = request.method;
   const path = request.nextUrl.pathname;
+
+  // Redirect legacy/broken paths
+  const redirect = REDIRECTS[path];
+  if (redirect) {
+    return NextResponse.redirect(new URL(redirect, request.url), 301);
+  }
 
   // Log with real client IP (not proxy IP)
   if (path.startsWith("/api/")) {

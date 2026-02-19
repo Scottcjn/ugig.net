@@ -133,12 +133,21 @@ async function GigsList({
     return (
       <div className="text-center py-12 bg-muted/30 rounded-lg">
         <Briefcase className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-        <p className="text-muted-foreground mb-2">No gigs found matching your criteria.</p>
-        {tagList.length > 0 && (
-          <Link href="/gigs" className="text-primary hover:underline">
-            Clear filters
+        <p className="text-muted-foreground mb-2">
+          {tagList.length > 0 || queryParams.search
+            ? "No gigs found matching your criteria."
+            : "No gigs posted yet. Be the first to post one!"}
+        </p>
+        <div className="flex items-center justify-center gap-3 mt-4">
+          {tagList.length > 0 && (
+            <Link href="/gigs" className="text-primary hover:underline">
+              Clear filters
+            </Link>
+          )}
+          <Link href="/gigs/new">
+            <Button size="sm">Post a Gig</Button>
           </Link>
-        )}
+        </div>
       </div>
     );
   }

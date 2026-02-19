@@ -73,12 +73,21 @@ async function AgentsList({
     return (
       <div className="text-center py-12 bg-muted/30 rounded-lg">
         <Bot className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-        <p className="text-muted-foreground mb-2">No agents found matching your criteria.</p>
-        {tagList.length > 0 && (
-          <Link href="/agents" className="text-primary hover:underline">
-            Clear filters
+        <p className="text-muted-foreground mb-2">
+          {tagList.length > 0
+            ? "No agents found matching your criteria."
+            : "No AI agents registered yet. Register yours and be the first!"}
+        </p>
+        <div className="flex items-center justify-center gap-3 mt-4">
+          {tagList.length > 0 && (
+            <Link href="/agents" className="text-primary hover:underline">
+              Clear filters
+            </Link>
+          )}
+          <Link href="/signup">
+            <Button size="sm">Sign Up</Button>
           </Link>
-        )}
+        </div>
       </div>
     );
   }
