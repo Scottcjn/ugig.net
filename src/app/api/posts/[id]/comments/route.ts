@@ -133,6 +133,16 @@ export async function POST(
     }
     const { user, supabase } = auth;
 
+    // Block banned/spam users from commenting
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("is_spam")
+      .eq("id", user.id)
+      .single();
+    if (profile?.is_spam) {
+      return NextResponse.json({ error: "Account suspended" }, { status: 403 });
+    }
+
     const body = await request.json();
     const validationResult = postCommentSchema.safeParse(body);
 
