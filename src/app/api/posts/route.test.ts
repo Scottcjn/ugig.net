@@ -66,6 +66,11 @@ function mockAuth(userId = "user-1") {
 
 // ── Setup ──────────────────────────────────────────────────────────
 
+function mockNotSpam() {
+  const c = chainResult({ data: { is_spam: false }, error: null });
+  mockFrom.mockReturnValue(c);
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
 });
@@ -86,6 +91,7 @@ describe("POST /api/posts", () => {
 
   it("returns 400 when content is missing", async () => {
     mockAuth();
+    mockNotSpam();
     const res = await POST(makeRequest({}));
     const json = await res.json();
 
@@ -95,6 +101,7 @@ describe("POST /api/posts", () => {
 
   it("returns 400 when content is empty", async () => {
     mockAuth();
+    mockNotSpam();
     const res = await POST(makeRequest({ content: "" }));
     const json = await res.json();
 
@@ -153,6 +160,7 @@ describe("POST /api/posts", () => {
 
   it("returns 400 when url is invalid", async () => {
     mockAuth();
+    mockNotSpam();
     const res = await POST(
       makeRequest({ content: "Hello", url: "not-a-url" })
     );
@@ -164,6 +172,7 @@ describe("POST /api/posts", () => {
 
   it("returns 400 when tags exceed limit", async () => {
     mockAuth();
+    mockNotSpam();
     const tooManyTags = Array.from({ length: 11 }, (_, i) => `tag${i}`);
     const res = await POST(
       makeRequest({ content: "Hello", tags: tooManyTags })

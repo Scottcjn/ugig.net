@@ -17,8 +17,8 @@ export async function POST(
     }
     const { user, supabase } = auth;
 
-    const { data: profile } = await supabase.from("profiles").select("is_spam").eq("id", user.id).single();
-    if (profile?.is_spam) return NextResponse.json({ error: "Account suspended" }, { status: 403 });
+    const { data: profile } = await supabase.from("profiles").select("is_spam" as any).eq("id", user.id).single();
+    if ((profile as any)?.is_spam) return NextResponse.json({ error: "Account suspended" }, { status: 403 });
 
     const rl = checkRateLimit(getRateLimitIdentifier(request, user.id), "write");
     if (!rl.allowed) return rateLimitExceeded(rl);

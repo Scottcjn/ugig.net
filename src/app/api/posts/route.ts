@@ -17,10 +17,10 @@ export async function POST(request: NextRequest) {
     // Block banned/spam users from posting
     const { data: profile } = await supabase
       .from("profiles")
-      .select("is_spam")
+      .select("is_spam" as any)
       .eq("id", user.id)
       .single();
-    if (profile?.is_spam) {
+    if ((profile as any)?.is_spam) {
       return NextResponse.json({ error: "Account suspended" }, { status: 403 });
     }
 

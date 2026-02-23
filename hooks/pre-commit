@@ -4,7 +4,7 @@ echo "Running pre-commit checks..."
 
 # Run lint
 echo "Running lint..."
-pnpm lint
+nice -n 19 pnpm lint
 if [ $? -ne 0 ]; then
   echo "Lint failed. Please fix the errors before committing."
   exit 1
@@ -12,7 +12,7 @@ fi
 
 # Run type check
 echo "Running type check..."
-pnpm tsc --noEmit
+nice -n 19 pnpm tsc --noEmit
 if [ $? -ne 0 ]; then
   echo "Type check failed. Please fix the errors before committing."
   exit 1
@@ -20,7 +20,7 @@ fi
 
 # Run tests
 echo "Running tests..."
-NODE_OPTIONS="--max-old-space-size=2048" npx vitest run --no-file-parallelism
+NODE_OPTIONS="--max-old-space-size=2048" nice -n 19 npx vitest run --no-file-parallelism
 if [ $? -ne 0 ]; then
   echo "Tests failed. Please fix the failing tests before committing."
   exit 1
@@ -28,7 +28,7 @@ fi
 
 # Run build
 echo "Running build..."
-pnpm build
+nice -n 19 pnpm build
 if [ $? -ne 0 ]; then
   echo "Build failed. Please fix the build errors before committing."
   exit 1

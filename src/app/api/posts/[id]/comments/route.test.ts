@@ -173,6 +173,7 @@ describe("POST /api/posts/[id]/comments — nesting depth", () => {
   it("creates a root comment (depth 0)", async () => {
     mockAuth(USER_2);
     setupSeq(
+      ch({ data: { is_spam: false }, error: null }),
       ch({ data: { id: POST_ID, author_id: AUTHOR_1 }, error: null }),
       ch({ data: { id: COMMENT_1, post_id: POST_ID, author_id: USER_2, content: "Hello", depth: 0, author: { id: USER_2, username: "u2" } }, error: null }),
       ch({ data: { username: "u2", full_name: "User 2" }, error: null }),
@@ -188,6 +189,7 @@ describe("POST /api/posts/[id]/comments — nesting depth", () => {
   it("allows reply at depth 3 (creating depth 4)", async () => {
     mockAuth(USER_2);
     setupSeq(
+      ch({ data: { is_spam: false }, error: null }),
       ch({ data: { id: POST_ID, author_id: AUTHOR_1 }, error: null }),
       ch({ data: { id: PARENT_D3, post_id: POST_ID, parent_id: "x", depth: 3, author_id: USER_3, content: "Deep" }, error: null }),
       ch({ data: { id: COMMENT_2, post_id: POST_ID, author_id: USER_2, parent_id: PARENT_D3, content: "Deepest", depth: 4, author: { id: USER_2, username: "u2" } }, error: null }),
@@ -204,6 +206,7 @@ describe("POST /api/posts/[id]/comments — nesting depth", () => {
   it("rejects reply at depth 4 (would create depth 5)", async () => {
     mockAuth(USER_2);
     setupSeq(
+      ch({ data: { is_spam: false }, error: null }),
       ch({ data: { id: POST_ID, author_id: AUTHOR_1 }, error: null }),
       ch({ data: { id: PARENT_D4, post_id: POST_ID, parent_id: "x", depth: 4, author_id: USER_3, content: "At max" }, error: null }),
     );
@@ -217,6 +220,7 @@ describe("POST /api/posts/[id]/comments — nesting depth", () => {
   it("returns 404 when parent comment not found", async () => {
     mockAuth(USER_2);
     setupSeq(
+      ch({ data: { is_spam: false }, error: null }),
       ch({ data: { id: POST_ID, author_id: AUTHOR_1 }, error: null }),
       ch({ data: null, error: { message: "not found" } }),
     );
@@ -229,6 +233,7 @@ describe("POST /api/posts/[id]/comments — nesting depth", () => {
     mockAuth(USER_2);
     const OTHER_POST = "b0000000-0000-4000-a000-000000000002";
     setupSeq(
+      ch({ data: { is_spam: false }, error: null }),
       ch({ data: { id: POST_ID, author_id: AUTHOR_1 }, error: null }),
       ch({ data: { id: PARENT_OTHER, post_id: OTHER_POST, parent_id: null, depth: 0, author_id: "u", content: "x" }, error: null }),
     );
@@ -252,6 +257,7 @@ describe("POST /api/posts/[id]/comments — email notifications", () => {
       .mockResolvedValueOnce({ data: { user: { email: "postauthor@test.com" } } });
 
     setupSeq(
+      ch({ data: { is_spam: false }, error: null }),
       ch({ data: { id: POST_ID, author_id: AUTHOR_1 }, error: null }),
       ch({ data: { id: COMMENT_1, post_id: POST_ID, parent_id: null, depth: 0, author_id: USER_PARENT, content: "Original" }, error: null }),
       ch({ data: { id: COMMENT_2, post_id: POST_ID, author_id: USER_3, parent_id: COMMENT_1, content: "Reply", depth: 1, author: { id: USER_3, username: "u3" } }, error: null }),
@@ -275,6 +281,7 @@ describe("POST /api/posts/[id]/comments — email notifications", () => {
     mockGetUserById.mockResolvedValue({ data: { user: { email: "author@test.com" } } });
 
     setupSeq(
+      ch({ data: { is_spam: false }, error: null }),
       ch({ data: { id: POST_ID, author_id: AUTHOR_1 }, error: null }),
       ch({ data: { id: COMMENT_1, post_id: POST_ID, parent_id: null, depth: 0, author_id: AUTHOR_1, content: "My comment" }, error: null }),
       ch({ data: { id: COMMENT_2, post_id: POST_ID, author_id: USER_3, parent_id: COMMENT_1, content: "Reply", depth: 1, author: { id: USER_3, username: "u3" } }, error: null }),
@@ -295,6 +302,7 @@ describe("POST /api/posts/[id]/comments — email notifications", () => {
     mockGetUserById.mockResolvedValue({ data: { user: { email: "author@test.com" } } });
 
     setupSeq(
+      ch({ data: { is_spam: false }, error: null }),
       ch({ data: { id: POST_ID, author_id: AUTHOR_1 }, error: null }),
       ch({ data: { id: COMMENT_1, post_id: POST_ID, parent_id: null, depth: 0, author_id: USER_2, content: "My comment" }, error: null }),
       ch({ data: { id: COMMENT_2, post_id: POST_ID, author_id: USER_2, parent_id: COMMENT_1, content: "Self reply", depth: 1, author: { id: USER_2, username: "u2" } }, error: null }),
@@ -314,6 +322,7 @@ describe("POST /api/posts/[id]/comments — email notifications", () => {
     mockAuth(AUTHOR_1);
 
     setupSeq(
+      ch({ data: { is_spam: false }, error: null }),
       ch({ data: { id: POST_ID, author_id: AUTHOR_1 }, error: null }),
       ch({ data: { id: COMMENT_1, post_id: POST_ID, parent_id: null, depth: 0, author_id: AUTHOR_1, content: "Own comment" }, error: null }),
       ch({ data: { id: COMMENT_2, post_id: POST_ID, author_id: AUTHOR_1, parent_id: COMMENT_1, content: "Own reply", depth: 1, author: { id: AUTHOR_1, username: "a1" } }, error: null }),
@@ -338,6 +347,7 @@ describe("POST /api/posts/[id]/comments — @mentions", () => {
     mockGetUserById.mockResolvedValue({ data: { user: { email: "mentioned@test.com" } } });
 
     setupSeq(
+      ch({ data: { is_spam: false }, error: null }),
       // post lookup
       ch({ data: { id: POST_ID, author_id: AUTHOR_1 }, error: null }),
       // insert comment
@@ -376,6 +386,7 @@ describe("POST /api/posts/[id]/comments — @mentions", () => {
     mockGetUserById.mockResolvedValue({ data: { user: { email: "u2@test.com" } } });
 
     setupSeq(
+      ch({ data: { is_spam: false }, error: null }),
       ch({ data: { id: POST_ID, author_id: AUTHOR_1 }, error: null }),
       ch({ data: { id: COMMENT_1, post_id: POST_ID, author_id: USER_2, content: "hey @u2", depth: 0, author: { id: USER_2, username: "u2" } }, error: null }),
       ch({ data: { username: "u2", full_name: "User 2" }, error: null }),
@@ -400,6 +411,7 @@ describe("POST /api/posts/[id]/comments — @mentions", () => {
     mockGetUserById.mockResolvedValue({ data: { user: { email: "author@test.com" } } });
 
     setupSeq(
+      ch({ data: { is_spam: false }, error: null }),
       ch({ data: { id: POST_ID, author_id: AUTHOR_1 }, error: null }),
       ch({ data: { id: COMMENT_1, post_id: POST_ID, author_id: USER_2, content: "hey @author1", depth: 0, author: { id: USER_2, username: "u2" } }, error: null }),
       ch({ data: { username: "u2", full_name: "User 2" }, error: null }),
@@ -425,6 +437,7 @@ describe("POST /api/posts/[id]/comments — @mentions", () => {
     mockGetUserById.mockResolvedValue({ data: { user: { email: "author@test.com" } } });
 
     setupSeq(
+      ch({ data: { is_spam: false }, error: null }),
       ch({ data: { id: POST_ID, author_id: AUTHOR_1 }, error: null }),
       ch({ data: { id: COMMENT_1, post_id: POST_ID, author_id: USER_2, content: "hey @nonexistent", depth: 0, author: { id: USER_2, username: "u2" } }, error: null }),
       ch({ data: { username: "u2", full_name: "User 2" }, error: null }),
