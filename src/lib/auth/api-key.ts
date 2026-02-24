@@ -12,16 +12,18 @@ export type ApiKeyAuthResult = {
  * Returns the user ID and key ID if valid, null otherwise.
  */
 export async function authenticateApiKey(
-  authHeader: string | null
+  authHeader: string | null,
+  apiKeyHeader?: string | null
 ): Promise<ApiKeyAuthResult | null> {
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return null;
+  // Determine the raw key from X-API-Key header or Authorization header
+  let rawKey: string | null = null;
+  if (apiKeyHeader?.startsWith("ugig_live_")) {
+    rawKey = apiKeyHeader;
+  } else if (authHeader?.startsWith("Bearer ") && authHeader.slice(7).startsWith("ugig_live_")) {
+    rawKey = authHeader.slice(7);
   }
 
-  const rawKey = authHeader.slice(7); // Remove "Bearer " prefix
-
-  // Only process keys with our prefix format
-  if (!rawKey.startsWith("ugig_live_")) {
+  if (!rawKey) {
     return null;
   }
 
