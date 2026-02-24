@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { gigSchema, type GigInput } from "@/lib/validations";
 import { gigs } from "@/lib/api";
 import { trackGigCreated } from "@/lib/analytics";
@@ -23,6 +23,8 @@ interface GigFormProps {
 
 export function GigForm({ initialData, gigId, mode = "create" }: GigFormProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const typeParam = searchParams.get("type");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -43,6 +45,7 @@ export function GigForm({ initialData, gigId, mode = "create" }: GigFormProps) {
       budget_type: "fixed",
       location_type: "remote",
       status: "draft",
+      listing_type: (typeParam === "for_hire" ? "for_hire" : "hiring") as "hiring" | "for_hire",
       ...initialData,
     },
   });
@@ -50,6 +53,8 @@ export function GigForm({ initialData, gigId, mode = "create" }: GigFormProps) {
   const selectedSkills = watch("skills_required");
   const selectedTools = watch("ai_tools_preferred");
   const budgetType = watch("budget_type");
+  const listingType = watch("listing_type");
+  const isForHire = listingType === "for_hire";
 
   const toggleSkill = (skill: string) => {
     const current = selectedSkills || [];
@@ -109,6 +114,31 @@ export function GigForm({ initialData, gigId, mode = "create" }: GigFormProps) {
         </div>
       )}
 
+      {/* Listing Type */}
+      <div className="space-y-2">
+        <Label>What are you posting? *</Label>
+        <div className="flex gap-4">
+          <label className={`flex items-center gap-2 px-4 py-3 border rounded-lg cursor-pointer transition-colors ${!isForHire ? "border-primary bg-primary/5" : "border-input"}`}>
+            <input
+              type="radio"
+              value="hiring"
+              {...register("listing_type")}
+              disabled={isLoading}
+            />
+            <span className="text-sm font-medium">I&apos;m hiring</span>
+          </label>
+          <label className={`flex items-center gap-2 px-4 py-3 border rounded-lg cursor-pointer transition-colors ${isForHire ? "border-primary bg-primary/5" : "border-input"}`}>
+            <input
+              type="radio"
+              value="for_hire"
+              {...register("listing_type")}
+              disabled={isLoading}
+            />
+            <span className="text-sm font-medium">I&apos;m available for hire</span>
+          </label>
+        </div>
+      </div>
+
       {/* Title */}
       <div className="space-y-2">
         <Label htmlFor="title">Title *</Label>
@@ -128,7 +158,7 @@ export function GigForm({ initialData, gigId, mode = "create" }: GigFormProps) {
         <Label htmlFor="description">Description *</Label>
         <Textarea
           id="description"
-          placeholder="Describe the project in detail. What are the requirements? What deliverables do you expect?"
+          placeholder={isForHire ? "Describe your skills, experience, and what kind of work you're looking for." : "Describe the project in detail. What are the requirements? What deliverables do you expect?"}
           rows={8}
           {...register("description")}
           disabled={isLoading}
@@ -264,7 +294,7 @@ export function GigForm({ initialData, gigId, mode = "create" }: GigFormProps) {
                budgetType === "monthly" ? "Min Rate ($/mo)" :
                budgetType === "revenue_share" ? "Min Share (%)" :
                (budgetType === "per_task" || budgetType === "per_unit") ? "Min Rate ($/unit)" :
-               "Min Budget ($)"}
+               isForHire ? "Min Rate ($)" : "Min Budget ($)"}
             </Label>
             <Input
               id="budget_min"
@@ -283,7 +313,7 @@ export function GigForm({ initialData, gigId, mode = "create" }: GigFormProps) {
                budgetType === "monthly" ? "Max Rate ($/mo)" :
                budgetType === "revenue_share" ? "Max Share (%)" :
                (budgetType === "per_task" || budgetType === "per_unit") ? "Max Rate ($/unit)" :
-               "Max Budget ($)"}
+               isForHire ? "Max Rate ($)" : "Max Budget ($)"}
             </Label>
             <Input
               id="budget_max"

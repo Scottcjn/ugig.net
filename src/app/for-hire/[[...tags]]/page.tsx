@@ -26,14 +26,14 @@ export async function generateMetadata({ params }: GigsPageProps) {
 
   if (tagList.length > 0) {
     return {
-      title: `${tagList.join(", ")} Gigs | ugig.net`,
-      description: `Find AI-powered gig opportunities requiring ${tagList.join(", ")}`,
+      title: `${tagList.join(", ")} For Hire | ugig.net`,
+      description: `Find professionals available for hire with ${tagList.join(", ")} skills`,
     };
   }
 
   return {
-    title: "Browse Gigs | ugig.net",
-    description: "Find AI-assisted gigs and freelance opportunities",
+    title: "For Hire | ugig.net",
+    description: "Browse professionals and agents available for hire",
   };
 }
 
@@ -72,7 +72,7 @@ async function GigsList({
       { count: "exact" }
     )
     .eq("status", "active")
-    .eq("listing_type", "hiring");
+    .eq("listing_type", "for_hire");
 
   // Filter by search query
   if (queryParams.search) {
@@ -136,17 +136,17 @@ async function GigsList({
         <Briefcase className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
         <p className="text-muted-foreground mb-2">
           {tagList.length > 0 || queryParams.search
-            ? "No gigs found matching your criteria."
-            : "No gigs posted yet. Be the first to post one!"}
+            ? "No for-hire listings found matching your criteria."
+            : "No for-hire listings yet. Post yours!"}
         </p>
         <div className="flex items-center justify-center gap-3 mt-4">
           {tagList.length > 0 && (
-            <Link href="/gigs" className="text-primary hover:underline">
+            <Link href="/for-hire" className="text-primary hover:underline">
               Clear filters
             </Link>
           )}
-          <Link href="/gigs/new">
-            <Button size="sm">Post a Gig</Button>
+          <Link href="/gigs/new?type=for_hire">
+            <Button size="sm">Post a For Hire Listing</Button>
           </Link>
         </div>
       </div>
@@ -164,7 +164,7 @@ async function GigsList({
     if (queryParams.sort && queryParams.sort !== "newest") params.set("sort", queryParams.sort);
     params.set("page", String(newPage));
     const tagPath = tagList.length > 0 ? `/${tagList.map(encodeURIComponent).join(",")}` : "";
-    return `/gigs${tagPath}?${params.toString()}`;
+    return `/for-hire${tagPath}?${params.toString()}`;
   };
 
   return (
@@ -224,7 +224,7 @@ function GigsListSkeleton() {
   );
 }
 
-export default async function GigsPage({ params, searchParams }: GigsPageProps) {
+export default async function ForHirePage({ params, searchParams }: GigsPageProps) {
   const { tags } = await params;
   const queryParams = await searchParams;
   const tagList = tags?.[0]?.split(",").map(decodeURIComponent) || [];
@@ -235,9 +235,9 @@ export default async function GigsPage({ params, searchParams }: GigsPageProps) 
 
       <main className="flex-1 container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl font-bold mb-2">Browse Gigs</h1>
+          <h1 className="text-3xl font-bold mb-2">For Hire</h1>
           <p className="text-muted-foreground mb-8">
-            Browse Gigs — Find clients looking to hire
+            Browse professionals and agents available for hire
           </p>
 
           <Suspense fallback={<div className="h-48" />}>

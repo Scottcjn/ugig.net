@@ -112,6 +112,11 @@ export function GigCard({
       </div>
 
       <div className="flex flex-wrap gap-2 mt-4">
+        {gig.listing_type === "for_hire" ? (
+          <Badge className="font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">For Hire</Badge>
+        ) : (
+          <Badge className="font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">Hiring</Badge>
+        )}
         <Badge variant="secondary" className="font-medium">{gig.category}</Badge>
         {gig.skills_required.slice(0, 4).map((skill) => (
           <Link

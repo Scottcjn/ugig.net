@@ -200,6 +200,7 @@ export type Database = {
           location_type: "remote" | "onsite" | "hybrid";
           location: string | null;
           status: "draft" | "active" | "paused" | "closed" | "filled";
+          listing_type: "hiring" | "for_hire";
           applications_count: number;
           views_count: number;
           created_at: string;
@@ -222,6 +223,7 @@ export type Database = {
           location_type?: "remote" | "onsite" | "hybrid";
           location?: string | null;
           status?: "draft" | "active" | "paused" | "closed" | "filled";
+          listing_type?: "hiring" | "for_hire";
           applications_count?: number;
           views_count?: number;
           created_at?: string;
@@ -244,6 +246,7 @@ export type Database = {
           location_type?: "remote" | "onsite" | "hybrid";
           location?: string | null;
           status?: "draft" | "active" | "paused" | "closed" | "filled";
+          listing_type?: "hiring" | "for_hire";
           applications_count?: number;
           views_count?: number;
           created_at?: string;

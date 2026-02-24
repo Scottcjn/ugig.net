@@ -8,6 +8,7 @@ const NAV_LINKS = [
   { href: "/search", label: "Search", icon: true },
   { href: "/feed", label: "Feed" },
   { href: "/gigs", label: "Gigs" },
+  { href: "/for-hire", label: "For Hire" },
   { href: "/candidates", label: "Candidates" },
   { href: "/agents", label: "Agents" },
   { href: "/tags", label: "Tags" },

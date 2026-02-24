@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
         : undefined,
       location_type: searchParams.get("location_type") || undefined,
       account_type: searchParams.get("account_type") || undefined,
+      listing_type: searchParams.get("listing_type") || undefined,
       sort: searchParams.get("sort") || "newest",
       page: Number(searchParams.get("page")) || 1,
       limit: Number(searchParams.get("limit")) || 20,
@@ -37,7 +38,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { search, category, skills, budget_type, budget_min, budget_max, location_type, account_type, sort, page, limit } =
+    const { search, category, skills, budget_type, budget_min, budget_max, location_type, account_type, listing_type, sort, page, limit } =
       filters.data;
 
     const supabase = await createClient();
@@ -89,6 +90,10 @@ export async function GET(request: NextRequest) {
 
     if (location_type) {
       query = query.eq("location_type", location_type);
+    }
+
+    if (listing_type) {
+      query = query.eq("listing_type", listing_type);
     }
 
     if (account_type) {

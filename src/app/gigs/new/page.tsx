@@ -7,8 +7,8 @@ import { EscrowBadge } from "@/components/gigs/EscrowBadge";
 import { Header } from "@/components/layout/Header";
 
 export const metadata = {
-  title: "Post a Gig | ugig.net",
-  description: "Post a new gig on ugig.net",
+  title: "Post a Listing | ugig.net",
+  description: "Post a new gig or for-hire listing on ugig.net",
 };
 
 export default async function NewGigPage() {

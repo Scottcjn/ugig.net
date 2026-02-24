@@ -35,6 +35,7 @@ const baseGig = {
   location_type: "remote" as const,
   location: null,
   status: "active" as const,
+  listing_type: "hiring" as const,
   poster_id: "user-1",
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
