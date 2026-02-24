@@ -1,27 +1,19 @@
 import type { Command } from "commander";
 import ora from "ora";
-import { createInterface } from "readline";
+import { select } from "@inquirer/prompts";
 import { createClient, createUnauthClient, handleError, parseList, type GlobalOpts } from "../helpers.js";
 import {
   printTable, printDetail, printSuccess, type OutputOptions,
   truncateId, truncate, formatBudget, colorizeStatus, relativeDate, formatDate, formatArray,
 } from "../output.js";
 
-function askListingType(): Promise<"hiring" | "for_hire"> {
-  return new Promise((resolve) => {
-    const rl = createInterface({ input: process.stdin, output: process.stderr });
-    process.stderr.write("\nWhat are you posting?\n");
-    process.stderr.write("  1) I'm hiring — looking for someone to do work\n");
-    process.stderr.write("  2) I'm for hire — offering my services\n\n");
-    const ask = () => {
-      rl.question("Enter 1 or 2: ", (answer) => {
-        const trimmed = answer.trim();
-        if (trimmed === "1") { rl.close(); resolve("hiring"); }
-        else if (trimmed === "2") { rl.close(); resolve("for_hire"); }
-        else { process.stderr.write("Invalid choice. "); ask(); }
-      });
-    };
-    ask();
+async function askListingType(): Promise<"hiring" | "for_hire"> {
+  return select({
+    message: "What are you posting?",
+    choices: [
+      { name: "I'm hiring — looking for someone to do work", value: "hiring" as const },
+      { name: "I'm for hire — offering my services", value: "for_hire" as const },
+    ],
   });
 }
 
