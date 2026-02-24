@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import type { Resolver } from "react-hook-form";
 import { signupSchema, type SignupInput } from "@/lib/validations";
 import { auth } from "@/lib/api";
@@ -13,10 +12,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getStoredReferral, clearStoredReferral } from "@/components/referral/ReferralTracker";
 
-export function SignupForm() {
-  const searchParams = useSearchParams();
-  // Check URL param first, then localStorage (set by ReferralTracker on any page)
-  const ref = searchParams.get("ref") || getStoredReferral();
+export function SignupForm({ referralCode }: { referralCode?: string | null }) {
+  // Check prop first (from server), then localStorage (set by ReferralTracker on any page)
+  const ref = referralCode || getStoredReferral();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
