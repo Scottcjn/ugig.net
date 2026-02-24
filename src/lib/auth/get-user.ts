@@ -42,9 +42,26 @@ export async function getAuthContext(
     };
   }
 
-  // Fall back to API key auth
+  // Try Bearer token auth (Supabase JWT via Authorization header)
   const authHeader = request.headers.get("authorization");
-  const apiKeyResult = await authenticateApiKey(authHeader);
+  if (authHeader?.startsWith("Bearer ") && !authHeader.slice(7).startsWith("ugig_live_")) {
+    const token = authHeader.slice(7);
+    const bearerClient = createSupabaseAdmin<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    const { data: { user: bearerUser }, error } = await bearerClient.auth.getUser(token);
+    if (bearerUser && !error) {
+      return {
+        user: { id: bearerUser.id, email: bearerUser.email, authMethod: "session" as const },
+        supabase: bearerClient,
+      };
+    }
+  }
+
+  // Fall back to API key auth
+  const apiKeyHeader = request.headers.get("x-api-key");
+  const apiKeyResult = await authenticateApiKey(authHeader, apiKeyHeader);
 
   if (apiKeyResult) {
     const serviceClient = createServiceClient();
