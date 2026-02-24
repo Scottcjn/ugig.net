@@ -39,7 +39,7 @@ describe("POST /api/auth/resend-confirmation", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.message).toContain("confirmation link has been sent");
-    expect(mockResend).toHaveBeenCalledWith({ type: "signup", email: "test@example.com" });
+    expect(mockResend).toHaveBeenCalledWith(expect.objectContaining({ type: "signup", email: "test@example.com" }));
   });
 
   it("should return same message even on error (no email leak)", async () => {

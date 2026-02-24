@@ -18,6 +18,10 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(() => Promise.resolve({ from: mockFrom })),
 }));
 
+vi.mock("@/lib/supabase/service", () => ({
+  createServiceClient: vi.fn(() => ({ from: mockFrom })),
+}));
+
 // ── Email mock ─────────────────────────────────────────────────────
 
 const mockSendEmail = vi.fn().mockResolvedValue({ success: true });
