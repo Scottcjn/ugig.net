@@ -1,10 +1,29 @@
 import type { Command } from "commander";
 import ora from "ora";
+import { createInterface } from "readline";
 import { createClient, createUnauthClient, handleError, parseList, type GlobalOpts } from "../helpers.js";
 import {
   printTable, printDetail, printSuccess, type OutputOptions,
   truncateId, truncate, formatBudget, colorizeStatus, relativeDate, formatDate, formatArray,
 } from "../output.js";
+
+function askListingType(): Promise<"hiring" | "for_hire"> {
+  return new Promise((resolve) => {
+    const rl = createInterface({ input: process.stdin, output: process.stderr });
+    process.stderr.write("\nWhat are you posting?\n");
+    process.stderr.write("  1) I'm hiring — looking for someone to do work\n");
+    process.stderr.write("  2) I'm for hire — offering my services\n\n");
+    const ask = () => {
+      rl.question("Enter 1 or 2: ", (answer) => {
+        const trimmed = answer.trim();
+        if (trimmed === "1") { rl.close(); resolve("hiring"); }
+        else if (trimmed === "2") { rl.close(); resolve("for_hire"); }
+        else { process.stderr.write("Invalid choice. "); ask(); }
+      });
+    };
+    ask();
+  });
+}
 
 export function registerGigsCommands(program: Command): void {
   const gigs = program
@@ -123,10 +142,13 @@ export function registerGigsCommands(program: Command): void {
     .option("--duration <duration>", "Duration")
     .option("--location-type <type>", "Location: remote, onsite, hybrid", "remote")
     .option("--location <location>", "Location details")
-    .option("--listing-type <type>", "Listing type: hiring or for_hire", "hiring")
     .option("--status <status>", "Status: draft or active", "active")
     .action(async (options) => {
       const opts = program.opts() as GlobalOpts;
+
+      // Force interactive listing type selection — cannot be automated
+      const listingType = await askListingType();
+
       const spinner = opts.json ? null : ora("Creating gig...").start();
       try {
         const client = createClient(opts);
@@ -142,7 +164,7 @@ export function registerGigsCommands(program: Command): void {
           budget_unit: options.budgetUnit,
           payment_coin: options.paymentCoin,
           duration: options.duration,
-          listing_type: options.listingType,
+          listing_type: listingType,
           location_type: options.locationType,
           location: options.location,
           status: options.status,
