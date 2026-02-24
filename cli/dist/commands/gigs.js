@@ -16,6 +16,7 @@ export function registerGigsCommands(program) {
         .option("--budget-max <max>", "Maximum budget", parseFloat)
         .option("--location-type <type>", "Filter: remote, onsite, hybrid")
         .option("--account-type <type>", "Filter: human or agent")
+        .option("--listing-type <type>", "Filter: hiring or for_hire")
         .option("--sort <sort>", "Sort: newest, oldest, budget_high, budget_low", "newest")
         .option("--page <n>", "Page number", (v) => Number(v), 1)
         .option("--limit <n>", "Results per page", (v) => Number(v), 20)
@@ -33,6 +34,7 @@ export function registerGigsCommands(program) {
                 budget_max: options.budgetMax,
                 location_type: options.locationType,
                 account_type: options.accountType,
+                listing_type: options.listingType,
                 sort: options.sort,
                 page: options.page,
                 limit: options.limit,
@@ -42,6 +44,7 @@ export function registerGigsCommands(program) {
             printTable([
                 { header: "ID", key: "id", width: 12, transform: truncateId },
                 { header: "Title", key: "title", width: 36, transform: truncate(34) },
+                { header: "Type", key: "listing_type", width: 10, transform: (v) => v === "for_hire" ? "For Hire" : "Hiring" },
                 { header: "Budget", key: "budget_type", transform: formatBudget },
                 { header: "Location", key: "location_type", width: 10 },
                 { header: "Status", key: "status", transform: colorizeStatus },
@@ -66,6 +69,7 @@ export function registerGigsCommands(program) {
             printDetail([
                 { label: "ID", key: "id" },
                 { label: "Title", key: "title" },
+                { label: "Listing Type", key: "listing_type", transform: (v) => v === "for_hire" ? "For Hire" : "Hiring" },
                 { label: "Status", key: "status", transform: (v) => colorizeStatus(v) },
                 { label: "Category", key: "category" },
                 { label: "Budget Type", key: "budget_type" },
@@ -104,6 +108,7 @@ export function registerGigsCommands(program) {
         .option("--duration <duration>", "Duration")
         .option("--location-type <type>", "Location: remote, onsite, hybrid", "remote")
         .option("--location <location>", "Location details")
+        .option("--listing-type <type>", "Listing type: hiring or for_hire", "hiring")
         .option("--status <status>", "Status: draft or active", "active")
         .action(async (options) => {
         const opts = program.opts();
@@ -122,6 +127,7 @@ export function registerGigsCommands(program) {
                 budget_unit: options.budgetUnit,
                 payment_coin: options.paymentCoin,
                 duration: options.duration,
+                listing_type: options.listingType,
                 location_type: options.locationType,
                 location: options.location,
                 status: options.status,
@@ -153,6 +159,7 @@ export function registerGigsCommands(program) {
         .option("--budget-max <max>", "Budget max", parseFloat)
         .option("--budget-unit <unit>", "Unit label for per_task/per_unit (e.g., post, tweet, image)")
         .option("--payment-coin <coin>", "Payment cryptocurrency (e.g., SOL, ETH, USDC, BTC)")
+        .option("--listing-type <type>", "Listing type: hiring or for_hire")
         .option("--duration <dur>", "Duration")
         .option("--location-type <type>", "Location type")
         .option("--location <loc>", "Location")
@@ -172,6 +179,8 @@ export function registerGigsCommands(program) {
                 body.skills_required = parseList(options.skills);
             if (options.aiTools !== undefined)
                 body.ai_tools_preferred = parseList(options.aiTools);
+            if (options.listingType !== undefined)
+                body.listing_type = options.listingType;
             if (options.budgetType !== undefined)
                 body.budget_type = options.budgetType;
             if (options.budgetMin !== undefined)
@@ -228,6 +237,7 @@ export function registerGigsCommands(program) {
             printTable([
                 { header: "ID", key: "id", width: 12, transform: truncateId },
                 { header: "Title", key: "title", width: 36, transform: truncate(34) },
+                { header: "Type", key: "listing_type", width: 10, transform: (v) => v === "for_hire" ? "For Hire" : "Hiring" },
                 { header: "Status", key: "status", transform: colorizeStatus },
                 { header: "Apps", key: "applications_count" },
                 { header: "Views", key: "views_count" },

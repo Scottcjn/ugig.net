@@ -12,6 +12,7 @@ export declare const signupSchema: z.ZodObject<{
     agent_version: z.ZodOptional<z.ZodString>;
     agent_operator_url: z.ZodOptional<z.ZodString>;
     agent_source_url: z.ZodOptional<z.ZodString>;
+    ref: z.ZodOptional<z.ZodString>;
 }, z.core.$strip>;
 export declare const loginSchema: z.ZodObject<{
     email: z.ZodString;
@@ -98,6 +99,10 @@ export declare const gigSchema: z.ZodObject<{
         filled: "filled";
         draft: "draft";
     }>>;
+    listing_type: z.ZodOptional<z.ZodEnum<{
+        hiring: "hiring";
+        for_hire: "for_hire";
+    }>>;
 }, z.core.$strip>;
 export declare const gigFiltersSchema: z.ZodObject<{
     search: z.ZodOptional<z.ZodString>;
@@ -123,6 +128,10 @@ export declare const gigFiltersSchema: z.ZodObject<{
     account_type: z.ZodOptional<z.ZodEnum<{
         human: "human";
         agent: "agent";
+    }>>;
+    listing_type: z.ZodOptional<z.ZodEnum<{
+        hiring: "hiring";
+        for_hire: "for_hire";
     }>>;
     sort: z.ZodDefault<z.ZodEnum<{
         newest: "newest";
@@ -166,7 +175,7 @@ export declare const portfolioItemSchema: z.ZodObject<{
     url: z.ZodUnion<[z.ZodNullable<z.ZodOptional<z.ZodString>>, z.ZodLiteral<"">]>;
     image_url: z.ZodUnion<[z.ZodNullable<z.ZodOptional<z.ZodString>>, z.ZodLiteral<"">]>;
     tags: z.ZodDefault<z.ZodArray<z.ZodString>>;
-    gig_id: z.ZodNullable<z.ZodOptional<z.ZodString>>;
+    gig_id: z.ZodUnion<[z.ZodNullable<z.ZodOptional<z.ZodString>>, z.ZodLiteral<"">]>;
 }, z.core.$strip>;
 export declare const portfolioItemUpdateSchema: z.ZodObject<{
     title: z.ZodOptional<z.ZodString>;
@@ -174,7 +183,7 @@ export declare const portfolioItemUpdateSchema: z.ZodObject<{
     url: z.ZodUnion<[z.ZodNullable<z.ZodOptional<z.ZodString>>, z.ZodLiteral<"">]>;
     image_url: z.ZodUnion<[z.ZodNullable<z.ZodOptional<z.ZodString>>, z.ZodLiteral<"">]>;
     tags: z.ZodOptional<z.ZodArray<z.ZodString>>;
-    gig_id: z.ZodNullable<z.ZodOptional<z.ZodString>>;
+    gig_id: z.ZodUnion<[z.ZodNullable<z.ZodOptional<z.ZodString>>, z.ZodLiteral<"">]>;
 }, z.core.$strip>;
 export declare const gigCommentSchema: z.ZodObject<{
     content: z.ZodString;
@@ -194,7 +203,7 @@ export declare const messageSchema: z.ZodObject<{
     content: z.ZodString;
 }, z.core.$strip>;
 export declare const conversationCreateSchema: z.ZodObject<{
-    gig_id: z.ZodNullable<z.ZodOptional<z.ZodString>>;
+    gig_id: z.ZodUnion<[z.ZodNullable<z.ZodOptional<z.ZodString>>, z.ZodLiteral<"">]>;
     recipient_id: z.ZodString;
 }, z.core.$strip>;
 export declare const createApiKeySchema: z.ZodObject<{

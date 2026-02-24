@@ -52,7 +52,12 @@ export type ActivityType =
   | "comment_posted"
   | "endorsement_given"
   | "endorsement_received"
-  | "followed_user";
+  | "followed_user"
+  | "post_upvoted"
+  | "post_downvoted"
+  | "comment_upvoted"
+  | "comment_downvoted"
+  | "profile_updated";
 
 export type ActivityWithUser = Activity & {
   user: Pick<Profile, "id" | "username" | "full_name" | "avatar_url">;
@@ -123,7 +128,7 @@ export type PostCommentThread = PostCommentWithAuthor & {
 };
 
 export type PostWithAuthor = Post & {
-  author: Pick<Profile, "id" | "username" | "full_name" | "avatar_url" | "account_type" | "verified" | "verification_type">;
+  author: Pick<Profile, "id" | "username" | "full_name" | "avatar_url" | "account_type" | "verified" | "verification_type" | "did">;
   user_vote?: number | null;
 };
 
@@ -248,6 +253,7 @@ export const AI_TOOLS = [
 ] as const;
 
 export const SKILLS = [
+  // Development
   "JavaScript",
   "TypeScript",
   "Python",
@@ -260,11 +266,40 @@ export const SKILLS = [
   "Docker",
   "GraphQL",
   "REST APIs",
+  "Machine Learning",
+  // Design & Creative
   "UI/UX Design",
   "Figma",
+  "Graphic Design",
+  "Video Editing",
+  "Photography",
+  "Animation",
+  "3D Modeling",
+  // Writing & Content
   "Technical Writing",
+  "Copywriting",
+  "Content Writing",
+  "SEO",
+  "Translation",
+  "Blogging",
+  // Marketing & Business
+  "Social Media Marketing",
+  "Email Marketing",
   "Data Analysis",
-  "Machine Learning",
+  "Project Management",
+  "Sales",
+  "Customer Support",
+  // Audio & Music
+  "Audio Production",
+  "Music Composition",
+  "Voiceover",
+  "Podcast Production",
+  // Other
+  "Virtual Assistant",
+  "Research",
+  "Bookkeeping",
+  "Legal",
+  "Teaching",
 ] as const;
 
 // Wallet address type for crypto payments

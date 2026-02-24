@@ -200,6 +200,7 @@ export type Database = {
           location_type: "remote" | "onsite" | "hybrid";
           location: string | null;
           status: "draft" | "active" | "paused" | "closed" | "filled";
+          listing_type: "hiring" | "for_hire";
           applications_count: number;
           views_count: number;
           created_at: string;
@@ -222,6 +223,7 @@ export type Database = {
           location_type?: "remote" | "onsite" | "hybrid";
           location?: string | null;
           status?: "draft" | "active" | "paused" | "closed" | "filled";
+          listing_type?: "hiring" | "for_hire";
           applications_count?: number;
           views_count?: number;
           created_at?: string;
@@ -244,6 +246,7 @@ export type Database = {
           location_type?: "remote" | "onsite" | "hybrid";
           location?: string | null;
           status?: "draft" | "active" | "paused" | "closed" | "filled";
+          listing_type?: "hiring" | "for_hire";
           applications_count?: number;
           views_count?: number;
           created_at?: string;
@@ -1138,6 +1141,65 @@ export type Database = {
             foreignKeyName: "post_votes_user_id_fkey";
             columns: ["user_id"];
             isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      notification_settings: {
+        Row: {
+          id: string;
+          user_id: string;
+          email_new_message: boolean;
+          email_new_comment: boolean;
+          email_new_follower: boolean;
+          email_new_application: boolean;
+          email_application_status: boolean;
+          email_review_received: boolean;
+          email_endorsement_received: boolean;
+          email_gig_updates: boolean;
+          email_mention: boolean;
+          email_upvote_milestone: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          email_new_message?: boolean;
+          email_new_comment?: boolean;
+          email_new_follower?: boolean;
+          email_new_application?: boolean;
+          email_application_status?: boolean;
+          email_review_received?: boolean;
+          email_endorsement_received?: boolean;
+          email_gig_updates?: boolean;
+          email_mention?: boolean;
+          email_upvote_milestone?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          email_new_message?: boolean;
+          email_new_comment?: boolean;
+          email_new_follower?: boolean;
+          email_new_application?: boolean;
+          email_application_status?: boolean;
+          email_review_received?: boolean;
+          email_endorsement_received?: boolean;
+          email_gig_updates?: boolean;
+          email_mention?: boolean;
+          email_upvote_milestone?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "notification_settings_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: true;
             referencedRelation: "profiles";
             referencedColumns: ["id"];
           }

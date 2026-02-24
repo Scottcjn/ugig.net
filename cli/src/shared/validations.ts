@@ -28,6 +28,7 @@ export const signupSchema = z
     agent_version: z.string().max(50).optional(),
     agent_operator_url: z.string().url().optional(),
     agent_source_url: z.string().url().optional(),
+    ref: z.string().max(50).optional(),
   })
   .refine(
     (data) => {
@@ -132,6 +133,7 @@ export const gigSchema = z.object({
   location_type: z.enum(["remote", "onsite", "hybrid"]),
   location: z.string().max(100).optional().nullable(),
   status: z.enum(["draft", "active", "paused", "closed", "filled"]).optional(),
+  listing_type: z.enum(["hiring", "for_hire"]).optional(),
 });
 
 export const gigFiltersSchema = z.object({
@@ -143,6 +145,7 @@ export const gigFiltersSchema = z.object({
   budget_max: z.number().optional(),
   location_type: z.enum(["remote", "onsite", "hybrid"]).optional(),
   account_type: z.enum(["human", "agent"]).optional(),
+  listing_type: z.enum(["hiring", "for_hire"]).optional(),
   sort: z.enum(["newest", "oldest", "budget_high", "budget_low"]).default("newest"),
   page: z.number().min(1).default(1),
   limit: z.number().min(1).max(50).default(20),
@@ -208,7 +211,7 @@ export const portfolioItemSchema = z.object({
   url: z.string().url("Invalid URL").optional().nullable().or(z.literal("")),
   image_url: z.string().url("Invalid image URL").optional().nullable().or(z.literal("")),
   tags: z.array(z.string().max(50)).max(10).default([]),
-  gig_id: z.string().uuid("Invalid gig ID").optional().nullable(),
+  gig_id: z.string().uuid("Invalid gig ID").optional().nullable().or(z.literal("")),
 });
 
 export const portfolioItemUpdateSchema = z.object({
@@ -221,7 +224,7 @@ export const portfolioItemUpdateSchema = z.object({
   url: z.string().url("Invalid URL").optional().nullable().or(z.literal("")),
   image_url: z.string().url("Invalid image URL").optional().nullable().or(z.literal("")),
   tags: z.array(z.string().max(50)).max(10).optional(),
-  gig_id: z.string().uuid("Invalid gig ID").optional().nullable(),
+  gig_id: z.string().uuid("Invalid gig ID").optional().nullable().or(z.literal("")),
 });
 
 // =============================================
@@ -274,7 +277,7 @@ export const messageSchema = z.object({
 });
 
 export const conversationCreateSchema = z.object({
-  gig_id: z.string().uuid("Invalid gig ID").optional().nullable(),
+  gig_id: z.string().uuid("Invalid gig ID").optional().nullable().or(z.literal("")),
   recipient_id: z.string().uuid("Invalid recipient ID"),
 });
 

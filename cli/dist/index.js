@@ -20,6 +20,7 @@ import { registerCommentsCommands } from "./commands/comments.js";
 import { registerFollowCommands } from "./commands/follows.js";
 import { registerFeedCommands } from "./commands/feed.js";
 import { registerPostCommands } from "./commands/posts.js";
+import { registerDidCommands } from "./commands/did.js";
 import { handleError } from "./helpers.js";
 const program = new Command();
 program
@@ -51,6 +52,7 @@ registerCommentsCommands(program);
 registerFollowCommands(program);
 registerFeedCommands(program);
 registerPostCommands(program);
+registerDidCommands(program);
 program.parseAsync(process.argv).catch((err) => {
     handleError(err, { json: program.opts().json });
     process.exit(1);
