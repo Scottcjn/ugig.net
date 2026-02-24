@@ -133,7 +133,7 @@ export const gigSchema = z.object({
   location_type: z.enum(["remote", "onsite", "hybrid"]),
   location: z.string().max(100).optional().nullable(),
   status: z.enum(["draft", "active", "paused", "closed", "filled"]).optional(),
-  listing_type: z.enum(["hiring", "for_hire"]).default("hiring"),
+  listing_type: z.enum(["hiring", "for_hire"]).optional(),
 });
 
 export const gigFiltersSchema = z.object({

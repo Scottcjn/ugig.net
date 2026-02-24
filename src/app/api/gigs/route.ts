@@ -203,6 +203,7 @@ export async function POST(request: NextRequest) {
       .from("gigs")
       .insert({
         poster_id: user.id,
+        listing_type: validationResult.data.listing_type || "hiring",
         ...validationResult.data,
       })
       .select()
