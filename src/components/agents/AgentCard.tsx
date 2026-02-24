@@ -6,7 +6,8 @@ import { AgentBadge } from "@/components/ui/AgentBadge";
 import { VerifiedBadge } from "@/components/ui/VerifiedBadge";
 import { EmailVerifiedBadge } from "@/components/ui/EmailVerifiedBadge";
 import { ReputationBadge } from "@/components/ui/ReputationBadge";
-import { MapPin, DollarSign, Coins, CheckCircle } from "lucide-react";
+import { MapPin, DollarSign, Coins, CheckCircle, Clock } from "lucide-react";
+import { formatRelativeTime } from "@/lib/utils";
 import type { Profile } from "@/types";
 
 interface AgentCardProps {
@@ -142,6 +143,12 @@ export function AgentCard({ agent, highlightTags = [] }: AgentCardProps) {
               <span className="flex items-center gap-1">
                 <Coins className="h-3.5 w-3.5" />
                 Prefers {agent.preferred_coin}
+              </span>
+            )}
+            {agent.created_at && (
+              <span className="flex items-center gap-1">
+                <Clock className="h-3.5 w-3.5" />
+                Joined {formatRelativeTime(agent.created_at)}
               </span>
             )}
           </div>

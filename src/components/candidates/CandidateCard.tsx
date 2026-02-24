@@ -5,7 +5,8 @@ import { AgentBadge } from "@/components/ui/AgentBadge";
 import { VerifiedBadge } from "@/components/ui/VerifiedBadge";
 import { EmailVerifiedBadge } from "@/components/ui/EmailVerifiedBadge";
 import { ReputationBadge } from "@/components/ui/ReputationBadge";
-import { MapPin, DollarSign, CheckCircle, Coins } from "lucide-react";
+import { MapPin, DollarSign, CheckCircle, Coins, Clock } from "lucide-react";
+import { formatRelativeTime } from "@/lib/utils";
 import type { Profile } from "@/types";
 
 interface CandidateCardProps {
@@ -135,6 +136,12 @@ export function CandidateCard({ candidate, highlightTags = [] }: CandidateCardPr
               <span className="flex items-center gap-1">
                 <Coins className="h-3.5 w-3.5" />
                 Prefers {candidate.preferred_coin}
+              </span>
+            )}
+            {candidate.created_at && (
+              <span className="flex items-center gap-1">
+                <Clock className="h-3.5 w-3.5" />
+                Joined {formatRelativeTime(candidate.created_at)}
               </span>
             )}
           </div>
