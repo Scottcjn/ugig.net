@@ -18,6 +18,7 @@ import { Header } from "@/components/layout/Header";
 import { GigComments } from "@/components/gigs/GigComments";
 import { AddToPortfolioPrompt } from "@/components/portfolio/AddToPortfolioPrompt";
 import { EscrowBadge } from "@/components/gigs/EscrowBadge";
+import { CloseGigButton } from "@/components/gigs/CloseGigButton";
 
 interface GigPageProps {
   params: Promise<{ id: string }>;
@@ -286,6 +287,7 @@ export default async function GigPage({ params }: GigPageProps) {
                         View Applications ({gig.applications_count})
                       </Button>
                     </Link>
+                    <CloseGigButton gigId={id} status={gig.status} />
                   </div>
                 )}
               </div>
