@@ -4,13 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { GigActions } from "@/components/gigs/GigActions";
-import {
-  Plus,
-  ArrowLeft,
-  Eye,
-  Users,
-  Briefcase,
-} from "lucide-react";
+import { Plus, ArrowLeft, Eye, Users, Briefcase, Archive } from "lucide-react";
 import { AddToPortfolioPrompt } from "@/components/portfolio/AddToPortfolioPrompt";
 
 export const metadata = {
@@ -18,8 +12,14 @@ export const metadata = {
   description: "Manage your posted gigs",
 };
 
-export default async function MyGigsPage() {
+interface MyGigsPageProps {
+  searchParams: Promise<{ tab?: string }>;
+}
+
+export default async function MyGigsPage({ searchParams }: MyGigsPageProps) {
   const supabase = await createClient();
+  const { tab } = await searchParams;
+  const activeTab = tab === "archived" ? "archived" : "active";
 
   const {
     data: { user },
@@ -36,6 +36,11 @@ export default async function MyGigsPage() {
     .eq("poster_id", user.id)
     .order("created_at", { ascending: false });
 
+  const allGigs = gigs || [];
+  const activeGigs = allGigs.filter((g) => ["draft", "active", "paused"].includes(g.status));
+  const archivedGigs = allGigs.filter((g) => ["closed", "filled"].includes(g.status));
+  const visibleGigs = activeTab === "archived" ? archivedGigs : activeGigs;
+
   const statusColors: Record<string, string> = {
     draft: "bg-gray-500/10 text-gray-600",
     active: "bg-green-500/10 text-green-600",
@@ -46,7 +51,6 @@ export default async function MyGigsPage() {
 
   return (
     <div>
-
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
           <Link
@@ -72,9 +76,23 @@ export default async function MyGigsPage() {
             </Link>
           </div>
 
-          {gigs && gigs.length > 0 ? (
+          <div className="flex items-center gap-2 mb-6">
+            <Link href="/dashboard/gigs">
+              <Button variant={activeTab === "active" ? "default" : "outline"} size="sm">
+                Active ({activeGigs.length})
+              </Button>
+            </Link>
+            <Link href="/dashboard/gigs?tab=archived">
+              <Button variant={activeTab === "archived" ? "default" : "outline"} size="sm">
+                <Archive className="h-4 w-4 mr-2" />
+                Archived / Closed ({archivedGigs.length})
+              </Button>
+            </Link>
+          </div>
+
+          {visibleGigs.length > 0 ? (
             <div className="space-y-4">
-              {gigs.map((gig) => (
+              {visibleGigs.map((gig) => (
                 <div
                   key={gig.id}
                   className="p-6 bg-card rounded-lg border border-border shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-200"
@@ -123,14 +141,12 @@ export default async function MyGigsPage() {
                     <GigActions gigId={gig.id} status={gig.status} />
                   </div>
 
-                  {/* Portfolio suggestion for filled gigs */}
                   {gig.status === "filled" && (
                     <div className="mt-4">
                       <AddToPortfolioPrompt gigId={gig.id} gigTitle={gig.title} />
                     </div>
                   )}
 
-                  {/* Quick stats bar */}
                   <div className="mt-4 pt-4 border-t border-border grid grid-cols-3 gap-4 text-center">
                     <div>
                       <p className="text-lg font-semibold">{gig.budget_min ? `$${gig.budget_min}` : "-"}</p>
@@ -151,14 +167,18 @@ export default async function MyGigsPage() {
           ) : (
             <div className="text-center py-16 bg-card rounded-lg border border-border shadow-sm">
               <Briefcase className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No gigs posted yet</h3>
+              <h3 className="text-lg font-semibold mb-2">
+                {activeTab === "archived" ? "No archived gigs yet" : "No active gigs"}
+              </h3>
               <p className="text-muted-foreground mb-6">
-                Post your first gig to start finding AI-powered professionals
+                {activeTab === "archived"
+                  ? "Closed gigs will appear here."
+                  : "Post or activate a gig to start finding AI-powered professionals."}
               </p>
               <Link href="/gigs/new">
                 <Button>
                   <Plus className="h-4 w-4 mr-2" />
-                  Post Your First Gig
+                  Post New Gig
                 </Button>
               </Link>
             </div>

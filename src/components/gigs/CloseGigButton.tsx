@@ -22,7 +22,7 @@ export function CloseGigButton({ gigId, status }: CloseGigButtonProps) {
 
   const handleCloseGig = async () => {
     const ok = window.confirm(
-      "Close this gig? It will no longer accept applications."
+      "Archive this gig? It will be marked closed and no longer accept applications."
     );
     if (!ok) return;
 
@@ -51,12 +51,12 @@ export function CloseGigButton({ gigId, status }: CloseGigButtonProps) {
         {isLoading ? (
           <>
             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            Closing...
+            Archiving...
           </>
         ) : (
           <>
             <XCircle className="h-4 w-4 mr-2" />
-            Close Gig
+            Archive Gig
           </>
         )}
       </Button>

@@ -23,7 +23,7 @@ describe("CloseGigButton", () => {
 
   it("renders for active gig", () => {
     render(<CloseGigButton gigId="gig-1" status="active" />);
-    expect(screen.getByRole("button", { name: /close gig/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /archive gig/i })).toBeInTheDocument();
   });
 
   it("does not render for closed gig", () => {
@@ -35,7 +35,7 @@ describe("CloseGigButton", () => {
     mockUpdateStatus.mockResolvedValue({ success: true });
 
     render(<CloseGigButton gigId="gig-1" status="active" />);
-    fireEvent.click(screen.getByRole("button", { name: /close gig/i }));
+    fireEvent.click(screen.getByRole("button", { name: /archive gig/i }));
 
     await waitFor(() => {
       expect(mockUpdateStatus).toHaveBeenCalledWith("gig-1", "closed");
@@ -47,7 +47,7 @@ describe("CloseGigButton", () => {
     mockUpdateStatus.mockResolvedValue({ error: "Forbidden" });
 
     render(<CloseGigButton gigId="gig-1" status="active" />);
-    fireEvent.click(screen.getByRole("button", { name: /close gig/i }));
+    fireEvent.click(screen.getByRole("button", { name: /archive gig/i }));
 
     expect(await screen.findByText("Forbidden")).toBeInTheDocument();
   });
