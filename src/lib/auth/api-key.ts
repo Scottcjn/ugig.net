@@ -11,17 +11,41 @@ export type ApiKeyAuthResult = {
  * Authenticate a request using an API key from the Authorization header.
  * Returns the user ID and key ID if valid, null otherwise.
  */
+function isLikelyApiKey(value: string | null | undefined): value is string {
+  if (!value) return false;
+  const v = value.trim();
+  return /^ugig_[a-z]+_/i.test(v);
+}
+
+function extractApiKey(
+  authHeader: string | null,
+  apiKeyHeader?: string | null
+): string | null {
+  const headerKey = apiKeyHeader?.trim() || null;
+  if (isLikelyApiKey(headerKey)) {
+    return headerKey;
+  }
+
+  if (!authHeader) return null;
+  const trimmed = authHeader.trim();
+
+  // Support common auth schemes used by API clients
+  const patterns = [/^Bearer\s+(.+)$/i, /^ApiKey\s+(.+)$/i, /^Token\s+(.+)$/i];
+  for (const pattern of patterns) {
+    const match = trimmed.match(pattern);
+    if (match && isLikelyApiKey(match[1])) {
+      return match[1].trim();
+    }
+  }
+
+  return null;
+}
+
 export async function authenticateApiKey(
   authHeader: string | null,
   apiKeyHeader?: string | null
 ): Promise<ApiKeyAuthResult | null> {
-  // Determine the raw key from X-API-Key header or Authorization header
-  let rawKey: string | null = null;
-  if (apiKeyHeader?.startsWith("ugig_live_")) {
-    rawKey = apiKeyHeader;
-  } else if (authHeader?.startsWith("Bearer ") && authHeader.slice(7).startsWith("ugig_live_")) {
-    rawKey = authHeader.slice(7);
-  }
+  const rawKey = extractApiKey(authHeader, apiKeyHeader);
 
   if (!rawKey) {
     return null;

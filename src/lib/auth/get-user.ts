@@ -1,7 +1,10 @@
 import { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { authenticateApiKey } from "./api-key";
-import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
+import {
+  createServiceClient as createServiceRoleClient,
+  authenticateWithToken,
+} from "@/lib/supabase/service";
 import type { Database } from "@/types/database";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -44,19 +47,16 @@ export async function getAuthContext(
 
   // Try Bearer token auth (Supabase JWT via Authorization header)
   const authHeader = request.headers.get("authorization");
-  if (authHeader?.startsWith("Bearer ") && !authHeader.slice(7).startsWith("ugig_live_")) {
-    const token = authHeader.slice(7);
-    const bearerClient = createSupabaseAdmin<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-    const { data: { user: bearerUser }, error } = await bearerClient.auth.getUser(token);
-    if (bearerUser && !error) {
-      return {
-        user: { id: bearerUser.id, email: bearerUser.email, authMethod: "session" as const },
-        supabase: bearerClient,
-      };
-    }
+  const tokenAuth = await authenticateWithToken(authHeader);
+  if (tokenAuth) {
+    return {
+      user: {
+        id: tokenAuth.user.id,
+        email: tokenAuth.user.email,
+        authMethod: "session",
+      },
+      supabase: tokenAuth.supabase,
+    };
   }
 
   // Fall back to API key auth
@@ -64,7 +64,7 @@ export async function getAuthContext(
   const apiKeyResult = await authenticateApiKey(authHeader, apiKeyHeader);
 
   if (apiKeyResult) {
-    const serviceClient = createServiceClient();
+    const serviceClient = createServiceRoleClient();
     return {
       user: {
         id: apiKeyResult.userId,
@@ -78,12 +78,9 @@ export async function getAuthContext(
 }
 
 /**
- * Create a Supabase client with service role (admin) privileges.
- * Used for API key authenticated requests where there is no user session.
+ * Backward-compatible export used by several routes.
  */
 export function createServiceClient() {
-  return createSupabaseAdmin<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  return createServiceRoleClient();
 }
+
