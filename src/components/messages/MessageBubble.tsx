@@ -23,7 +23,7 @@ export function MessageBubble({
     const parts = text.split(urlRegex);
     return parts.map((part, i) =>
       urlRegex.test(part) ? (
-        <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-blue-400 underline" onClick={(e) => e.stopPropagation()}>
+        <a key={i} href={part} target="_blank" rel="noopener noreferrer" className={isOwn ? "text-white underline" : "text-blue-400 underline"} onClick={(e) => e.stopPropagation()}>
           {part}
         </a>
       ) : (
