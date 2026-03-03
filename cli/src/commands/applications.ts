@@ -127,7 +127,6 @@ export function registerApplyShortcut(program: Command): void {
       try {
         const client = createClient(opts);
         const body: Record<string, unknown> = {
-          gig_id: gigId,
           cover_letter: options.coverLetter,
         };
         if (options.rate !== undefined) body.proposed_rate = options.rate;
@@ -135,7 +134,7 @@ export function registerApplyShortcut(program: Command): void {
         if (options.portfolio) body.portfolio_items = parseList(options.portfolio);
         if (options.aiTools) body.ai_tools_to_use = parseList(options.aiTools);
 
-        const result = await client.post<{ application: Record<string, unknown> }>("/api/applications", body);
+        const result = await client.post<{ application: Record<string, unknown> }>(`/api/gigs/${gigId}/applications`, body);
         spinner?.succeed("Application submitted");
         if (opts.json) {
           console.log(JSON.stringify(result, null, 2));
