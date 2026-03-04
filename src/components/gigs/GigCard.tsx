@@ -151,6 +151,13 @@ export function GigCard({
           {formatRelativeTime(gig.created_at)}
         </span>
       </div>
+
+      {/* Zap */}
+      {gig.poster?.id && (
+        <div className="mt-3" onClick={(e) => e.preventDefault()}>
+          <ZapButton targetType="gig" targetId={gig.id} recipientId={gig.poster.id} />
+        </div>
+      )}
     </Link>
   );
 }
