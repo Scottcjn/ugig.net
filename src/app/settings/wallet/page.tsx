@@ -137,7 +137,7 @@ export default function WalletPage() {
             if (data.balance_sats !== undefined) {
               setBalance(data.balance_sats);
               refreshTransactions();
-              alert(\`Synced \${data.synced} payment(s), +\${data.credited_sats} sats\`);
+              alert(`Synced ${data.synced} payment(s), +${data.credited_sats} sats`);
             } else {
               refreshTransactions();
               alert(data.message || "Already in sync");
