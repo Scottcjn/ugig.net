@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PlatformBalance } from "@/components/zaps/PlatformBalance";
 import { Github } from "lucide-react";
 import { EscrowBadge } from "@/components/gigs/EscrowBadge";
 
@@ -134,6 +135,7 @@ export function Footer() {
               </svg>
             </a>
             <EscrowBadge variant="compact" />
+            <PlatformBalance />
             <p className="text-sm text-muted-foreground">Built for the AI era.</p>
           </div>
         </div>
