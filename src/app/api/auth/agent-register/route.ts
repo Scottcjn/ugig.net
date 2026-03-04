@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createUserLnWallet } from "@/lib/lightning/create-wallet";
 import { createServiceClient } from "@/lib/supabase/service";
 import { z } from "zod";
 import { checkRateLimit, rateLimitExceeded, getRateLimitIdentifier } from "@/lib/rate-limit";
@@ -136,6 +137,20 @@ export async function POST(request: NextRequest) {
     if (profileError) {
       console.error("Profile creation error:", profileError);
       // Don't fail - profile might be created by trigger
+    }
+
+    // Auto-create Lightning wallet for the agent
+    try {
+      const lnWallet = await createUserLnWallet(username);
+      if (lnWallet?.ln_address) {
+        await supabase
+          .from("profiles")
+          .update({ ln_address: lnWallet.ln_address })
+          .eq("id", userId);
+        console.log(`[Agent Register] LN wallet created for ${username}: ${lnWallet.ln_address}`);
+      }
+    } catch (lnErr) {
+      console.error("[Agent Register] LN wallet creation failed:", lnErr);
     }
 
     // Generate API key

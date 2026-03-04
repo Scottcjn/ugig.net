@@ -17,6 +17,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { sendEmail, welcomeEmail } from "@/lib/email";
 import { generateAndStoreDid } from "@/lib/auth/did";
+import { createUserLnWallet } from "@/lib/lightning/create-wallet";
 
 export async function POST(request: NextRequest) {
   try {
@@ -81,6 +82,24 @@ export async function POST(request: NextRequest) {
       } catch (didErr) {
         // Non-fatal — don't block signup if DID claim fails
         console.error("[Auth Confirmed] DID claim failed:", didErr);
+      }
+    }
+
+    // Auto-create Lightning wallet for the user
+    const username = profile?.username;
+    if (username) {
+      try {
+        const lnWallet = await createUserLnWallet(username);
+        if (lnWallet?.ln_address) {
+          await supabase
+            .from("profiles")
+            .update({ ln_address: lnWallet.ln_address })
+            .eq("id", userId);
+          console.log(`[Auth Confirmed] LN wallet created for ${username}: ${lnWallet.ln_address}`);
+        }
+      } catch (lnErr) {
+        // Non-fatal — don't block signup if LN wallet creation fails
+        console.error("[Auth Confirmed] LN wallet creation failed:", lnErr);
       }
     }
 
