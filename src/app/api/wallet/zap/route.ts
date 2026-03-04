@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
     // Notify recipient
     const { data: recipientProfile } = await admin
       .from("profiles")
-      .select("ln_address, username" as any)
+      .select("ln_address, username")
       .eq("id", recipient_id)
       .single();
 
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
 
     const senderName = senderProfile?.username || "Someone";
 
-    if ((recipientProfile as any)?.ln_address) {
+    if (recipientProfile?.ln_address) {
       await admin.from("notifications").insert({
         user_id: recipient_id,
         type: "zap_received",

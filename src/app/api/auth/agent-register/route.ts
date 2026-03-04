@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
       if (lnWallet?.ln_address) {
         await supabase
           .from("profiles")
-          .update({ ln_address: lnWallet.ln_address } as any)
+          .update({ ln_address: lnWallet.ln_address })
           .eq("id", userId);
         console.log(`[Agent Register] LN wallet created for ${username}: ${lnWallet.ln_address}`);
       }
