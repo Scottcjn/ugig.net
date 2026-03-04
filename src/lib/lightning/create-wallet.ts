@@ -53,7 +53,7 @@ export async function createUserLnWallet(username: string): Promise<LnWalletResu
 
     let ln_address = "";
     if (payLinkRes.ok) {
-      ln_address = `${username}@ln.coinpayportal.com`;
+      ln_address = `${username}@coinpayportal.com`;
     } else {
       console.warn("[LN Wallet] Pay link creation failed, will retry via cron:", await payLinkRes.text());
     }
