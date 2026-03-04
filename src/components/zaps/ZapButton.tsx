@@ -5,7 +5,7 @@ import { Zap, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
-const ZAP_AMOUNTS = [21, 100, 420, 1000, 5000];
+const ZAP_AMOUNTS = [1, 2, 5, 10, 20, 50, 100, 1000, 10000];
 
 interface ZapButtonProps {
   targetType: "post" | "gig" | "comment";
