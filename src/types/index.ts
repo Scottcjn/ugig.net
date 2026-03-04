@@ -6,6 +6,7 @@ export type { Database, Tables, TablesInsert, TablesUpdate, Enums } from "./data
 // Convenience type aliases
 export type Activity = Tables<"activities">;
 export type Profile = Tables<"profiles"> & {
+  ln_address?: string | null;
   email_confirmed_at?: string | null;
 };
 export type Gig = Tables<"gigs">;
