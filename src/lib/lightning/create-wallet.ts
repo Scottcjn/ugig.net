@@ -33,8 +33,21 @@ export async function createUserLnWallet(username: string, supabase?: any, userI
     const wallet = await res.json();
 
     // Create a pay link (lightning address) for the wallet
-    // Wait briefly for extensions to be available
-    await new Promise((r) => setTimeout(r, 2000));
+    // Wait for lnurlp extension (systemd timer auto-enables every 10s)
+    const start = Date.now();
+    let extReady = false;
+    while (Date.now() - start < 15000) {
+      try {
+        const check = await fetch(`${LNBITS_URL}/lnurlp/api/v1/links`, {
+          headers: { "X-Api-Key": wallet.adminkey },
+        });
+        if (check.status === 200) { extReady = true; break; }
+      } catch {}
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+    if (!extReady) {
+      console.warn("[LN Wallet] lnurlp not enabled after 15s");
+    }
 
     const payLinkRes = await fetch(`${LNBITS_URL}/lnurlp/api/v1/links`, {
       method: "POST",

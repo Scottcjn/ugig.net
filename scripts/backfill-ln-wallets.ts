@@ -34,11 +34,23 @@ async function createWallet(username: string) {
 
   const wallet = await res.json();
 
-  // Wait for extensions to be available on new wallet
-  await new Promise((r) => setTimeout(r, 3000));
+  // Wait for lnurlp extension to be enabled (systemd timer auto-enables every 10s)
+  const start = Date.now();
+  let extReady = false;
+  while (Date.now() - start < 15000) {
+    const check = await fetch(`${LNBITS_URL}/lnurlp/api/v1/links`, {
+      headers: { "X-Api-Key": wallet.adminkey },
+    });
+    if (check.status === 200) { extReady = true; break; }
+    await new Promise((r) => setTimeout(r, 2000));
+  }
 
-  // Create pay link (with retry)
-  let payRes = await fetch(`${LNBITS_URL}/lnurlp/api/v1/links`, {
+  if (!extReady) {
+    console.error("  [WARN] lnurlp not enabled after 15s, skipping pay link");
+  }
+
+  // Create pay link
+  let payRes = extReady ? await fetch(`${LNBITS_URL}/lnurlp/api/v1/links`, {
     method: "POST",
     headers: { "X-Api-Key": wallet.adminkey, "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -48,31 +60,12 @@ async function createWallet(username: string) {
       comment_chars: 255,
       username: `${username}-ugig`,
     }),
-  });
-
-  // Retry once after longer delay if extension not ready
-  if (!payRes.ok) {
-    const errCheck = await payRes.text();
-    if (errCheck.includes("not enabled")) {
-      await new Promise((r) => setTimeout(r, 5000));
-      payRes = await fetch(`${LNBITS_URL}/lnurlp/api/v1/links`, {
-        method: "POST",
-        headers: { "X-Api-Key": wallet.adminkey, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          description: `ugig.net wallet for ${username}`,
-          min: 1,
-          max: 10000000,
-          comment_chars: 255,
-          username: `${username}-ugig`,
-        }),
-      });
-    }
-  }
+  }) : null;
 
   let ln_address = "";
-  if (payRes.ok) {
+  if (payRes?.ok) {
     ln_address = `${username}-ugig@coinpayportal.com`;
-  } else {
+  } else if (payRes) {
     let errText = "";
     try { errText = await payRes.text(); } catch {}
     if (errText.includes("already") || errText.includes("unique")) {
