@@ -7,6 +7,9 @@
  * Requires: LNBITS_URL, LNBITS_ADMIN_KEY, NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
  */
 
+import { config } from "dotenv";
+config();
+config({ path: ".env.local", override: true });
 import { createClient } from "@supabase/supabase-js";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
