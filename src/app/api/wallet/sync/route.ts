@@ -13,9 +13,16 @@ export async function POST(request: NextRequest) {
     const admin = createServiceClient();
     const userId = auth.user.id;
 
+    // Use user's personal wallet key if available
+    const { data: userWallet } = await admin.from("user_ln_wallets" as any)
+      .select("invoice_key")
+      .eq("user_id", userId)
+      .single() as any;
+    const invoiceKey = userWallet?.invoice_key || LNBITS_INVOICE_KEY;
+
     // Get recent incoming payments from LNbits
     const lnRes = await fetch(`${LNBITS_URL}/api/v1/payments?limit=20`, {
-      headers: { "X-Api-Key": LNBITS_INVOICE_KEY },
+      headers: { "X-Api-Key": invoiceKey },
     });
     if (!lnRes.ok) return NextResponse.json({ error: "Failed to fetch LNbits payments" }, { status: 502 });
 
@@ -30,15 +37,29 @@ export async function POST(request: NextRequest) {
       const bolt11 = p.bolt11 || p.payment_request || "";
       const amount_sats = Math.abs(p.amount / 1000);
 
-      // Check if already tracked by payment_hash
+      // Check if this payment_hash exists globally (not per-user)
       const { data: byHash } = await admin.from("wallet_transactions" as any)
-        .select("id").eq("user_id", userId).eq("payment_hash", hash).single() as any;
-      if (byHash) continue;
+        .select("id, status")
+        .eq("payment_hash", hash)
+        .single() as any;
 
-      // Check by bolt11
+      if (byHash) {
+        if (byHash.status === "pending") {
+          await admin.from("wallet_transactions" as any)
+            .update({ status: "completed" }).eq("id", byHash.id);
+          synced++;
+          totalSats += amount_sats;
+        }
+        continue;
+      }
+
+      // Check by bolt11 globally
       if (bolt11) {
         const { data: byBolt } = await admin.from("wallet_transactions" as any)
-          .select("id, status").eq("user_id", userId).eq("bolt11", bolt11).single() as any;
+          .select("id, status")
+          .eq("bolt11", bolt11)
+          .single() as any;
+
         if (byBolt) {
           if (byBolt.status === "pending") {
             await admin.from("wallet_transactions" as any)
@@ -50,7 +71,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Insert missing transaction
+      // Truly new payment not in DB
       await admin.from("wallet_transactions" as any).insert({
         user_id: userId, type: "deposit", amount_sats,
         balance_after: 0, bolt11, payment_hash: hash, status: "completed",
