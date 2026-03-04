@@ -34,16 +34,11 @@ async function createWallet(username: string) {
 
   const wallet = await res.json();
 
-  // Enable lnurlp extension for this wallet
-  await fetch(`${LNBITS_URL}/api/v1/extensions`, {
-    method: "POST",
-    headers: { "X-Api-Key": wallet.adminkey, "Content-Type": "application/json" },
-    body: JSON.stringify({ extension: "lnurlp", active: true }),
-  });
-  await new Promise((r) => setTimeout(r, 1000));
+  // Wait for extensions to be available on new wallet
+  await new Promise((r) => setTimeout(r, 3000));
 
-  // Create pay link
-  const payRes = await fetch(`${LNBITS_URL}/lnurlp/api/v1/links`, {
+  // Create pay link (with retry)
+  let payRes = await fetch(`${LNBITS_URL}/lnurlp/api/v1/links`, {
     method: "POST",
     headers: { "X-Api-Key": wallet.adminkey, "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -55,11 +50,31 @@ async function createWallet(username: string) {
     }),
   });
 
+  // Retry once after longer delay if extension not ready
+  if (!payRes.ok) {
+    const errCheck = await payRes.text();
+    if (errCheck.includes("not enabled")) {
+      await new Promise((r) => setTimeout(r, 5000));
+      payRes = await fetch(`${LNBITS_URL}/lnurlp/api/v1/links`, {
+        method: "POST",
+        headers: { "X-Api-Key": wallet.adminkey, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          description: `ugig.net wallet for ${username}`,
+          min: 1,
+          max: 10000000,
+          comment_chars: 255,
+          username: `${username}-ugig`,
+        }),
+      });
+    }
+  }
+
   let ln_address = "";
   if (payRes.ok) {
     ln_address = `${username}-ugig@coinpayportal.com`;
   } else {
-    const errText = await payRes.text();
+    let errText = "";
+    try { errText = await payRes.text(); } catch {}
     if (errText.includes("already") || errText.includes("unique")) {
       ln_address = `${username}-ugig@coinpayportal.com`;
       console.log(`  [WARN] Pay link already exists, reusing`);
