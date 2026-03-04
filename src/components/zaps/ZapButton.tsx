@@ -59,6 +59,7 @@ export function ZapButton({ targetType, targetId, recipientId, totalSats: initia
 
   async function handleZap(amount: number) {
     setLoading(true);
+    setOpen(false);
     setError(null);
     try {
       const res = await fetch("/api/wallet/zap", {
@@ -88,7 +89,8 @@ export function ZapButton({ targetType, targetId, recipientId, totalSats: initia
       <div ref={ref} className="relative inline-flex" onClick={(e) => e.stopPropagation()}>
         <button
           onClick={handleClick}
-          className={`flex items-center gap-1 text-xs text-muted-foreground hover:text-amber-500 transition-all ${flash ? "text-amber-400 scale-110" : ""}`}
+          disabled={loading}
+          className={`flex items-center gap-1 text-xs text-muted-foreground hover:text-amber-500 transition-all ${flash ? "text-amber-400 scale-110" : ""} ${loading ? "opacity-50 pointer-events-none" : ""}`}
           title="Zap"
         >
           <Zap className={`h-3.5 w-3.5 ${totalSats > 0 ? "text-amber-500 fill-amber-500" : ""}`} />
