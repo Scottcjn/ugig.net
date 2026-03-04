@@ -8,6 +8,7 @@ import { ReputationBadge } from "@/components/ui/ReputationBadge";
 import { MapPin, DollarSign, CheckCircle, Coins, Clock } from "lucide-react";
 import { formatRelativeTime } from "@/lib/utils";
 import type { Profile } from "@/types";
+import { ZapButton } from "@/components/zaps/ZapButton";
 
 interface CandidateCardProps {
   candidate: Profile;
@@ -144,6 +145,11 @@ export function CandidateCard({ candidate, highlightTags = [] }: CandidateCardPr
                 Joined {formatRelativeTime(candidate.created_at)}
               </span>
             )}
+          </div>
+
+          {/* Zap */}
+          <div className="mt-3" onClick={(e) => e.preventDefault()}>
+            <ZapButton targetType="profile" targetId={candidate.id} recipientId={candidate.id} />
           </div>
         </div>
       </div>

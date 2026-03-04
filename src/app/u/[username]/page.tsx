@@ -1,4 +1,5 @@
 import { ZapStats } from "@/components/zaps/ZapStats";
+import { ZapButton } from "@/components/zaps/ZapButton";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -208,6 +209,7 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
                             variant="outline"
                             size="sm"
                           />
+                          <ZapButton targetType="profile" targetId={profile.id} recipientId={profile.id} />
                         </>
                       )}
                       {!currentUser && (

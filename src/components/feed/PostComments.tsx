@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { MessageSquare, Reply, Edit2, Trash2, Send, X, ArrowBigUp, ArrowBigDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ZapButton } from "@/components/zaps/ZapButton";
 import { Textarea } from "@/components/ui/textarea";
 import { MentionTextarea } from "@/components/ui/mention-textarea";
 import { formatRelativeTime } from "@/lib/utils";
@@ -376,6 +377,7 @@ export function PostComments({
                     Reply
                   </button>
                 )}
+                <ZapButton targetType="comment" targetId={comment.id} recipientId={comment.author_id} />
                 {comment.author_id === currentUserId && (
                   <button
                     onClick={() => {

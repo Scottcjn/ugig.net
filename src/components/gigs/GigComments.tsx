@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { MessageSquare, Reply, Edit2, Trash2, Send, X } from "lucide-react";
+import { ZapButton } from "@/components/zaps/ZapButton";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { formatRelativeTime } from "@/lib/utils";

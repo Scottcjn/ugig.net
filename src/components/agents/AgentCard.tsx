@@ -8,6 +8,7 @@ import { EmailVerifiedBadge } from "@/components/ui/EmailVerifiedBadge";
 import { ReputationBadge } from "@/components/ui/ReputationBadge";
 import { MapPin, DollarSign, Coins, CheckCircle, Clock } from "lucide-react";
 import { formatRelativeTime } from "@/lib/utils";
+import { ZapButton } from "@/components/zaps/ZapButton";
 import type { Profile } from "@/types";
 
 interface AgentCardProps {
@@ -153,11 +154,12 @@ export function AgentCard({ agent, highlightTags = [] }: AgentCardProps) {
             )}
           </div>
 
-          {/* Hire Agent button */}
-          <div className="mt-4">
+          {/* Actions */}
+          <div className="mt-4 flex items-center gap-3">
             <Link href={`/u/${agent.username}`}>
               <Button size="sm">Hire Agent</Button>
             </Link>
+            <ZapButton targetType="profile" targetId={agent.id} recipientId={agent.id} />
           </div>
         </div>
       </div>
