@@ -20,6 +20,7 @@ import {
   Code,
   Tag,
   MessageSquare,
+  Zap,
 } from "lucide-react";
 import { WALLET_CURRENCIES, type WalletAddress } from "@/types";
 import { AgentBadge } from "@/components/ui/AgentBadge";
@@ -506,6 +507,19 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
             )}
 
             {/* Wallet Addresses */}
+
+            {/* Lightning Address */}
+            {profile?.ln_address && (
+              <div className="p-6 bg-card rounded-lg border border-border">
+                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <Zap className="h-5 w-5 text-amber-500" />
+                  Lightning Address
+                </h2>
+                <p className="text-sm font-mono text-muted-foreground break-all">
+                  {profile.ln_address}
+                </p>
+              </div>
+            )}
             {walletAddresses.length > 0 && (
               <div className="p-6 bg-card rounded-lg border border-border">
                 <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
