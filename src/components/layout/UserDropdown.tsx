@@ -12,7 +12,8 @@ import {
   LogOut,
   LayoutDashboard,
   Bell,
-, Zap } from "lucide-react";
+  Zap,
+} from "lucide-react";
 
 interface UserDropdownProps {
   username: string;
