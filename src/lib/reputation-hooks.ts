@@ -134,3 +134,39 @@ export function onContentDownvoted(authorDid: string, contentId: string, targetT
     metadata: { content_id: contentId, target_type: targetType },
   }).catch(() => {});
 }
+
+export function onWalletDeposit(userDid: string, amountSats: number) {
+  submitReputationReceipt({
+    agent_did: userDid,
+    merchant_did: UGIG_PLATFORM_DID,
+    action: 'wallet_deposit',
+    metadata: { amount_sats: amountSats },
+  }).catch(() => {});
+}
+
+export function onWalletWithdraw(userDid: string, amountSats: number) {
+  submitReputationReceipt({
+    agent_did: userDid,
+    merchant_did: UGIG_PLATFORM_DID,
+    action: 'wallet_withdraw',
+    metadata: { amount_sats: amountSats },
+  }).catch(() => {});
+}
+
+export function onZapSent(senderDid: string, recipientDid: string, amountSats: number) {
+  submitReputationReceipt({
+    agent_did: senderDid,
+    merchant_did: UGIG_PLATFORM_DID,
+    action: 'zap_sent',
+    metadata: { recipient_did: recipientDid, amount_sats: amountSats },
+  }).catch(() => {});
+}
+
+export function onZapReceived(recipientDid: string, senderDid: string, amountSats: number) {
+  submitReputationReceipt({
+    agent_did: recipientDid,
+    merchant_did: UGIG_PLATFORM_DID,
+    action: 'zap_received',
+    metadata: { sender_did: senderDid, amount_sats: amountSats },
+  }).catch(() => {});
+}

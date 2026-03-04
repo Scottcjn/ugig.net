@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthContext } from "@/lib/auth/get-user";
 import { createServiceClient } from "@/lib/supabase/service";
 import { PLATFORM_FEE_RATE, PLATFORM_WALLET_USER_ID } from "@/lib/constants";
+import { getUserDid, onZapSent, onZapReceived } from "@/lib/reputation-hooks";
 
 export async function POST(request: NextRequest) {
   try {
@@ -137,6 +138,12 @@ export async function POST(request: NextRequest) {
         data: { zap_id: zapId, amount_sats: recipient_amount, target_type, target_id, action_url: "/profile" },
       });
     }
+
+    // DID reputation
+    const senderDid = await getUserDid(admin, senderId);
+    const recipientDid = await getUserDid(admin, recipient_id);
+    if (senderDid) onZapSent(senderDid, recipientDid || recipient_id, amount_sats);
+    if (recipientDid) onZapReceived(recipientDid, senderDid || senderId, recipient_amount);
 
     return NextResponse.json({ ok: true, zap, new_balance: newSenderBalance, fee_sats });
   } catch {

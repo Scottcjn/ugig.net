@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthContext } from "@/lib/auth/get-user";
 import { createServiceClient } from "@/lib/supabase/service";
+import { getUserDid, onWalletDeposit } from "@/lib/reputation-hooks";
 
 const LNBITS_URL = process.env.LNBITS_URL || "https://ln.coinpayportal.com";
 const LNBITS_INVOICE_KEY = process.env.LNBITS_INVOICE_KEY || "";
@@ -48,6 +49,10 @@ export async function GET(request: NextRequest) {
     }
 
     await admin.from("wallet_transactions" as any).update({ status: "completed", balance_after: newBalance }).eq("user_id", userId).eq("type", "deposit").eq("status", "pending").eq("bolt11", bolt11);
+
+    // DID reputation for deposit
+    const userDid = await getUserDid(admin, userId);
+    if (userDid) onWalletDeposit(userDid, amount_sats);
 
     return NextResponse.json({ paid: true, balance_sats: newBalance });
   } catch (err) {

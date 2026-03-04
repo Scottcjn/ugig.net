@@ -12,7 +12,7 @@ import {
   LogOut,
   LayoutDashboard,
   Bell,
-} from "lucide-react";
+, Zap } from "lucide-react";
 
 interface UserDropdownProps {
   username: string;
@@ -117,6 +117,14 @@ export function UserDropdown({ username, fullName, avatarUrl }: UserDropdownProp
             >
               <Bell className="h-4 w-4" />
               Notification Settings
+            </Link>
+            <Link
+              href="/settings/wallet"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-3 px-4 py-2 text-sm hover:bg-muted/50 transition-colors cursor-pointer"
+            >
+              <Zap className="h-4 w-4 text-amber-500" />
+              Wallet
             </Link>
             <Link
               href="/dashboard/referrals"
