@@ -102,6 +102,40 @@ export async function POST(request: NextRequest) {
     }
     await admin.from("wallet_transactions" as any).insert(txns);
 
+
+    // Notify recipient
+    const { data: recipientProfile } = await admin
+      .from("profiles")
+      .select("ln_address, username")
+      .eq("id", recipient_id)
+      .single();
+
+    const { data: senderProfile } = await admin
+      .from("profiles")
+      .select("username")
+      .eq("id", senderId)
+      .single();
+
+    const senderName = senderProfile?.username || "Someone";
+
+    if (recipientProfile?.ln_address) {
+      await admin.from("notifications").insert({
+        user_id: recipient_id,
+        type: "zap_received",
+        title: "You received a zap! ⚡",
+        body: `${senderName} zapped you ${recipient_amount.toLocaleString()} sats`,
+        data: { zap_id: zapId, amount_sats: recipient_amount, target_type, target_id },
+      });
+    } else {
+      await admin.from("notifications").insert({
+        user_id: recipient_id,
+        type: "zap_received",
+        title: "You received a zap! ⚡",
+        body: `${senderName} zapped you ${recipient_amount.toLocaleString()} sats. Add a Lightning Address to your profile to withdraw.`,
+        data: { zap_id: zapId, amount_sats: recipient_amount, target_type, target_id, action_url: "/profile" },
+      });
+    }
+
     return NextResponse.json({ ok: true, zap, new_balance: newSenderBalance, fee_sats });
   } catch {
     return NextResponse.json({ error: "An unexpected error occurred" }, { status: 500 });
