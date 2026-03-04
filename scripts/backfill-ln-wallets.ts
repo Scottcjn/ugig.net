@@ -34,8 +34,13 @@ async function createWallet(username: string) {
 
   const wallet = await res.json();
 
-  // Wait for extensions
-  await new Promise((r) => setTimeout(r, 2000));
+  // Enable lnurlp extension for this wallet
+  await fetch(`${LNBITS_URL}/api/v1/extensions`, {
+    method: "POST",
+    headers: { "X-Api-Key": wallet.adminkey, "Content-Type": "application/json" },
+    body: JSON.stringify({ extension: "lnurlp", active: true }),
+  });
+  await new Promise((r) => setTimeout(r, 1000));
 
   // Create pay link
   const payRes = await fetch(`${LNBITS_URL}/lnurlp/api/v1/links`, {
@@ -88,7 +93,7 @@ async function main() {
 
   const hasWallet = new Set((existingWallets || []).map((w: any) => w.user_id));
 
-  const needsWallet = (profiles || []).filter((p) => p.username && !hasWallet.has(p.id));
+  const needsWallet = (profiles || []).filter((p) => p.username && !hasWallet.has(p.id) && !(p.ln_address && p.ln_address.includes("-ugig@")));
 
   console.log(`Total profiles: ${profiles?.length || 0}`);
   console.log(`Already have wallet: ${hasWallet.size}`);
