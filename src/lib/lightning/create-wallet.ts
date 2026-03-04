@@ -13,7 +13,7 @@ interface LnWalletResult {
   ln_address: string;
 }
 
-export async function createUserLnWallet(username: string): Promise<LnWalletResult | null> {
+export async function createUserLnWallet(username: string, supabase?: any, userId?: string): Promise<LnWalletResult | null> {
   try {
     // Create wallet on LNbits
     const res = await fetch(`${LNBITS_URL}/api/v1/account`, {
@@ -62,6 +62,20 @@ export async function createUserLnWallet(username: string): Promise<LnWalletResu
         console.warn("[LN Wallet] Pay link username already exists, reusing:", ln_address);
       } else {
         console.warn("[LN Wallet] Pay link creation failed:", errText);
+      }
+    }
+
+    // Store wallet credentials for future use
+    if (supabase && userId) {
+      try {
+        await supabase.from("user_ln_wallets").upsert({
+          user_id: userId,
+          wallet_id: wallet.id,
+          admin_key: wallet.adminkey,
+          invoice_key: wallet.inkey,
+        }, { onConflict: "user_id" });
+      } catch (e) {
+        console.warn("[LN Wallet] Failed to store wallet credentials:", e);
       }
     }
 

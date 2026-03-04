@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
 
     // Auto-create Lightning wallet for the agent
     try {
-      const lnWallet = await createUserLnWallet(username);
+      const lnWallet = await createUserLnWallet(username, supabase, userId);
       if (lnWallet?.ln_address) {
         await supabase
           .from("profiles" as any)

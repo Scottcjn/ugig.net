@@ -17,10 +17,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid amount (1-1,000,000 sats)" }, { status: 400 });
     }
 
-    // Create invoice via LNbits
+    // Get user's personal LNbits wallet key, fall back to platform wallet
+    const admin = createServiceClient();
+    const userId = auth.user.id;
+    const { data: userWallet } = await admin.from("user_ln_wallets" as any)
+      .select("invoice_key")
+      .eq("user_id", userId)
+      .single() as any;
+    const invoiceKey = userWallet?.invoice_key || LNBITS_INVOICE_KEY;
+
+    // Create invoice via LNbits (from user's wallet if available, otherwise platform)
     const lnRes = await fetch(`${LNBITS_URL}/api/v1/payments`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-Api-Key": LNBITS_INVOICE_KEY },
+      headers: { "Content-Type": "application/json", "X-Api-Key": invoiceKey },
       body: JSON.stringify({ out: false, amount: amount_sats, memo: "ugig.net deposit" }),
     });
 
@@ -30,8 +39,6 @@ export async function POST(request: NextRequest) {
     }
 
     const { payment_request, payment_hash } = await lnRes.json();
-    const admin = createServiceClient();
-    const userId = auth.user.id;
 
     // Ensure wallet exists
     const { data: wallet } = await admin.from("wallets" as any).select("id, balance_sats").eq("user_id", userId).single() as any;

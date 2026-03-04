@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     const username = profile?.username;
     if (username) {
       try {
-        const lnWallet = await createUserLnWallet(username);
+        const lnWallet = await createUserLnWallet(username, supabase, userId);
         if (lnWallet?.ln_address) {
           await supabase
             .from("profiles")

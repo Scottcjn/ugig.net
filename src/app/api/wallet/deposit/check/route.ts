@@ -18,16 +18,24 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "payment_hash required" }, { status: 400 });
     }
 
+    const admin = createServiceClient();
+    const userId = auth.user.id;
+
+    // Use user's personal wallet key if available
+    const { data: userWallet } = await admin.from("user_ln_wallets" as any)
+      .select("invoice_key")
+      .eq("user_id", userId)
+      .single() as any;
+    const invoiceKey = userWallet?.invoice_key || LNBITS_INVOICE_KEY;
+
     const lnRes = await fetch(`${LNBITS_URL}/api/v1/payments/${payment_hash}`, {
-      headers: { "X-Api-Key": LNBITS_INVOICE_KEY },
+      headers: { "X-Api-Key": invoiceKey },
     });
     if (!lnRes.ok) return NextResponse.json({ paid: false });
 
     const lnData = await lnRes.json();
     if (!lnData.paid && lnData.details?.status !== "success") return NextResponse.json({ paid: false });
 
-    const admin = createServiceClient();
-    const userId = auth.user.id;
     const bolt11 = lnData.details?.bolt11 || lnData.bolt11 || "";
     const rawAmount = lnData.amount ?? lnData.details?.amount ?? 0;
     const amount_sats = Math.abs(rawAmount / 1000);
