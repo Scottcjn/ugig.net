@@ -209,7 +209,24 @@ export default function WalletPage() {
               <div key={tx.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
                 <div>
                   <span className={`text-sm font-medium ${typeColor[tx.type] || ""}`}>{typeLabel[tx.type] || tx.type}</span>
-                  {tx.status === "pending" && <span className="text-xs text-yellow-500 ml-1">(pending)</span>}
+                  {tx.status === "pending" && (
+                    <button
+                      className="text-xs text-yellow-500 ml-1 underline hover:text-yellow-400"
+                      onClick={async () => {
+                        // Try to resolve pending deposit via LNbits check
+                        const res = await fetch("/api/wallet/deposit/resolve", { method: "POST" });
+                        const data = await res.json();
+                        if (data.resolved) {
+                          setBalance(data.balance_sats);
+                          refreshTransactions();
+                        } else {
+                          alert("Payment not yet received. Try again later.");
+                        }
+                      }}
+                    >
+                      (pending - click to check)
+                    </button>
+                  )}
                   <span className="text-xs text-muted-foreground ml-2">{new Date(tx.created_at).toLocaleDateString()}</span>
                 </div>
                 <div className="text-right">
