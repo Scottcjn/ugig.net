@@ -26,20 +26,34 @@ async function main() {
 
     console.log(`Fixing ${profile.username}...`);
 
+    // Enable lnurlp and wait
+    const start = Date.now();
+    let extReady = false;
+    while (Date.now() - start < 15000) {
+      const check = await fetch(`${LNBITS_URL}/lnurlp/api/v1/links`, {
+        headers: { "X-Api-Key": w.admin_key },
+      });
+      if (check.status === 200) { extReady = true; break; }
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+    if (!extReady) {
+      console.log("  [FAIL] lnurlp not enabled after 15s");
+      continue;
+    }
+
     // Try creating pay link
-    await new Promise((r) => setTimeout(r, 2000));
     const res = await fetch(`${LNBITS_URL}/lnurlp/api/v1/links`, {
       method: "POST",
       headers: { "X-Api-Key": w.admin_key, "Content-Type": "application/json" },
       body: JSON.stringify({
-        description: `ugig.net wallet for ${profile.username}`,
+        description: `ugig.net wallet for ${profile.username.toLowerCase()}`,
         min: 1, max: 10000000, comment_chars: 255,
-        username: `${profile.username}-ugig`,
+        username: `${profile.username.toLowerCase()}-ugig`,
       }),
     });
 
     if (res.ok || (await res.text()).includes("already")) {
-      const ln_address = `${profile.username}-ugig@coinpayportal.com`;
+      const ln_address = `${profile.username.toLowerCase()}-ugig@coinpayportal.com`;
       await supabase.from("profiles" as any).update({ ln_address } as any).eq("id", w.user_id);
       console.log(`  [OK] ${ln_address}`);
       fixed++;
