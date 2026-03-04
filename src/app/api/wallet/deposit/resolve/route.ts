@@ -13,24 +13,35 @@ export async function POST(request: NextRequest) {
     const admin = createServiceClient();
     const userId = auth.user.id;
 
-    // Get all pending deposits
+    // 1. Fix existing pending transactions
     const { data: pending } = await admin.from("wallet_transactions" as any)
       .select("id, bolt11, payment_hash, amount_sats")
       .eq("user_id", userId)
       .eq("type", "deposit")
       .eq("status", "pending") as any;
 
-    if (!pending?.length) return NextResponse.json({ resolved: false, message: "No pending deposits" });
-
     let totalCredited = 0;
 
-    for (const tx of pending) {
-      // Try to check via payment_hash if we have it
+    for (const tx of (pending || [])) {
       let paid = false;
       let amount_sats = tx.amount_sats;
+      let hash = tx.payment_hash;
 
-      if (tx.payment_hash) {
-        const res = await fetch(`${LNBITS_URL}/api/v1/payments/${tx.payment_hash}`, {
+      // Decode bolt11 to get payment_hash if missing
+      if (!hash && tx.bolt11) {
+        const decRes = await fetch(`${LNBITS_URL}/api/v1/payments/decode`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Api-Key": LNBITS_INVOICE_KEY },
+          body: JSON.stringify({ data: tx.bolt11 }),
+        });
+        if (decRes.ok) {
+          const decoded = await decRes.json();
+          hash = decoded.payment_hash;
+        }
+      }
+
+      if (hash) {
+        const res = await fetch(`${LNBITS_URL}/api/v1/payments/${hash}`, {
           headers: { "X-Api-Key": LNBITS_INVOICE_KEY },
         });
         if (res.ok) {
@@ -40,55 +51,85 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // If no payment_hash, try checking by decoding the bolt11
-      if (!paid && tx.bolt11) {
-        const res = await fetch(`${LNBITS_URL}/api/v1/payments/decode`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "X-Api-Key": LNBITS_INVOICE_KEY },
-          body: JSON.stringify({ data: tx.bolt11 }),
-        });
-        if (res.ok) {
-          const decoded = await res.json();
-          if (decoded.payment_hash) {
-            const checkRes = await fetch(`${LNBITS_URL}/api/v1/payments/${decoded.payment_hash}`, {
-              headers: { "X-Api-Key": LNBITS_INVOICE_KEY },
-            });
-            if (checkRes.ok) {
-              const checkData = await checkRes.json();
-              paid = !!checkData.paid || checkData.details?.status === "success";
-              if (paid) amount_sats = Math.abs((checkData.amount ?? checkData.details?.amount ?? 0) / 1000);
-              // Store payment_hash for future
-              await admin.from("wallet_transactions" as any).update({ payment_hash: decoded.payment_hash }).eq("id", tx.id);
-            }
-          }
-        }
-      }
-
       if (paid) {
         totalCredited += amount_sats;
         await admin.from("wallet_transactions" as any)
-          .update({ status: "completed" })
+          .update({ status: "completed", payment_hash: hash })
           .eq("id", tx.id);
       }
     }
 
-    if (totalCredited > 0) {
-      const { data: wallet } = await admin.from("wallets" as any).select("balance_sats").eq("user_id", userId).single() as any;
-      const newBalance = (wallet?.balance_sats ?? 0) + totalCredited;
-      await admin.from("wallets" as any).update({ balance_sats: newBalance, updated_at: new Date().toISOString() }).eq("user_id", userId);
+    // 2. Check LNbits for recent paid invoices not in DB
+    const lnRes = await fetch(`${LNBITS_URL}/api/v1/payments?limit=20`, {
+      headers: { "X-Api-Key": LNBITS_INVOICE_KEY },
+    });
+    if (lnRes.ok) {
+      const payments = await lnRes.json();
+      for (const p of payments) {
+        // Only incoming payments (positive amount) with ugig memo
+        if (p.amount <= 0 || !p.memo?.includes("ugig.net deposit")) continue;
+        if (p.status !== "success") continue;
 
-      // Update balance_after on resolved txns
-      await admin.from("wallet_transactions" as any)
-        .update({ balance_after: newBalance })
+        const hash = p.payment_hash || p.checking_id;
+        if (!hash) continue;
+
+        // Check if we already have this transaction
+        const { data: exists } = await admin.from("wallet_transactions" as any)
+          .select("id")
+          .eq("user_id", userId)
+          .eq("payment_hash", hash)
+          .single() as any;
+
+        // Also check by bolt11
+        const bolt11 = p.bolt11 || p.payment_request || "";
+        let existsByBolt11 = null;
+        if (!exists && bolt11) {
+          const { data: b } = await admin.from("wallet_transactions" as any)
+            .select("id, status")
+            .eq("user_id", userId)
+            .eq("bolt11", bolt11)
+            .single() as any;
+          existsByBolt11 = b;
+        }
+
+        if (!exists && !existsByBolt11) {
+          // Missing from DB — create it as completed
+          const sats = Math.abs(p.amount / 1000);
+          totalCredited += sats;
+          await admin.from("wallet_transactions" as any).insert({
+            user_id: userId,
+            type: "deposit",
+            amount_sats: sats,
+            balance_after: 0,
+            bolt11,
+            payment_hash: hash,
+            status: "completed",
+          });
+        } else if (existsByBolt11 && existsByBolt11.status === "pending") {
+          // Found by bolt11 but still pending — mark complete
+          const sats = Math.abs(p.amount / 1000);
+          totalCredited += sats;
+          await admin.from("wallet_transactions" as any)
+            .update({ status: "completed", payment_hash: hash })
+            .eq("id", existsByBolt11.id);
+        }
+      }
+    }
+
+    if (totalCredited > 0) {
+      const { data: wallet } = await admin.from("wallets" as any)
+        .select("balance_sats")
         .eq("user_id", userId)
-        .eq("type", "deposit")
-        .eq("status", "completed")
-        .eq("balance_after", 0);
+        .single() as any;
+      const newBalance = (wallet?.balance_sats ?? 0) + totalCredited;
+      await admin.from("wallets" as any)
+        .update({ balance_sats: newBalance, updated_at: new Date().toISOString() })
+        .eq("user_id", userId);
 
       return NextResponse.json({ resolved: true, credited_sats: totalCredited, balance_sats: newBalance });
     }
 
-    return NextResponse.json({ resolved: false, message: "No paid invoices found" });
+    return NextResponse.json({ resolved: false, message: "No paid invoices found to resolve" });
   } catch (err) {
     console.error("Deposit resolve error:", err);
     return NextResponse.json({ error: "An unexpected error occurred" }, { status: 500 });

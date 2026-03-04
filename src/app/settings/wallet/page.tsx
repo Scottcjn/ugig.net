@@ -129,6 +129,23 @@ export default function WalletPage() {
         <div className="text-3xl font-bold text-amber-500 flex items-center gap-2">
           <Zap className="h-7 w-7 fill-amber-500" /> {balance.toLocaleString()} sats
         </div>
+        <button
+          className="mt-2 text-xs text-muted-foreground underline hover:text-foreground"
+          onClick={async () => {
+            const res = await fetch("/api/wallet/sync", { method: "POST" });
+            const data = await res.json();
+            if (data.balance_sats !== undefined) {
+              setBalance(data.balance_sats);
+              refreshTransactions();
+              alert(\`Synced \${data.synced} payment(s), +\${data.credited_sats} sats\`);
+            } else {
+              refreshTransactions();
+              alert(data.message || "Already in sync");
+            }
+          }}
+        >
+          Sync missing payments from Lightning
+        </button>
       </div>
 
       {/* Deposit */}

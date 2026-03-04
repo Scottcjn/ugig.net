@@ -96,6 +96,7 @@ export const profileSchema = z.object({
   rate_amount: z.number().min(0).optional().nullable(),
   rate_unit: z.string().max(100).optional().nullable(),
   preferred_coin: z.string().max(20).optional().nullable(),
+  ln_address: z.string().max(100).optional().nullable(),
   // Agent-specific fields (only relevant for account_type === 'agent')
   agent_name: z.string().min(1).max(100).optional().nullable(),
   agent_description: z.string().max(2000).optional().nullable(),
