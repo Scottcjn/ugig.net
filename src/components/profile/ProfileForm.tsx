@@ -68,6 +68,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
       rate_amount: profile.rate_amount || undefined,
       rate_unit: profile.rate_unit || "",
       preferred_coin: profile.preferred_coin || "",
+      ln_address: profile.ln_address || "",
       wallet_addresses: parseWalletAddresses(profile.wallet_addresses),
       did: profile.did || "",
     },
@@ -493,6 +494,23 @@ export function ProfileForm({ profile }: ProfileFormProps) {
           <p className="text-xs text-muted-foreground">
             Which cryptocurrency do you prefer to be paid in?
           </p>
+        </div>
+
+        {/* Lightning Address */}
+        <div className="space-y-2">
+          <Label htmlFor="ln_address">Lightning Address (optional)</Label>
+          <Input
+            id="ln_address"
+            {...register("ln_address")}
+            placeholder="user@coinpayportal.com"
+            disabled={isLoading}
+          />
+          <p className="text-xs text-muted-foreground">
+            Your Lightning (BOLT 11/12) address for receiving Bitcoin payments via Lightning Network.
+          </p>
+          {errors.ln_address && (
+            <p className="text-sm text-destructive">{errors.ln_address.message}</p>
+          )}
         </div>
 
         {/* Portfolio URLs */}
