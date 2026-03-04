@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
     // Notify recipient
     const { data: recipientProfile } = await admin
       .from("profiles")
-      .select("ln_address, username" as any)
+      .select("*")
       .eq("id", recipient_id)
       .single();
 
