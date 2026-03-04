@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     }
 
     await admin.from("wallet_transactions" as any).insert({
-      user_id: userId, type: "deposit", amount_sats, balance_after: wallet?.balance_sats ?? 0, bolt11: payment_request, status: "pending",
+      user_id: userId, type: "deposit", amount_sats, balance_after: wallet?.balance_sats ?? 0, bolt11: payment_request, payment_hash, status: "pending",
     });
 
     return NextResponse.json({ ok: true, payment_request, payment_hash, amount_sats });

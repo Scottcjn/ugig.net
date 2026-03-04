@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     const amount_sats = Math.abs(lnData.amount / 1000);
 
     // Idempotency check
-    const { data: existing } = await admin.from("wallet_transactions" as any).select("id").eq("user_id", userId).eq("type", "deposit").eq("status", "completed").eq("bolt11", bolt11).single() as any;
+    const { data: existing } = await admin.from("wallet_transactions" as any).select("id").eq("user_id", userId).eq("type", "deposit").eq("status", "completed").eq("payment_hash", payment_hash).single() as any;
     if (existing) {
       const { data: w } = await admin.from("wallets" as any).select("balance_sats").eq("user_id", userId).single() as any;
       return NextResponse.json({ paid: true, balance_sats: w?.balance_sats ?? 0 });
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
       await admin.from("wallets" as any).insert({ user_id: userId, balance_sats: newBalance });
     }
 
-    await admin.from("wallet_transactions" as any).update({ status: "completed", balance_after: newBalance }).eq("user_id", userId).eq("type", "deposit").eq("status", "pending").eq("bolt11", bolt11);
+    await admin.from("wallet_transactions" as any).update({ status: "completed", balance_after: newBalance }).eq("user_id", userId).eq("type", "deposit").eq("status", "pending").eq("payment_hash", payment_hash);
 
     // DID reputation for deposit
     const userDid = await getUserDid(admin, userId);
