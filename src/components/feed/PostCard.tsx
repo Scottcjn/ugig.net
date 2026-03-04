@@ -10,6 +10,7 @@ import { VerifiedBadge } from "@/components/ui/VerifiedBadge";
 import { ReputationBadge } from "@/components/ui/ReputationBadge";
 import { FollowTagButton } from "@/components/follow/FollowTagButton";
 import { VoteButtons } from "./VoteButtons";
+import { ZapButton } from "@/components/zaps/ZapButton";
 import { formatRelativeTime } from "@/lib/utils";
 import type { PostWithAuthor } from "@/types";
 
@@ -140,6 +141,9 @@ export function PostCard({ post, showFollowButtons, followedTags, expanded }: Po
             <Eye className="h-3.5 w-3.5" />
             {post.views_count} views
           </span>
+          {post.author_id && (
+            <ZapButton targetType="post" targetId={post.id} recipientId={post.author_id} />
+          )}
         </div>
       </div>
     </div>

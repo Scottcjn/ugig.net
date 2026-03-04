@@ -6,6 +6,7 @@ import { Plus } from "lucide-react";
 import { UserDropdown } from "./UserDropdown";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { MobileMenu } from "./MobileMenu";
+import { WalletBalance } from "@/components/zaps/WalletBalance";
 import { HeaderSearch } from "@/components/search/HeaderSearch";
 
 interface HeaderProps {
@@ -96,6 +97,7 @@ export async function Header({ showPostGig = true }: HeaderProps) {
                   </Button>
                 </Link>
               )}
+              <WalletBalance />
               <NotificationBell />
               <UserDropdown
                 username={profile.username}

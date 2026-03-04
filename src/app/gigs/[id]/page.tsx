@@ -19,6 +19,7 @@ import { GigComments } from "@/components/gigs/GigComments";
 import { AddToPortfolioPrompt } from "@/components/portfolio/AddToPortfolioPrompt";
 import { EscrowBadge } from "@/components/gigs/EscrowBadge";
 import { CloseGigButton } from "@/components/gigs/CloseGigButton";
+import { ZapButton } from "@/components/zaps/ZapButton";
 
 interface GigPageProps {
   params: Promise<{ id: string }>;
@@ -220,6 +221,12 @@ export default async function GigPage({ params }: GigPageProps) {
               </div>
             )}
 
+            {/* Zap */}
+            {gig.poster_id && !isOwner && (
+              <div className="flex items-center gap-2 mb-4">
+                <ZapButton targetType="gig" targetId={id} recipientId={gig.poster_id} />
+              </div>
+            )}
             {/* Q&A Comments */}
             <GigComments
               gigId={id}
