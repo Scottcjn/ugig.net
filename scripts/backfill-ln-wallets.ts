@@ -24,7 +24,7 @@ async function createWallet(username: string) {
   const res = await fetch(`${LNBITS_URL}/api/v1/account`, {
     method: "POST",
     headers: { "X-Api-Key": LNBITS_ADMIN_KEY, "Content-Type": "application/json" },
-    body: JSON.stringify({ name: `ugig-${username}` }),
+    body: JSON.stringify({ name: `ugig-${username.toLowerCase()}` }),
   });
 
   if (!res.ok) {
@@ -54,22 +54,22 @@ async function createWallet(username: string) {
     method: "POST",
     headers: { "X-Api-Key": wallet.adminkey, "Content-Type": "application/json" },
     body: JSON.stringify({
-      description: `ugig.net wallet for ${username}`,
+      description: `ugig.net wallet for ${username.toLowerCase()}`,
       min: 1,
       max: 10000000,
       comment_chars: 255,
-      username: `${username}-ugig`,
+      username: `${username.toLowerCase()}-ugig`,
     }),
   }) : null;
 
   let ln_address = "";
   if (payRes?.ok) {
-    ln_address = `${username}-ugig@coinpayportal.com`;
+    ln_address = `${username.toLowerCase()}-ugig@coinpayportal.com`;
   } else if (payRes) {
     let errText = "";
     try { errText = await payRes.text(); } catch {}
     if (errText.includes("already") || errText.includes("unique")) {
-      ln_address = `${username}-ugig@coinpayportal.com`;
+      ln_address = `${username.toLowerCase()}-ugig@coinpayportal.com`;
       console.log(`  [WARN] Pay link already exists, reusing`);
     } else {
       console.error(`  [WARN] Pay link failed: ${errText}`);

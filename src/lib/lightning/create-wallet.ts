@@ -14,6 +14,7 @@ interface LnWalletResult {
 }
 
 export async function createUserLnWallet(username: string, supabase?: any, userId?: string): Promise<LnWalletResult | null> {
+  const lnUsername = username.toLowerCase();
   try {
     // Create wallet on LNbits
     const res = await fetch(`${LNBITS_URL}/api/v1/account`, {
@@ -22,7 +23,7 @@ export async function createUserLnWallet(username: string, supabase?: any, userI
         "X-Api-Key": LNBITS_ADMIN_KEY,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ name: `ugig-${username}` }),
+      body: JSON.stringify({ name: `ugig-${lnUsername}` }),
     });
 
     if (!res.ok) {
@@ -56,22 +57,22 @@ export async function createUserLnWallet(username: string, supabase?: any, userI
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        description: `ugig.net wallet for ${username}`,
+        description: `ugig.net wallet for ${lnUsername}`,
         min: 1,
         max: 10000000,
         comment_chars: 255,
-        username: `${username}-ugig`,
+        username: `${lnUsername}-ugig`,
       }),
     });
 
     let ln_address = "";
     if (payLinkRes.ok) {
-      ln_address = `${username}-ugig@coinpayportal.com`;
+      ln_address = `${lnUsername}-ugig@coinpayportal.com`;
     } else {
       const errText = await payLinkRes.text();
       // If username already taken on LNbits, the address already exists
       if (errText.includes("already") || errText.includes("unique")) {
-        ln_address = `${username}-ugig@coinpayportal.com`;
+        ln_address = `${lnUsername}-ugig@coinpayportal.com`;
         console.warn("[LN Wallet] Pay link username already exists, reusing:", ln_address);
       } else {
         console.warn("[LN Wallet] Pay link creation failed:", errText);
