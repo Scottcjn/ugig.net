@@ -119,7 +119,8 @@ export async function POST(request: NextRequest) {
     const senderName = senderProfile?.username || "Someone";
 
     if (recipientProfile?.ln_address) {
-      await admin.from("notifications").insert({
+      await (admin.from("notifications") as any).insert({
+
         user_id: recipient_id,
         type: "zap_received",
         title: "You received a zap! ⚡",
@@ -127,7 +128,8 @@ export async function POST(request: NextRequest) {
         data: { zap_id: zapId, amount_sats: recipient_amount, target_type, target_id },
       });
     } else {
-      await admin.from("notifications").insert({
+      await (admin.from("notifications") as any).insert({
+
         user_id: recipient_id,
         type: "zap_received",
         title: "You received a zap! ⚡",
