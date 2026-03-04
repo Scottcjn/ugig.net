@@ -26,6 +26,7 @@ export default function WalletPage() {
   const [copied, setCopied] = useState(false);
   const [paid, setPaid] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const mountedRef = useRef(true);
 
   const refreshTransactions = useCallback(async () => {
     const t = await fetch("/api/wallet/transactions").then((r) => r.json());
@@ -44,7 +45,9 @@ export default function WalletPage() {
   }, []);
 
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
+      mountedRef.current = false;
       if (pollRef.current) clearInterval(pollRef.current);
     };
   }, []);
@@ -77,7 +80,7 @@ export default function WalletPage() {
         try {
           const checkRes = await fetch(`/api/wallet/deposit/check?payment_hash=${data.payment_hash}`);
           const checkData = await checkRes.json();
-          if (checkData.paid) {
+          if (checkData.paid && mountedRef.current) {
             setPaid(true);
             setBalance(checkData.balance_sats);
             if (pollRef.current) clearInterval(pollRef.current);
