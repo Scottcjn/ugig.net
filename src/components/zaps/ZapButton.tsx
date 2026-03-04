@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Zap } from "lucide-react";
+import { Zap, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
@@ -22,6 +22,8 @@ export function ZapButton({ targetType, targetId, recipientId, totalSats: initia
   const [loading, setLoading] = useState(false);
   const [flash, setFlash] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showLnModal, setShowLnModal] = useState(false);
+  const [hasLnAddress, setHasLnAddress] = useState<boolean | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -31,6 +33,29 @@ export function ZapButton({ targetType, targetId, recipientId, totalSats: initia
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
+
+  async function checkLnAddress(): Promise<boolean> {
+    if (hasLnAddress !== null) return hasLnAddress;
+    try {
+      const res = await fetch("/api/profile", { method: "GET" });
+      if (!res.ok) return false;
+      const data = await res.json();
+      const has = !!data.profile?.ln_address;
+      setHasLnAddress(has);
+      return has;
+    } catch {
+      return false;
+    }
+  }
+
+  async function handleClick() {
+    const has = await checkLnAddress();
+    if (!has) {
+      setShowLnModal(true);
+      return;
+    }
+    setOpen(!open);
+  }
 
   async function handleZap(amount: number) {
     setLoading(true);
@@ -59,35 +84,69 @@ export function ZapButton({ targetType, targetId, recipientId, totalSats: initia
   }
 
   return (
-    <div ref={ref} className="relative inline-flex" onClick={(e) => e.stopPropagation()}>
-      <button
-        onClick={() => setOpen(!open)}
-        className={`flex items-center gap-1 text-xs text-muted-foreground hover:text-amber-500 transition-all ${flash ? "text-amber-400 scale-110" : ""}`}
-        title="Zap"
-      >
-        <Zap className={`h-3.5 w-3.5 ${totalSats > 0 ? "text-amber-500 fill-amber-500" : ""}`} />
-        {totalSats > 0 && <span className="text-amber-500 font-medium">{totalSats.toLocaleString()}</span>}
-      </button>
+    <>
+      <div ref={ref} className="relative inline-flex" onClick={(e) => e.stopPropagation()}>
+        <button
+          onClick={handleClick}
+          className={`flex items-center gap-1 text-xs text-muted-foreground hover:text-amber-500 transition-all ${flash ? "text-amber-400 scale-110" : ""}`}
+          title="Zap"
+        >
+          <Zap className={`h-3.5 w-3.5 ${totalSats > 0 ? "text-amber-500 fill-amber-500" : ""}`} />
+          {totalSats > 0 && <span className="text-amber-500 font-medium">{totalSats.toLocaleString()}</span>}
+        </button>
 
-      {open && (
-        <div className="absolute bottom-full left-0 mb-1 z-50 bg-popover border border-border rounded-lg shadow-lg p-2 min-w-[160px]">
-          <div className="text-xs text-muted-foreground mb-1.5 px-1">Zap sats ⚡</div>
-          <div className="flex flex-wrap gap-1">
-            {ZAP_AMOUNTS.map((amt) => (
-              <Button key={amt} size="sm" variant="outline" className="text-xs h-7 px-2" disabled={loading} onClick={() => handleZap(amt)}>
-                {amt.toLocaleString()}
-              </Button>
-            ))}
-          </div>
-          {error && (
-            <div className="text-xs text-red-500 mt-1.5 px-1">
-              {error === "Insufficient balance" ? (
-                <Link href="/settings/wallet" className="underline">Deposit sats</Link>
-              ) : error}
+        {open && (
+          <div className="absolute bottom-full left-0 mb-1 z-50 bg-popover border border-border rounded-lg shadow-lg p-2 min-w-[160px]">
+            <div className="text-xs text-muted-foreground mb-1.5 px-1">Zap sats ⚡</div>
+            <div className="flex flex-wrap gap-1">
+              {ZAP_AMOUNTS.map((amt) => (
+                <Button key={amt} size="sm" variant="outline" className="text-xs h-7 px-2" disabled={loading} onClick={() => handleZap(amt)}>
+                  {amt.toLocaleString()}
+                </Button>
+              ))}
             </div>
-          )}
+            {error && (
+              <div className="text-xs text-red-500 mt-1.5 px-1">
+                {error === "Insufficient balance" ? (
+                  <Link href="/settings/wallet" className="underline">Deposit sats →</Link>
+                ) : error}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Modal: Add Lightning Address */}
+      {showLnModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50" onClick={() => setShowLnModal(false)}>
+          <div className="bg-card border border-border rounded-lg shadow-xl p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Zap className="h-5 w-5 text-amber-500" />
+                Lightning Wallet Required
+              </h3>
+              <button onClick={() => setShowLnModal(false)} className="text-muted-foreground hover:text-foreground">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              To send and receive zaps, you need to add a Lightning Address to your profile. 
+              This is an address like <span className="font-mono text-foreground">you@coinpayportal.com</span> that lets you send and receive Bitcoin over the Lightning Network.
+            </p>
+            <div className="flex gap-2">
+              <Link href="/profile" className="flex-1">
+                <Button className="w-full" variant="default">
+                  <Zap className="h-4 w-4 mr-2" />
+                  Add Lightning Address
+                </Button>
+              </Link>
+              <Button variant="outline" onClick={() => setShowLnModal(false)}>
+                Later
+              </Button>
+            </div>
+          </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
