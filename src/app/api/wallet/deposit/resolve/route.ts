@@ -35,8 +35,8 @@ export async function POST(request: NextRequest) {
         });
         if (res.ok) {
           const data = await res.json();
-          paid = !!data.paid;
-          if (paid) amount_sats = Math.abs(data.amount / 1000);
+          paid = !!data.paid || data.details?.status === "success";
+          if (paid) amount_sats = Math.abs((data.amount ?? data.details?.amount ?? 0) / 1000);
         }
       }
 
@@ -55,8 +55,8 @@ export async function POST(request: NextRequest) {
             });
             if (checkRes.ok) {
               const checkData = await checkRes.json();
-              paid = !!checkData.paid;
-              if (paid) amount_sats = Math.abs(checkData.amount / 1000);
+              paid = !!checkData.paid || checkData.details?.status === "success";
+              if (paid) amount_sats = Math.abs((checkData.amount ?? checkData.details?.amount ?? 0) / 1000);
               // Store payment_hash for future
               await admin.from("wallet_transactions" as any).update({ payment_hash: decoded.payment_hash }).eq("id", tx.id);
             }

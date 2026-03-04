@@ -24,12 +24,13 @@ export async function GET(request: NextRequest) {
     if (!lnRes.ok) return NextResponse.json({ paid: false });
 
     const lnData = await lnRes.json();
-    if (!lnData.paid) return NextResponse.json({ paid: false });
+    if (!lnData.paid && lnData.details?.status !== "success") return NextResponse.json({ paid: false });
 
     const admin = createServiceClient();
     const userId = auth.user.id;
     const bolt11 = lnData.details?.bolt11 || lnData.bolt11 || "";
-    const amount_sats = Math.abs(lnData.amount / 1000);
+    const rawAmount = lnData.amount ?? lnData.details?.amount ?? 0;
+    const amount_sats = Math.abs(rawAmount / 1000);
 
     // Idempotency check - try payment_hash first, fall back to bolt11
     let existing = null;
