@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     const admin = createServiceClient();
 
     // Calculate fee
-    const fee_sats = Math.floor(amount_sats * PLATFORM_FEE_RATE);
+    const fee_sats = Math.max(1, Math.floor(amount_sats * PLATFORM_FEE_RATE));
     const recipient_amount = amount_sats - fee_sats;
 
     // Get sender wallet
