@@ -1,3 +1,4 @@
+import { ZapStats } from "@/components/zaps/ZapStats";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -508,6 +509,9 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
 
             {/* Wallet Addresses */}
 
+
+            {/* Zap Stats */}
+            <ZapStats userId={profile.id} />
             {/* Lightning Address */}
             {profile?.ln_address && (
               <div className="p-6 bg-card rounded-lg border border-border">
