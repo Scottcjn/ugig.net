@@ -9,6 +9,7 @@ import { VerifiedBadge } from "@/components/ui/VerifiedBadge";
 import { SaveGigButton } from "./SaveGigButton";
 import { formatCurrency, formatRelativeTime } from "@/lib/utils";
 import type { Gig, Profile } from "@/types";
+import { ZapButton } from "@/components/zaps/ZapButton";
 
 interface GigCardProps {
   gig: Gig & {
