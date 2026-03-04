@@ -18,7 +18,7 @@ interface ZapButtonProps {
 export function ZapButton({ targetType, targetId, recipientId, totalSats: initialTotal = 0, zapCount: initialCount = 0 }: ZapButtonProps) {
   const [open, setOpen] = useState(false);
   const [totalSats, setTotalSats] = useState(initialTotal);
-  const [, setZapCount] = useState(initialCount);
+  const [zapCount, setZapCount] = useState(initialCount);
   const [loading, setLoading] = useState(false);
   const [flash, setFlash] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -74,6 +74,7 @@ export function ZapButton({ targetType, targetId, recipientId, totalSats: initia
       }
       setTotalSats((prev) => prev + amount);
       setZapCount((prev) => prev + 1);
+      setZapCount((prev) => prev + 1);
       setOpen(false);
       setFlash(true);
       setTimeout(() => setFlash(false), 600);
@@ -95,6 +96,7 @@ export function ZapButton({ targetType, targetId, recipientId, totalSats: initia
         >
           <Zap className={`h-3.5 w-3.5 ${totalSats > 0 ? "text-amber-500 fill-amber-500" : ""}`} />
           {totalSats > 0 && <span className="text-amber-500 font-medium">{totalSats.toLocaleString()}</span>}
+          {zapCount > 0 && <span className="text-muted-foreground">({zapCount})</span>}
         </button>
 
         {open && (
