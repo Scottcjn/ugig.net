@@ -68,7 +68,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
       rate_amount: profile.rate_amount || undefined,
       rate_unit: profile.rate_unit || "",
       preferred_coin: profile.preferred_coin || "",
-      ln_address: profile.ln_address || "",
+      ln_address: (profile as any).ln_address || "",
       wallet_addresses: parseWalletAddresses(profile.wallet_addresses),
       did: profile.did || "",
     },
