@@ -4,7 +4,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 
 const LNBITS_URL = process.env.LNBITS_URL || "https://ln.coinpayportal.com";
 const LNBITS_INVOICE_KEY = process.env.LNBITS_INVOICE_KEY || "";
-const LNBITS_ADMIN_KEY = process.env.LNBITS_ADMIN_KEY || "";
+const LNBITS_PAYLINK_KEY = process.env.LNBITS_PAYLINK_KEY || "";
 
 export async function POST(request: NextRequest) {
   try {
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Check pay link (Lightning Address) payments on the main platform wallet
-    if (LNBITS_ADMIN_KEY) {
+    if (LNBITS_PAYLINK_KEY) {
       // Get user's username for matching pay link payments
       const { data: profile } = await admin.from("profiles" as any)
         .select("username")
@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
 
       if (profile?.username) {
         const payLinkRes = await fetch(`${LNBITS_URL}/api/v1/payments?limit=30`, {
-          headers: { "X-Api-Key": LNBITS_ADMIN_KEY },
+          headers: { "X-Api-Key": LNBITS_PAYLINK_KEY },
         });
         if (payLinkRes.ok) {
           const payments = await payLinkRes.json();
