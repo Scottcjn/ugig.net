@@ -61,18 +61,18 @@ export async function createUserLnWallet(username: string, supabase?: any, userI
         min: 1,
         max: 10000000,
         comment_chars: 255,
-        username: `${lnUsername}-ugig`,
+        username: lnUsername,
       }),
     });
 
     let ln_address = "";
     if (payLinkRes.ok) {
-      ln_address = `${lnUsername}-ugig@coinpayportal.com`;
+      ln_address = `${lnUsername}@ugig.net`;
     } else {
       const errText = await payLinkRes.text();
       // If username already taken on LNbits, the address already exists
       if (errText.includes("already") || errText.includes("unique")) {
-        ln_address = `${lnUsername}-ugig@coinpayportal.com`;
+        ln_address = `${lnUsername}@ugig.net`;
         console.warn("[LN Wallet] Pay link username already exists, reusing:", ln_address);
       } else {
         console.warn("[LN Wallet] Pay link creation failed:", errText);
