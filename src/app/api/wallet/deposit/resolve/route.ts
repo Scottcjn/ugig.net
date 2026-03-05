@@ -4,6 +4,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 
 const LNBITS_URL = process.env.LNBITS_URL || "https://ln.coinpayportal.com";
 const LNBITS_INVOICE_KEY = process.env.LNBITS_INVOICE_KEY || "";
+const LNBITS_ADMIN_KEY = process.env.LNBITS_ADMIN_KEY || "";
 
 export async function POST(request: NextRequest) {
   try {
@@ -112,6 +113,53 @@ export async function POST(request: NextRequest) {
           await admin.from("wallet_transactions" as any)
             .update({ status: "completed", payment_hash: hash })
             .eq("id", existsByBolt11.id);
+        }
+      }
+    }
+
+    // 3. Check pay link (Lightning Address) payments on the main platform wallet
+    if (LNBITS_ADMIN_KEY) {
+      // Get user's username for matching pay link payments
+      const { data: profile } = await admin.from("profiles" as any)
+        .select("username")
+        .eq("id", userId)
+        .single() as any;
+
+      if (profile?.username) {
+        const payLinkRes = await fetch(`${LNBITS_URL}/api/v1/payments?limit=30`, {
+          headers: { "X-Api-Key": LNBITS_ADMIN_KEY },
+        });
+        if (payLinkRes.ok) {
+          const payments = await payLinkRes.json();
+          for (const p of payments) {
+            // Only incoming payments for this user's Lightning Address
+            if (p.amount <= 0) continue;
+            if (p.status !== "success" && !p.paid) continue;
+            const memo = p.memo || "";
+            if (!memo.includes(`Lightning Address for ${profile.username}`)) continue;
+
+            const hash = p.payment_hash || p.checking_id;
+            if (!hash) continue;
+
+            // Check if already credited
+            const { data: exists } = await admin.from("wallet_transactions" as any)
+              .select("id")
+              .eq("payment_hash", hash)
+              .single() as any;
+
+            if (!exists) {
+              const sats = Math.abs(p.amount / 1000);
+              totalCredited += sats;
+              await admin.from("wallet_transactions" as any).insert({
+                user_id: userId,
+                type: "deposit",
+                amount_sats: sats,
+                balance_after: 0,
+                payment_hash: hash,
+                status: "completed",
+              });
+            }
+          }
         }
       }
     }
