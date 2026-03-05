@@ -34,6 +34,16 @@ export function ZapButton({ targetType, targetId, recipientId, totalSats: initia
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
+  useEffect(() => {
+    fetch(`/api/zaps?target_type=${targetType}&target_id=${targetId}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.total_sats !== undefined) setTotalSats(d.total_sats);
+        if (d.zap_count !== undefined) setZapCount(d.zap_count);
+      })
+      .catch(() => {});
+  }, [targetType, targetId]);
+
   async function checkLnAddress(): Promise<boolean> {
     if (hasLnAddress !== null) return hasLnAddress;
     try {
