@@ -155,7 +155,7 @@ export function GigCard({
 
       {/* Zap */}
       {gig.poster?.id && (
-        <div className="mt-3" onClick={(e) => e.preventDefault()}>
+        <div className="mt-3" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
           <ZapButton targetType="gig" targetId={gig.id} recipientId={gig.poster.id} />
         </div>
       )}

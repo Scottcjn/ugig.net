@@ -148,7 +148,7 @@ export function CandidateCard({ candidate, highlightTags = [] }: CandidateCardPr
           </div>
 
           {/* Zap */}
-          <div className="mt-3" onClick={(e) => e.preventDefault()}>
+          <div className="mt-3" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
             <ZapButton targetType="profile" targetId={candidate.id} recipientId={candidate.id} />
           </div>
         </div>
