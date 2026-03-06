@@ -110,7 +110,7 @@ export function ZapButton({ targetType, targetId, recipientId, totalSats: initia
         </button>
 
         {open && (
-          <div className="absolute bottom-full left-0 mb-1 z-50 bg-popover border border-border rounded-lg shadow-lg p-2 min-w-[160px]">
+          <div className="absolute bottom-full left-0 mb-1 z-50 bg-gray-900 border border-gray-700 rounded-lg shadow-lg p-2 min-w-[160px]">
             <div className="text-xs text-muted-foreground mb-1.5 px-1">Zap sats ⚡</div>
             <div className="flex flex-wrap gap-1">
               {ZAP_AMOUNTS.map((amt) => (
