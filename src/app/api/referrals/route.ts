@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthContext } from "@/lib/auth/get-user";
+import { createServiceClient } from "@/lib/supabase/service";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnySupabase = any;
@@ -69,6 +70,55 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Spam throttling: max 50 invites per day, max 10 per hour
+    const svc = createServiceClient();
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+    const { count: hourlyCount } = await (svc as AnySupabase)
+      .from("referrals")
+      .select("id", { count: "exact", head: true })
+      .eq("referrer_id", user.id)
+      .gte("created_at", oneHourAgo);
+
+    if ((hourlyCount ?? 0) + emails.length > 10) {
+      return NextResponse.json(
+        { error: "Too many invites. Max 10 per hour." },
+        { status: 429 }
+      );
+    }
+
+    const { count: dailyCount } = await (svc as AnySupabase)
+      .from("referrals")
+      .select("id", { count: "exact", head: true })
+      .eq("referrer_id", user.id)
+      .gte("created_at", oneDayAgo);
+
+    if ((dailyCount ?? 0) + emails.length > 50) {
+      return NextResponse.json(
+        { error: "Daily invite limit reached. Max 50 per day." },
+        { status: 429 }
+      );
+    }
+
+    // Prevent duplicate invites to same email
+    const normalizedEmails = emails.map((e: string) => e.trim().toLowerCase());
+    const { data: existingInvites } = await (svc as AnySupabase)
+      .from("referrals")
+      .select("referred_email")
+      .eq("referrer_id", user.id)
+      .in("referred_email", normalizedEmails);
+
+    const alreadyInvited = new Set((existingInvites || []).map((r: any) => r.referred_email));
+    const newEmails = normalizedEmails.filter((e: string) => !alreadyInvited.has(e));
+
+    if (newEmails.length === 0) {
+      return NextResponse.json(
+        { error: "All these emails have already been invited" },
+        { status: 400 }
+      );
+    }
+
     // Get user's referral code
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: profile } = await (supabase as any)
@@ -85,7 +135,7 @@ export async function POST(request: NextRequest) {
 
     // Validate emails and create referrals
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const validEmails = emails.filter((e: string) => emailRegex.test(e.trim()));
+    const validEmails = newEmails.filter((e: string) => emailRegex.test(e));
 
     if (validEmails.length === 0) {
       return NextResponse.json(

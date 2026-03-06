@@ -125,7 +125,7 @@ export default function ReferralsPage() {
       <div>
         <h1 className="text-2xl font-bold">Invite Friends</h1>
         <p className="text-muted-foreground mt-1">
-          Share your referral link and track your invites
+          Share your referral link and earn ⚡ 25 sats for each friend who signs up. They get 25 sats too!
         </p>
       </div>
 

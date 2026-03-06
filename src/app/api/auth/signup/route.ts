@@ -150,6 +150,73 @@ export async function POST(request: NextRequest) {
             metadata: { referred_username: username, referred_email: email },
             is_public: true,
           });
+
+          // ── Referral reward: 25 sats to referrer, 25 sats to new user ──
+          const REFERRAL_REWARD = 25;
+          try {
+            // Credit referrer
+            const { data: referrerWallet } = await (svc as any)
+              .from("wallets")
+              .select("balance_sats")
+              .eq("user_id", referrer.id)
+              .single();
+
+            if (referrerWallet) {
+              await (svc as any).from("wallets")
+                .update({ balance_sats: referrerWallet.balance_sats + REFERRAL_REWARD, updated_at: new Date().toISOString() })
+                .eq("user_id", referrer.id);
+            } else {
+              await (svc as any).from("wallets")
+                .insert({ user_id: referrer.id, balance_sats: REFERRAL_REWARD });
+            }
+
+            await (svc as any).from("wallet_transactions").insert({
+              user_id: referrer.id,
+              type: "deposit",
+              amount_sats: REFERRAL_REWARD,
+              balance_after: (referrerWallet?.balance_sats ?? 0) + REFERRAL_REWARD,
+              status: "completed",
+              reference_id: data.user.id,
+            });
+
+            // Credit new user
+            const { data: newUserWallet } = await (svc as any)
+              .from("wallets")
+              .select("balance_sats")
+              .eq("user_id", data.user.id)
+              .single();
+
+            if (newUserWallet) {
+              await (svc as any).from("wallets")
+                .update({ balance_sats: newUserWallet.balance_sats + REFERRAL_REWARD, updated_at: new Date().toISOString() })
+                .eq("user_id", data.user.id);
+            } else {
+              await (svc as any).from("wallets")
+                .insert({ user_id: data.user.id, balance_sats: REFERRAL_REWARD });
+            }
+
+            await (svc as any).from("wallet_transactions").insert({
+              user_id: data.user.id,
+              type: "deposit",
+              amount_sats: REFERRAL_REWARD,
+              balance_after: (newUserWallet?.balance_sats ?? 0) + REFERRAL_REWARD,
+              status: "completed",
+              reference_id: referrer.id,
+            });
+
+            // Notify referrer
+            await (svc as any).from("notifications").insert({
+              user_id: referrer.id,
+              type: "referral_reward",
+              title: "Referral reward! 🎉",
+              body: `${username} signed up with your referral! You both earned ${REFERRAL_REWARD} sats.`,
+              data: { amount_sats: REFERRAL_REWARD, referred_user_id: data.user.id },
+            });
+
+            console.log(`[Referral] Rewarded ${REFERRAL_REWARD} sats each to referrer ${referrer.id} and new user ${data.user.id}`);
+          } catch (rewardErr) {
+            console.error("[Referral] Reward failed (non-fatal):", rewardErr);
+          }
         }
       } catch (refError) {
         // Don't fail signup if referral tracking fails
