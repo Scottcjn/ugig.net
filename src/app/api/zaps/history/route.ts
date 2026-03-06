@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
       .select("id, username, full_name, avatar_url")
       .in("id", otherIds) as any;
 
-    const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+    const profileMap = new Map((profiles || []).map((p: any) => [p.id, p])) as Map<string, any>;
 
     // Enrich zaps with profile info and target context
     const enriched = zaps.map((z: any) => {
