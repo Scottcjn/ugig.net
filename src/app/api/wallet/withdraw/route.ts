@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
 
     // Atomic balance check + deduct using Postgres conditional update
     // This prevents race conditions: only deducts if balance >= amount
-    const { data: wallet, error: updateError } = await admin.rpc("withdraw_balance", {
+    const { data: wallet, error: updateError } = await (admin.rpc as any)("withdraw_balance", {
       p_user_id: userId,
       p_amount: amount_sats,
     }) as any;
