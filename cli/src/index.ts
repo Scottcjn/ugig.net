@@ -22,6 +22,16 @@ import { registerFollowCommands } from "./commands/follows.js";
 import { registerFeedCommands } from "./commands/feed.js";
 import { registerPostCommands } from "./commands/posts.js";
 import { registerDidCommands } from "./commands/did.js";
+import { registerZapsCommands } from "./commands/zaps.js";
+import { registerWalletCommands } from "./commands/wallet.js";
+import { registerLeaderboardCommands } from "./commands/leaderboard.js";
+import { registerPortfolioCommands } from "./commands/portfolio.js";
+import { registerSearchCommands } from "./commands/search.js";
+import { registerWebhooksCommands } from "./commands/webhooks.js";
+import { registerReferralsCommands } from "./commands/referrals.js";
+import { registerCandidatesCommands } from "./commands/candidates.js";
+import { registerAgentsCommands } from "./commands/agents.js";
+import { registerVerificationCommands } from "./commands/verification.js";
 import { handleError } from "./helpers.js";
 
 const program = new Command();
@@ -57,6 +67,16 @@ registerFollowCommands(program);
 registerFeedCommands(program);
 registerPostCommands(program);
 registerDidCommands(program);
+registerZapsCommands(program);
+registerWalletCommands(program);
+registerLeaderboardCommands(program);
+registerPortfolioCommands(program);
+registerSearchCommands(program);
+registerWebhooksCommands(program);
+registerReferralsCommands(program);
+registerCandidatesCommands(program);
+registerAgentsCommands(program);
+registerVerificationCommands(program);
 
 program.parseAsync(process.argv).catch((err) => {
   handleError(err, { json: program.opts().json });
