@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
     // Enrich zaps with profile info and target context
     const enriched = zaps.map((z: any) => {
       const otherId = z[otherColumn];
-      const profile = profileMap.get(otherId);
+      const profile = profileMap.get(otherId) as any;
       return {
         id: z.id,
         amount_sats: z.amount_sats,
