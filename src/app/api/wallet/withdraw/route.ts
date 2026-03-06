@@ -6,6 +6,8 @@ const LNBITS_URL = process.env.LNBITS_URL || "https://ln.coinpayportal.com";
 const LNBITS_ADMIN_KEY = process.env.LNBITS_ADMIN_KEY || "";
 const MIN_WITHDRAW = 10; // minimum 10 sats to withdraw
 const MAX_WITHDRAW = 100000; // max 100k sats per withdrawal
+const DAILY_WITHDRAW_LIMIT = 500000; // max 500k sats per day per user
+const HOURLY_WITHDRAW_LIMIT = 3; // max 3 withdrawals per hour per user
 
 /**
  * POST /api/wallet/withdraw
@@ -35,17 +37,86 @@ export async function POST(request: NextRequest) {
     const admin = createServiceClient();
     const userId = auth.user.id;
 
-    // Check balance
-    const { data: wallet } = await admin
+    // Validate amount is a positive integer
+    if (!Number.isInteger(amount_sats)) {
+      return NextResponse.json({ error: "Amount must be a whole number" }, { status: 400 });
+    }
+
+    // Rate limit: max N withdrawals per hour
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const { count: recentCount } = await admin
+      .from("wallet_transactions" as any)
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("type", "withdraw")
+      .gte("created_at", oneHourAgo) as any;
+
+    if ((recentCount ?? 0) >= HOURLY_WITHDRAW_LIMIT) {
+      return NextResponse.json({ error: "Too many withdrawals. Max 3 per hour." }, { status: 429 });
+    }
+
+    // Daily limit check
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { data: dailyTxs } = await admin
+      .from("wallet_transactions" as any)
+      .select("amount_sats")
+      .eq("user_id", userId)
+      .eq("type", "withdraw")
+      .gte("created_at", oneDayAgo) as any;
+
+    const dailyTotal = (dailyTxs || []).reduce((sum: number, tx: any) => sum + Math.abs(tx.amount_sats), 0);
+    if (dailyTotal + amount_sats > DAILY_WITHDRAW_LIMIT) {
+      return NextResponse.json({
+        error: `Daily withdrawal limit is ${DAILY_WITHDRAW_LIMIT.toLocaleString()} sats. You've used ${dailyTotal.toLocaleString()} today.`,
+      }, { status: 400 });
+    }
+
+    // Atomic balance check + deduct using Postgres conditional update
+    // This prevents race conditions: only deducts if balance >= amount
+    const { data: wallet, error: updateError } = await admin.rpc("withdraw_balance", {
+      p_user_id: userId,
+      p_amount: amount_sats,
+    }) as any;
+
+    if (updateError || !wallet || wallet.length === 0) {
+      // Fallback: check balance manually (rpc might not exist yet)
+      const { data: walletData } = await admin
+        .from("wallets" as any)
+        .select("balance_sats")
+        .eq("user_id", userId)
+        .single() as any;
+
+      const balance = walletData?.balance_sats ?? 0;
+      if (balance < amount_sats) {
+        return NextResponse.json({ error: "Insufficient balance", balance_sats: balance }, { status: 400 });
+      }
+
+      // Non-atomic fallback deduct (still auth-scoped)
+      const newBalance = balance - amount_sats;
+      await admin.from("wallets" as any)
+        .update({ balance_sats: newBalance, updated_at: new Date().toISOString() })
+        .eq("user_id", userId)
+        .eq("balance_sats", balance); // optimistic lock: only update if balance hasn't changed
+
+      // Verify deduction took effect
+      const { data: verify } = await admin
+        .from("wallets" as any)
+        .select("balance_sats")
+        .eq("user_id", userId)
+        .single() as any;
+
+      if ((verify?.balance_sats ?? 0) > balance - amount_sats) {
+        return NextResponse.json({ error: "Concurrent withdrawal detected. Please try again." }, { status: 409 });
+      }
+    }
+
+    const { data: currentWallet } = await admin
       .from("wallets" as any)
       .select("balance_sats")
       .eq("user_id", userId)
       .single() as any;
 
-    const balance = wallet?.balance_sats ?? 0;
-    if (balance < amount_sats) {
-      return NextResponse.json({ error: "Insufficient balance", balance_sats: balance }, { status: 400 });
-    }
+    const balance = currentWallet?.balance_sats ?? 0;
 
     let paymentHash: string;
     let bolt11: string | null = null;
@@ -136,18 +207,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid destination. Provide a Lightning Address (user@domain) or bolt11 invoice." }, { status: 400 });
     }
 
-    // Deduct from internal balance
-    const newBalance = balance - amount_sats;
-    await admin.from("wallets" as any)
-      .update({ balance_sats: newBalance, updated_at: new Date().toISOString() })
-      .eq("user_id", userId);
-
-    // Record transaction
+    // Record transaction (balance already deducted above)
     await admin.from("wallet_transactions" as any).insert({
       user_id: userId,
       type: "withdraw",
       amount_sats: -amount_sats,
-      balance_after: newBalance,
+      balance_after: balance,
       bolt11,
       payment_hash: paymentHash,
       status: "completed",
@@ -157,7 +222,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       ok: true,
       amount_sats,
-      new_balance: newBalance,
+      new_balance: balance,
       payment_hash: paymentHash,
       destination,
     });
