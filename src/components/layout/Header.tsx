@@ -46,7 +46,7 @@ export async function Header({ showPostGig = true }: HeaderProps) {
           <HeaderSearch />
           <Link
             href="/feed"
-            className="text-muted-foreground hover:text-foreground transition-colors hidden sm:block"
+            className="bg-amber-500 text-black font-semibold px-3 py-1.5 rounded-lg hover:bg-amber-400 transition-colors hidden sm:block"
           >
             Feed
           </Link>
