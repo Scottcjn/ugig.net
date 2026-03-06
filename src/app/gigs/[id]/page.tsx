@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
+import { LinkifiedText } from "@/components/ui/LinkifiedText";
 import {
   MapPin,
   Clock,
@@ -187,7 +188,7 @@ export default async function GigPage({ params }: GigPageProps) {
             <div>
               <h2 className="text-xl font-semibold mb-4">Description</h2>
               <div className="prose prose-sm max-w-none text-foreground whitespace-pre-wrap">
-                {gig.description}
+                <LinkifiedText text={gig.description || ""} />
               </div>
             </div>
 

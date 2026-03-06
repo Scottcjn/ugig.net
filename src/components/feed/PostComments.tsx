@@ -11,6 +11,7 @@ import { MentionTextarea } from "@/components/ui/mention-textarea";
 import { formatRelativeTime } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 import { parseContentWithMentions } from "@/lib/mentions";
+import { linkifyText } from "@/lib/linkify";
 
 function CommentContent({ content }: { content: string }) {
   const segments = parseContentWithMentions(content);
@@ -26,7 +27,7 @@ function CommentContent({ content }: { content: string }) {
             @{seg.username}
           </Link>
         ) : (
-          <span key={i}>{seg.value}</span>
+          <span key={i}>{linkifyText(seg.value)}</span>
         )
       )}
     </>

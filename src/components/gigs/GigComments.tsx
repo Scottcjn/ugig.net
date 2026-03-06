@@ -7,6 +7,7 @@ import { ZapButton } from "@/components/zaps/ZapButton";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { formatRelativeTime } from "@/lib/utils";
+import { linkifyText } from "@/lib/linkify";
 import type { GigCommentThread, GigCommentWithAuthor } from "@/types";
 
 interface GigCommentsProps {
@@ -224,7 +225,7 @@ export function GigComments({ gigId, currentUserId, gigOwnerId }: GigCommentsPro
             </div>
           ) : (
             <p className="text-sm mt-1 whitespace-pre-wrap break-words">
-              {comment.content}
+              {linkifyText(comment.content)}
             </p>
           )}
 

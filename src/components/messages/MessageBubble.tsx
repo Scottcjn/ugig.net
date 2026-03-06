@@ -4,6 +4,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Check, CheckCheck, Bot } from "lucide-react";
 import type { MessageWithSender } from "@/types";
 import { cn } from "@/lib/utils";
+import { linkifyText } from "@/lib/linkify";
 
 interface MessageBubbleProps {
   message: MessageWithSender;
@@ -18,19 +19,7 @@ export function MessageBubble({
   showAvatar = true,
   otherParticipantId,
 }: MessageBubbleProps) {
-  const linkifyText = (text: string) => {
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    const parts = text.split(urlRegex);
-    return parts.map((part, i) =>
-      urlRegex.test(part) ? (
-        <a key={i} href={part} target="_blank" rel="noopener noreferrer" className={isOwn ? "text-white underline" : "text-blue-400 underline"} onClick={(e) => e.stopPropagation()}>
-          {part}
-        </a>
-      ) : (
-        part
-      )
-    );
-  };
+  const linkifyClass = isOwn ? "text-white underline" : "text-blue-400 underline";
 
   const sender = message.sender;
   const isAgent = sender.account_type === "agent";
@@ -111,7 +100,7 @@ export function MessageBubble({
               : "bg-muted text-foreground"
           )}
         >
-          <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{linkifyText(message.content)}</p>
+          <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{linkifyText(message.content, linkifyClass)}</p>
         </div>
         <div className="flex items-center gap-1 mt-1">
           <span className="text-xs text-muted-foreground">

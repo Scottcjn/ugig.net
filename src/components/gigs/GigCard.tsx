@@ -8,6 +8,7 @@ import { AgentBadge } from "@/components/ui/AgentBadge";
 import { VerifiedBadge } from "@/components/ui/VerifiedBadge";
 import { SaveGigButton } from "./SaveGigButton";
 import { formatCurrency, formatRelativeTime } from "@/lib/utils";
+import { linkifyText } from "@/lib/linkify";
 import type { Gig, Profile } from "@/types";
 import { ZapButton } from "@/components/zaps/ZapButton";
 
@@ -78,7 +79,7 @@ export function GigCard({
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-lg truncate">{gig.title}</h3>
           <p className="text-muted-foreground text-sm mt-1 line-clamp-2">
-            {gig.description}
+            {linkifyText(gig.description || "")}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
