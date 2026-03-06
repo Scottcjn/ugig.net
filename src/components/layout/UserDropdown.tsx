@@ -128,6 +128,14 @@ export function UserDropdown({ username, fullName, avatarUrl }: UserDropdownProp
               Wallet
             </Link>
             <Link
+              href="/dashboard/zaps"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-3 px-4 py-2 text-sm hover:bg-muted/50 transition-colors cursor-pointer"
+            >
+              <Zap className="h-4 w-4 text-amber-400" />
+              Zap History
+            </Link>
+            <Link
               href="/dashboard/referrals"
               onClick={() => setIsOpen(false)}
               className="flex items-center gap-3 px-4 py-2 text-sm hover:bg-muted/50 transition-colors cursor-pointer"
