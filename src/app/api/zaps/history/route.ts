@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch profiles for the other party
-    const otherIds = [...new Set(zaps.map((z: any) => z[otherColumn]))];
+    const otherIds = [...new Set(zaps.map((z: any) => z[otherColumn]))] as string[];
     const { data: profiles } = await admin
       .from("profiles")
       .select("id, username, full_name, avatar_url")
