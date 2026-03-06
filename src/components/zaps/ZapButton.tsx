@@ -58,7 +58,9 @@ export function ZapButton({ targetType, targetId, recipientId, totalSats: initia
     }
   }
 
-  async function handleClick() {
+  async function handleClick(e?: React.MouseEvent) {
+    e?.preventDefault();
+    e?.stopPropagation();
     const has = await checkLnAddress();
     if (!has) {
       setShowLnModal(true);
@@ -97,9 +99,9 @@ export function ZapButton({ targetType, targetId, recipientId, totalSats: initia
 
   return (
     <>
-      <div ref={ref} className="relative inline-flex" onClick={(e) => e.stopPropagation()}>
+      <div ref={ref} className="relative inline-flex" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
         <button
-          onClick={handleClick}
+          onClick={(e) => handleClick(e)}
           disabled={loading}
           className={`flex items-center gap-1 text-xs text-muted-foreground hover:text-amber-500 transition-all ${flash ? "text-amber-400 scale-110" : ""} ${loading ? "opacity-50 pointer-events-none" : ""}`}
           title="Zap"
@@ -114,7 +116,7 @@ export function ZapButton({ targetType, targetId, recipientId, totalSats: initia
             <div className="text-xs text-muted-foreground mb-1.5 px-1">Zap sats ⚡</div>
             <div className="flex flex-wrap gap-1">
               {ZAP_AMOUNTS.map((amt) => (
-                <Button key={amt} size="sm" variant="outline" className="text-xs h-7 px-2" disabled={loading} onClick={() => handleZap(amt)}>
+                <Button key={amt} size="sm" variant="outline" className="text-xs h-7 px-2" disabled={loading} onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleZap(amt); }}>
                   {amt.toLocaleString()}
                 </Button>
               ))}
