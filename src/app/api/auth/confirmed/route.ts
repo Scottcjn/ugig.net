@@ -114,6 +114,90 @@ export async function POST(request: NextRequest) {
 
     console.log(`[Auth Confirmed] Welcome email sent to ${email} (${accountType})`, result);
 
+    // ── Referral reward: 25 sats each on account activation ──
+    try {
+      const { data: referral } = await (supabase as any)
+        .from("referrals")
+        .select("referrer_id, reward_paid")
+        .eq("referred_user_id", userId)
+        .eq("status", "registered")
+        .maybeSingle();
+
+      if (referral && !referral.reward_paid) {
+        const REFERRAL_REWARD = 25;
+        const referrerId = referral.referrer_id;
+
+        // Credit referrer
+        const { data: referrerWallet } = await (supabase as any)
+          .from("wallets")
+          .select("balance_sats")
+          .eq("user_id", referrerId)
+          .single();
+
+        if (referrerWallet) {
+          await (supabase as any).from("wallets")
+            .update({ balance_sats: referrerWallet.balance_sats + REFERRAL_REWARD, updated_at: new Date().toISOString() })
+            .eq("user_id", referrerId);
+        } else {
+          await (supabase as any).from("wallets")
+            .insert({ user_id: referrerId, balance_sats: REFERRAL_REWARD });
+        }
+
+        await (supabase as any).from("wallet_transactions").insert({
+          user_id: referrerId,
+          type: "deposit",
+          amount_sats: REFERRAL_REWARD,
+          balance_after: (referrerWallet?.balance_sats ?? 0) + REFERRAL_REWARD,
+          status: "completed",
+          reference_id: userId,
+        });
+
+        // Credit new user
+        const { data: newUserWallet } = await (supabase as any)
+          .from("wallets")
+          .select("balance_sats")
+          .eq("user_id", userId)
+          .single();
+
+        if (newUserWallet) {
+          await (supabase as any).from("wallets")
+            .update({ balance_sats: newUserWallet.balance_sats + REFERRAL_REWARD, updated_at: new Date().toISOString() })
+            .eq("user_id", userId);
+        } else {
+          await (supabase as any).from("wallets")
+            .insert({ user_id: userId, balance_sats: REFERRAL_REWARD });
+        }
+
+        await (supabase as any).from("wallet_transactions").insert({
+          user_id: userId,
+          type: "deposit",
+          amount_sats: REFERRAL_REWARD,
+          balance_after: (newUserWallet?.balance_sats ?? 0) + REFERRAL_REWARD,
+          status: "completed",
+          reference_id: referrerId,
+        });
+
+        // Mark reward as paid
+        await (supabase as any).from("referrals")
+          .update({ reward_paid: true })
+          .eq("referred_user_id", userId)
+          .eq("referrer_id", referrerId);
+
+        // Notify referrer
+        await (supabase as any).from("notifications").insert({
+          user_id: referrerId,
+          type: "referral_reward",
+          title: "Referral reward! \u{1F389}",
+          body: `${name || email} activated their account! You both earned ${REFERRAL_REWARD} sats.`,
+          data: { amount_sats: REFERRAL_REWARD, referred_user_id: userId },
+        });
+
+        console.log(`[Auth Confirmed] Referral reward: ${REFERRAL_REWARD} sats each to ${referrerId} and ${userId}`);
+      }
+    } catch (rewardErr) {
+      console.error("[Auth Confirmed] Referral reward failed (non-fatal):", rewardErr);
+    }
+
     return NextResponse.json({ ok: true, emailSent: true });
   } catch (err) {
     console.error("[Auth Confirmed] Error:", err);
