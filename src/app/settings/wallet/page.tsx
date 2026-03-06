@@ -337,8 +337,8 @@ export default function WalletPage() {
                   <span className="text-xs text-muted-foreground ml-2">{new Date(tx.created_at).toLocaleDateString()}</span>
                 </div>
                 <div className="text-right">
-                  <span className={`text-sm font-medium ${tx.type.includes("received") || tx.type === "deposit" ? "text-green-500" : "text-red-400"}`}>
-                    {tx.type.includes("received") || tx.type === "deposit" ? "+" : "-"}{tx.amount_sats.toLocaleString()} sats
+                  <span className={`text-sm font-medium ${tx.amount_sats >= 0 ? "text-green-500" : "text-red-400"}`}>
+                    {tx.amount_sats < 0 ? "" : "+"}{tx.amount_sats.toLocaleString()} sats
                   </span>
                   <div className="text-xs text-muted-foreground">bal: {tx.balance_after.toLocaleString()}</div>
                 </div>
