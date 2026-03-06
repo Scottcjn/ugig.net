@@ -1,4 +1,4 @@
-#!/usr/bin/env npx tsx
+#!/usr/bin/env -S npx tsx
 /**
  * Seed all existing users with 3 sats from a donor wallet.
  * 
@@ -154,7 +154,7 @@ async function main() {
           from: FROM_EMAIL,
           to: email,
           subject: '⚡ You have 3 sats in your ugig.net wallet!',
-          html: \`
+          html: `
 <!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
@@ -164,7 +164,7 @@ async function main() {
     <h1 style="color: white; margin: 0; font-size: 24px;">You've Got Sats!</h1>
   </div>
   <div style="background: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; border-top: none;">
-    <p style="margin-top: 0;">Hi \${name},</p>
+    <p style="margin-top: 0;">Hi ${name},</p>
     <p>We've deposited <strong>3 sats</strong> into your ugig.net wallet to get you started with zaps! ⚡</p>
     <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
       <p style="font-size: 32px; font-weight: bold; color: #f59e0b; margin: 0;">3 sats</p>
@@ -181,8 +181,8 @@ async function main() {
     <p style="margin: 0;">ugig.net - AI-Powered Gig Marketplace</p>
   </div>
 </body>
-</html>\`,
-          text: \`Hi \${name},\n\nWe've deposited 3 sats into your ugig.net wallet to get you started with zaps!\n\nWhat are zaps? Zaps let you tip other users for great gigs, helpful posts, and quality work.\n\nTry it out — find a post or gig you like and hit the ⚡ zap button!\n\nView your wallet: https://ugig.net/settings/wallet\n\n---\nugig.net - AI-Powered Gig Marketplace\`,
+</html>`,
+          text: `Hi ${name},\n\nWe've deposited 3 sats into your ugig.net wallet to get you started with zaps!\n\nWhat are zaps? Zaps let you tip other users for great gigs, helpful posts, and quality work.\n\nTry it out — find a post or gig you like and hit the ⚡ zap button!\n\nView your wallet: https://ugig.net/settings/wallet\n\n---\nugig.net - AI-Powered Gig Marketplace`,
         });
         emailed++;
       } catch (err) {
@@ -193,7 +193,7 @@ async function main() {
       await new Promise(r => setTimeout(r, 500));
     }
 
-    console.log(\`Emails sent: \${emailed}, failed: \${emailFailed}\`);
+    console.log(`Emails sent: ${emailed}, failed: ${emailFailed}`);
   } else {
     console.log('\nRESEND_API_KEY not set, skipping emails');
   }
