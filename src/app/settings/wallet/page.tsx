@@ -16,6 +16,96 @@ interface Transaction {
 
 const DEPOSIT_AMOUNTS = [1000, 5000, 10000, 50000];
 
+function WithdrawSection({ balance, onWithdraw }: { balance: number; onWithdraw: (newBal: number) => void }) {
+  const [amount, setAmount] = useState("");
+  const [destination, setDestination] = useState("");
+  const [withdrawing, setWithdrawing] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleWithdraw() {
+    const sats = parseInt(amount);
+    if (!sats || sats <= 0 || !destination) return;
+
+    setWithdrawing(true);
+    setError("");
+    setSuccess(false);
+
+    try {
+      const res = await fetch("/api/wallet/withdraw", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount_sats: sats, destination }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Withdrawal failed");
+        setWithdrawing(false);
+        return;
+      }
+
+      setSuccess(true);
+      onWithdraw(data.new_balance);
+      setAmount("");
+      setDestination("");
+    } catch {
+      setError("Withdrawal failed. Please try again.");
+    }
+    setWithdrawing(false);
+  }
+
+  return (
+    <div className="border border-border rounded-lg p-6 mb-6 bg-card">
+      <h2 className="font-semibold mb-3 flex items-center gap-2"><ArrowUpFromLine className="h-4 w-4" /> Withdraw</h2>
+
+      {success ? (
+        <div className="text-center py-4">
+          <div className="text-2xl mb-2">✅</div>
+          <p className="text-green-500 font-semibold">Withdrawal sent!</p>
+          <p className="text-sm text-muted-foreground mt-1">Sats are on their way.</p>
+          <Button variant="outline" size="sm" className="mt-3" onClick={() => setSuccess(false)}>Withdraw more</Button>
+        </div>
+      ) : (
+        <>
+          <p className="text-sm text-muted-foreground mb-3">Withdraw sats to any Lightning Address or paste a bolt11 invoice.</p>
+
+          {error && <p className="text-sm text-red-500 mb-3">{error}</p>}
+
+          <div className="space-y-3">
+            <input
+              type="text"
+              placeholder="Lightning Address (user@wallet.com) or bolt11 invoice"
+              value={destination}
+              onChange={(e) => setDestination(e.target.value.trim())}
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+            />
+            <div className="flex gap-2">
+              <input
+                type="number"
+                placeholder="Amount (sats)"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm"
+                min={10}
+                max={balance}
+              />
+              <Button
+                size="sm"
+                disabled={withdrawing || !amount || !destination || parseInt(amount) > balance || parseInt(amount) < 10}
+                onClick={handleWithdraw}
+              >
+                {withdrawing ? "Sending..." : "Withdraw"}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">Min: 10 sats · Max: {Math.min(balance, 100000).toLocaleString()} sats · Available: {balance.toLocaleString()} sats</p>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function WalletPage() {
   const [balance, setBalance] = useState<number>(0);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -110,8 +200,8 @@ export default function WalletPage() {
     setPaid(false);
   }
 
-  const typeLabel: Record<string, string> = { deposit: "Deposit", withdrawal: "Withdrawal", zap_sent: "Zap Sent", zap_received: "Zap Received" };
-  const typeColor: Record<string, string> = { deposit: "text-green-500", withdrawal: "text-red-500", zap_sent: "text-red-400", zap_received: "text-green-400" };
+  const typeLabel: Record<string, string> = { deposit: "Deposit", withdrawal: "Withdrawal", withdraw: "Withdrawal", zap_sent: "Zap Sent", zap_received: "Zap Received" };
+  const typeColor: Record<string, string> = { deposit: "text-green-500", withdrawal: "text-red-500", withdraw: "text-red-500", zap_sent: "text-red-400", zap_received: "text-green-400" };
 
   if (loading) {
     return <div className="container mx-auto px-4 py-8 max-w-2xl"><p className="text-muted-foreground">Loading wallet...</p></div>;
@@ -213,10 +303,7 @@ export default function WalletPage() {
       </div>
 
       {/* Withdraw */}
-      <div className="border border-border rounded-lg p-6 mb-6 bg-card">
-        <h2 className="font-semibold mb-3 flex items-center gap-2"><ArrowUpFromLine className="h-4 w-4" /> Withdraw</h2>
-        <p className="text-sm text-muted-foreground">Coming soon — withdraw to your Lightning Address.</p>
-      </div>
+      <WithdrawSection balance={balance} onWithdraw={(newBal) => { setBalance(newBal); refreshTransactions(); }} />
 
       {/* Transactions */}
       <div className="border border-border rounded-lg p-6 bg-card">
