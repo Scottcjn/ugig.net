@@ -4,7 +4,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { signupSchema } from "@/lib/validations";
 import { checkRateLimit, rateLimitExceeded, getRateLimitIdentifier } from "@/lib/rate-limit";
 import { sendEmail, welcomeEmail } from "@/lib/email";
-import { checkSpam } from "@/lib/spam-check";
+import { checkSpam, checkEmail } from "@/lib/spam-check";
 import { generateAndStoreDid } from "@/lib/auth/did";
 
 export async function POST(request: NextRequest) {
@@ -36,12 +36,21 @@ export async function POST(request: NextRequest) {
       ref,
     } = validationResult.data;
 
-    // Spam check on username and agent name
+    // Spam check on username, name, and email
     const spamResult = checkSpam(username, agent_name);
     if (spamResult.spam) {
       console.warn(`[signup] Spam detected: ${username} — ${spamResult.reason}`);
       return NextResponse.json(
         { error: "Username or name is not allowed. Please use a real name." },
+        { status: 400 }
+      );
+    }
+
+    const emailSpam = checkEmail(email);
+    if (emailSpam.spam) {
+      console.warn(`[signup] Spam email: ${email} — ${emailSpam.reason}`);
+      return NextResponse.json(
+        { error: emailSpam.reason || "This email address is not allowed." },
         { status: 400 }
       );
     }
@@ -81,7 +90,7 @@ export async function POST(request: NextRequest) {
           username,
           account_type,
           ...(account_type === "agent" && {
-            agent_name,
+      agent_name,
             agent_description,
             agent_version,
             agent_operator_url,

@@ -82,3 +82,41 @@ export function checkSpam(
 
   return { spam: false };
 }
+
+// Common disposable/throwaway email domains
+const DISPOSABLE_DOMAINS = new Set([
+  "tempmail.com", "throwaway.email", "guerrillamail.com", "guerrillamail.net",
+  "mailinator.com", "yopmail.com", "sharklasers.com", "guerrillamailblock.com",
+  "grr.la", "dispostable.com", "mailnesia.com", "maildrop.cc", "discard.email",
+  "tempail.com", "tempr.email", "temp-mail.org", "fakeinbox.com", "trashmail.com",
+  "trashmail.net", "trashmail.me", "mohmal.com", "getnada.com", "emailondeck.com",
+  "10minutemail.com", "minutemail.com", "tempinbox.com", "binkmail.com",
+  "mailcatch.com", "mailexpire.com", "mailmoat.com", "mailnull.com",
+  "mytrashmail.com", "spamfree24.org", "spamgourmet.com", "spamhereplease.com",
+  "throwam.com", "trash-mail.at", "trashymail.com", "yopmail.fr", "yopmail.net",
+  "jetable.org", "guerrillamail.info", "guerrillamail.biz", "guerrillamail.de",
+  "guerrillamail.org", "harakirimail.com", "mailforspam.com",
+]);
+
+const SPAM_EMAIL_PATTERNS = [
+  /^[a-z]{2,3}\d{6,}@/i,           // ab123456@...
+  /^[a-z0-9]{20,}@/i,               // long random local part
+  /\+.{10,}@/,                       // long plus-addressing (used for mass signups)
+];
+
+export function checkEmail(email: string): { spam: boolean; reason?: string } {
+  const [localPart, domain] = email.toLowerCase().split("@");
+  if (!localPart || !domain) return { spam: true, reason: "Invalid email" };
+
+  if (DISPOSABLE_DOMAINS.has(domain)) {
+    return { spam: true, reason: "Disposable email addresses are not allowed" };
+  }
+
+  for (const pattern of SPAM_EMAIL_PATTERNS) {
+    if (pattern.test(email)) {
+      return { spam: true, reason: "Email matches spam pattern" };
+    }
+  }
+
+  return { spam: false };
+}
