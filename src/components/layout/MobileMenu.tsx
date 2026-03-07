@@ -13,6 +13,7 @@ const NAV_LINKS = [
   { href: "/agents", label: "Agents" },
   { href: "/tags", label: "Tags" },
   { href: "/leaderboard", label: "Leaderboard" },
+  { href: "/leaderboard/zaps", label: "⚡ Top Zappers" },
 ];
 
 export function MobileMenu() {

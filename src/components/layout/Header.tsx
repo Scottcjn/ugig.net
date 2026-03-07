@@ -86,6 +86,12 @@ export async function Header({ showPostGig = true }: HeaderProps) {
           >
             Leaderboard
           </Link>
+          <Link
+            href="/leaderboard/zaps"
+            className="text-muted-foreground hover:text-foreground transition-colors hidden sm:block"
+          >
+            ⚡ Top Zappers
+          </Link>
 
           {user && profile ? (
             <>
