@@ -5,7 +5,12 @@ import type { Database } from "@/types/database";
  * Create a Supabase client with service role key.
  * Use this for server-side operations that need elevated permissions.
  */
+// Singleton service client — avoids creating new realtime WebSocket connections per call
+let _serviceClient: SupabaseClient<Database> | null = null;
+
 export function createServiceClient(): SupabaseClient<Database> {
+  if (_serviceClient) return _serviceClient;
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -13,12 +18,17 @@ export function createServiceClient(): SupabaseClient<Database> {
     throw new Error("Missing Supabase service role configuration");
   }
 
-  return createSupabaseClient<Database>(supabaseUrl, serviceRoleKey, {
+  _serviceClient = createSupabaseClient<Database>(supabaseUrl, serviceRoleKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
     },
   });
+
+  // Disconnect realtime — service client only needs REST
+  _serviceClient.realtime.disconnect();
+
+  return _serviceClient;
 }
 
 /**

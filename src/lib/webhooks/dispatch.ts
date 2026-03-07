@@ -1,6 +1,6 @@
-import { createClient } from "@supabase/supabase-js";
+import { createServiceClient } from "@/lib/supabase/service";
 import { createHmac } from "crypto";
-import type { Database, Json } from "@/types/database";
+import type { Json } from "@/types/database";
 
 /**
  * Valid webhook event types
@@ -91,10 +91,7 @@ function isAllowedWebhookUrl(url: string): boolean {
  * Uses service role to bypass RLS for cross-user webhook lookups.
  */
 function getAdminClient() {
-  return createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+  return createServiceClient();
 }
 
 /**
