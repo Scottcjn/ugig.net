@@ -27,8 +27,9 @@ export async function GET(
       return NextResponse.json({ error: "Skill not found" }, { status: 404 });
     }
 
-    // Check if current user has purchased
+    // Check if current user has purchased + their vote
     let purchased = false;
+    let userVote: number | null = null;
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -42,6 +43,18 @@ export async function GET(
         .single();
 
       purchased = !!purchase;
+
+      // Get user's vote
+      const { data: vote } = await supabase
+        .from("skill_votes" as any)
+        .select("vote_type")
+        .eq("listing_id", (listing as any).id)
+        .eq("user_id", user.id)
+        .single();
+
+      if (vote) {
+        userVote = (vote as any).vote_type;
+      }
     }
 
     // Fetch reviews
@@ -54,9 +67,20 @@ export async function GET(
       .order("created_at", { ascending: false })
       .limit(20);
 
+    // Fetch zap totals for this listing
+    const admin = createServiceClient();
+    const { data: zapAgg } = await admin
+      .from("zaps" as any)
+      .select("amount_sats")
+      .eq("target_type", "skill")
+      .eq("target_id", (listing as any).id);
+
+    const zapsTotal = (zapAgg || []).reduce((sum: number, z: any) => sum + (z.amount_sats || 0), 0);
+
     return NextResponse.json({
-      listing,
+      listing: { ...(listing as any), zaps_total: zapsTotal },
       purchased,
+      user_vote: userVote,
       reviews: reviews || [],
     });
   } catch {

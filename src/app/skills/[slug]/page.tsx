@@ -1,12 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { Header } from "@/components/layout/Header";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Star, Download, Zap, ArrowLeft, Calendar, Package } from "lucide-react";
 import { SkillPurchaseButton } from "@/components/skills/SkillPurchaseButton";
 import { SkillReviewForm } from "@/components/skills/SkillReviewForm";
+import { SkillVoteButton } from "@/components/skills/SkillVoteButton";
+import { SkillZapButton } from "@/components/skills/SkillZapButton";
+import { SkillComments } from "@/components/skills/SkillComments";
+import { SkillDownloadButton } from "@/components/skills/SkillDownloadButton";
 
 interface SkillDetailProps {
   params: Promise<{ slug: string }>;
@@ -44,13 +49,15 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
 
   const l = listing as any;
 
-  // Check auth + purchase status
+  // Check auth + purchase status + user vote
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   let purchased = false;
   let isOwner = false;
+  let userVote: number | null = null;
+
   if (user) {
     isOwner = user.id === l.seller_id;
     if (!isOwner) {
@@ -61,6 +68,18 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
         .eq("buyer_id", user.id)
         .single();
       purchased = !!purchase;
+    }
+
+    // Get user's vote
+    const { data: vote } = await supabase
+      .from("skill_votes" as any)
+      .select("vote_type")
+      .eq("listing_id", l.id)
+      .eq("user_id", user.id)
+      .single();
+
+    if (vote) {
+      userVote = (vote as any).vote_type;
     }
   }
 
@@ -73,6 +92,19 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
     .eq("listing_id", l.id)
     .order("created_at", { ascending: false })
     .limit(20);
+
+  // Zap totals
+  const admin = createServiceClient();
+  const { data: zapAgg } = await admin
+    .from("zaps" as any)
+    .select("amount_sats")
+    .eq("target_type", "skill")
+    .eq("target_id", l.id);
+
+  const zapsTotal = (zapAgg || []).reduce((sum: number, z: any) => sum + (z.amount_sats || 0), 0);
+
+  const hasFile = !!l.skill_file_path;
+  const canDownload = isOwner || purchased;
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -116,8 +148,23 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
                 </div>
               )}
 
-              {/* Stats */}
-              <div className="flex items-center gap-6 text-sm text-muted-foreground border-y border-border py-3">
+              {/* Stats + Social row */}
+              <div className="flex items-center gap-6 text-sm text-muted-foreground border-y border-border py-3 flex-wrap">
+                {/* Vote */}
+                {user ? (
+                  <SkillVoteButton
+                    slug={slug}
+                    initialUpvotes={l.upvotes ?? 0}
+                    initialDownvotes={l.downvotes ?? 0}
+                    initialScore={l.score ?? 0}
+                    initialUserVote={userVote}
+                  />
+                ) : (
+                  <span className="flex items-center gap-1">
+                    👍 {l.upvotes ?? 0}
+                  </span>
+                )}
+
                 <span className="flex items-center gap-1.5">
                   <Download className="h-4 w-4" />
                   {l.downloads_count} downloads
@@ -135,6 +182,21 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
                 </span>
               </div>
 
+              {/* Zap button */}
+              {user && !isOwner && (
+                <SkillZapButton
+                  listingId={l.id}
+                  sellerId={l.seller_id}
+                  initialZapsTotal={zapsTotal}
+                />
+              )}
+              {!user && zapsTotal > 0 && (
+                <span className="text-sm text-amber-500 flex items-center gap-1">
+                  <Zap className="h-4 w-4 fill-amber-500" />
+                  {zapsTotal.toLocaleString()} sats zapped
+                </span>
+              )}
+
               {/* Description */}
               <div className="prose prose-invert max-w-none">
                 <h2 className="text-xl font-semibold mb-3">Description</h2>
@@ -142,6 +204,24 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
                   {l.description}
                 </div>
               </div>
+
+              {/* Source URL */}
+              {l.source_url && (
+                <div>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-1">Source</h3>
+                  <a
+                    href={l.source_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-primary hover:underline break-all"
+                  >
+                    {l.source_url}
+                  </a>
+                </div>
+              )}
+
+              {/* Comments */}
+              <SkillComments slug={slug} isAuthenticated={!!user} />
 
               {/* Reviews */}
               <div>
@@ -234,16 +314,24 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
                 </div>
 
                 {isOwner ? (
-                  <Link href={`/dashboard/skills/${slug}/edit`}>
-                    <button className="w-full py-2.5 px-4 rounded-lg bg-muted text-foreground font-medium hover:bg-muted/80 transition-colors">
-                      Edit Listing
-                    </button>
-                  </Link>
+                  <div className="space-y-3">
+                    <Link href={`/dashboard/skills/${slug}/edit`}>
+                      <button className="w-full py-2.5 px-4 rounded-lg bg-muted text-foreground font-medium hover:bg-muted/80 transition-colors">
+                        Edit Listing
+                      </button>
+                    </Link>
+                    {hasFile && (
+                      <SkillDownloadButton slug={slug} hasFile={hasFile} />
+                    )}
+                  </div>
                 ) : purchased ? (
-                  <div className="text-center">
+                  <div className="space-y-3 text-center">
                     <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-500/10 text-green-600 rounded-lg font-medium mb-2">
                       <Package className="h-4 w-4" /> Purchased
                     </div>
+                    {hasFile && (
+                      <SkillDownloadButton slug={slug} hasFile={hasFile} />
+                    )}
                     <p className="text-xs text-muted-foreground">
                       Available in your{" "}
                       <Link href="/skills/library" className="text-primary hover:underline">

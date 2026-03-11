@@ -48,6 +48,7 @@ export default async function EditSkillPage({ params }: EditSkillPageProps) {
           </p>
           <SkillListingForm
             slug={l.slug}
+            listingId={l.id}
             initialData={{
               title: l.title,
               tagline: l.tagline || "",
@@ -56,6 +57,8 @@ export default async function EditSkillPage({ params }: EditSkillPageProps) {
               category: l.category || "",
               tags: l.tags || [],
               status: l.status,
+              source_url: l.source_url || "",
+              skill_file_path: l.skill_file_path || "",
             }}
           />
         </div>

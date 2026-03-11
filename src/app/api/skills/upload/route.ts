@@ -7,6 +7,8 @@ import {
   isScanAcceptable,
 } from "@/lib/skills/security-scan";
 
+const BUCKET = "skill-files";
+
 /**
  * POST /api/skills/upload - Upload a skill file with security scanning
  *
@@ -18,7 +20,7 @@ import {
  *   1. Validate auth + ownership
  *   2. Run SecureClaw security scan
  *   3. Persist scan results
- *   4. If clean, store file; otherwise reject
+ *   4. If clean, store file in Supabase Storage; otherwise reject
  */
 export async function POST(request: NextRequest) {
   try {
@@ -67,12 +69,15 @@ export async function POST(request: NextRequest) {
       timeoutMs: 30_000,
     });
 
+    // Storage path: {seller_id}/{slug}/{filename}
+    const storagePath = `${auth.user.id}/${(listing as any).slug}/${file.name}`;
+
     // Persist scan record
     const { data: scanRecord, error: scanError } = await admin
       .from("skill_security_scans" as any)
       .insert({
         listing_id: listingId,
-        file_path: `skills/${auth.user.id}/${(listing as any).slug}/${file.name}`,
+        file_path: storagePath,
         file_hash: scanResult.fileHash,
         file_size_bytes: scanResult.fileSizeBytes,
         scan_status: scanResult.status,
@@ -111,14 +116,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Store file (using Supabase storage or filesystem)
-    const filePath = `skills/${auth.user.id}/${(listing as any).slug}/${file.name}`;
+    // Upload to Supabase Storage (service role bypasses RLS)
+    const { error: uploadError } = await admin.storage
+      .from(BUCKET)
+      .upload(storagePath, buffer, {
+        contentType: file.type || "application/octet-stream",
+        upsert: true, // overwrite if re-uploading
+      });
+
+    if (uploadError) {
+      console.error("Storage upload error:", uploadError);
+      return NextResponse.json(
+        { error: "Failed to store file" },
+        { status: 500 }
+      );
+    }
 
     // Update listing with file path
     await admin
       .from("skill_listings" as any)
       .update({
-        skill_file_path: filePath,
+        skill_file_path: storagePath,
         scan_status: "clean",
       })
       .eq("id", listingId);
@@ -126,7 +144,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         ok: true,
-        file_path: filePath,
+        file_path: storagePath,
         scan: {
           status: scanResult.status,
           file_hash: scanResult.fileHash,

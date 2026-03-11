@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SKILL_CATEGORIES } from "@/lib/constants";
-import { Loader2, Trash2 } from "lucide-react";
+import { Loader2, Trash2, Upload, Link as LinkIcon, Sparkles } from "lucide-react";
 
 interface SkillListingFormProps {
   slug?: string; // If editing
+  listingId?: string; // For file upload
   initialData?: {
     title: string;
     tagline: string;
@@ -18,12 +19,15 @@ interface SkillListingFormProps {
     category: string;
     tags: string[];
     status: string;
+    source_url?: string;
+    skill_file_path?: string;
   };
 }
 
-export function SkillListingForm({ slug, initialData }: SkillListingFormProps) {
+export function SkillListingForm({ slug, listingId, initialData }: SkillListingFormProps) {
   const router = useRouter();
   const isEdit = !!slug;
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [title, setTitle] = useState(initialData?.title || "");
   const [tagline, setTagline] = useState(initialData?.tagline || "");
@@ -32,10 +36,93 @@ export function SkillListingForm({ slug, initialData }: SkillListingFormProps) {
   const [category, setCategory] = useState(initialData?.category || "");
   const [tagsInput, setTagsInput] = useState(initialData?.tags?.join(", ") || "");
   const [status, setStatus] = useState(initialData?.status || "draft");
+  const [sourceUrl, setSourceUrl] = useState(initialData?.source_url || "");
+  const [skillFilePath, setSkillFilePath] = useState(initialData?.skill_file_path || "");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [autofilling, setAutofilling] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+
+  async function handleAutofill() {
+    if (!sourceUrl) return;
+    setAutofilling(true);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/skills/metadata", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: sourceUrl }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Failed to fetch metadata");
+        return;
+      }
+
+      const meta = data.metadata;
+      if (meta.title && !title) setTitle(meta.title);
+      if (meta.description && !description) setDescription(meta.description);
+      if (meta.tags?.length && !tagsInput) setTagsInput(meta.tags.join(", "));
+    } catch {
+      setError("Failed to fetch metadata");
+    } finally {
+      setAutofilling(false);
+    }
+  }
+
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Need a listing ID to upload
+    const targetListingId = listingId;
+    if (!targetListingId) {
+      setError("Save the listing first before uploading a file.");
+      return;
+    }
+
+    setUploading(true);
+    setUploadStatus(null);
+    setError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("listing_id", targetListingId);
+
+      const res = await fetch("/api/skills/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (data.scan?.findings?.length) {
+          setError(
+            `Security scan: ${data.error} — ${data.scan.findings.map((f: any) => f.detail).join(", ")}`
+          );
+        } else {
+          setError(data.error || "Upload failed");
+        }
+        return;
+      }
+
+      setSkillFilePath(data.file_path);
+      setUploadStatus(`Uploaded (${data.scan.status}) — ${file.name}`);
+    } catch {
+      setError("Upload failed");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -47,7 +134,7 @@ export function SkillListingForm({ slug, initialData }: SkillListingFormProps) {
       .map((t) => t.trim())
       .filter(Boolean);
 
-    const body = {
+    const body: Record<string, unknown> = {
       title,
       tagline,
       description,
@@ -55,6 +142,7 @@ export function SkillListingForm({ slug, initialData }: SkillListingFormProps) {
       category: category || undefined,
       tags,
       status,
+      source_url: sourceUrl || undefined,
     };
 
     try {
@@ -102,6 +190,42 @@ export function SkillListingForm({ slug, initialData }: SkillListingFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Source URL + Autofill */}
+      <div className="space-y-2">
+        <Label htmlFor="source_url">
+          <LinkIcon className="h-3.5 w-3.5 inline mr-1" />
+          Source URL <span className="text-muted-foreground font-normal">(optional)</span>
+        </Label>
+        <div className="flex gap-2">
+          <Input
+            id="source_url"
+            type="url"
+            value={sourceUrl}
+            onChange={(e) => setSourceUrl(e.target.value)}
+            placeholder="https://github.com/user/skill-repo"
+            className="flex-1"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleAutofill}
+            disabled={autofilling || !sourceUrl}
+            className="shrink-0"
+          >
+            {autofilling ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4" />
+            )}
+            <span className="ml-1.5 hidden sm:inline">Autofill</span>
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Paste a GitHub repo, npm package, or website URL and click Autofill to populate fields.
+        </p>
+      </div>
+
       <div className="space-y-2">
         <Label htmlFor="title">Title *</Label>
         <Input
@@ -181,6 +305,39 @@ export function SkillListingForm({ slug, initialData }: SkillListingFormProps) {
           onChange={(e) => setTagsInput(e.target.value)}
           placeholder="e.g. github, code-review, automation (comma separated)"
         />
+      </div>
+
+      {/* File Upload */}
+      <div className="space-y-2">
+        <Label>
+          <Upload className="h-3.5 w-3.5 inline mr-1" />
+          Skill File
+        </Label>
+        {skillFilePath && (
+          <p className="text-xs text-green-500">
+            ✓ {uploadStatus || `File: ${skillFilePath.split("/").pop()}`}
+          </p>
+        )}
+        <div className="flex items-center gap-3">
+          <input
+            ref={fileInputRef}
+            type="file"
+            onChange={handleFileUpload}
+            disabled={uploading || (!isEdit && !listingId)}
+            className="text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20 disabled:opacity-50"
+          />
+          {uploading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+        </div>
+        {!isEdit && !listingId && (
+          <p className="text-xs text-muted-foreground">
+            Save the listing first, then upload a file.
+          </p>
+        )}
+        {isEdit && !listingId && (
+          <p className="text-xs text-amber-500">
+            Listing ID needed for upload — refresh the page.
+          </p>
+        )}
       </div>
 
       <div className="space-y-2">
