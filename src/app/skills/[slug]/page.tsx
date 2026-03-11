@@ -20,7 +20,7 @@ import {
 import { SkillPurchaseButton } from "@/components/skills/SkillPurchaseButton";
 import { SkillReviewForm } from "@/components/skills/SkillReviewForm";
 import { SkillVoteButton } from "@/components/skills/SkillVoteButton";
-import { SkillZapButton } from "@/components/skills/SkillZapButton";
+import { ZapButton } from "@/components/zaps/ZapButton";
 import { SkillComments } from "@/components/skills/SkillComments";
 import { SkillDownloadButton } from "@/components/skills/SkillDownloadButton";
 import { SecurityScanBadge } from "@/components/skills/SecurityScanBadge";
@@ -273,10 +273,11 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
 
               {/* ─── Zap button (always visible when user is logged in) ─── */}
               {user && (
-                <SkillZapButton
-                  listingId={l.id}
-                  sellerId={l.seller_id}
-                  initialZapsTotal={zapsTotal}
+                <ZapButton
+                  targetType="skill"
+                  targetId={l.id}
+                  recipientId={l.seller_id}
+                  totalSats={zapsTotal}
                 />
               )}
               {!user && zapsTotal > 0 && (
