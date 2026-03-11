@@ -20,6 +20,8 @@ interface SkillListingFormProps {
     tags: string[];
     status: string;
     source_url?: string;
+    skill_file_url?: string;
+    website_url?: string;
     skill_file_path?: string;
   };
 }
@@ -37,6 +39,8 @@ export function SkillListingForm({ slug, listingId, initialData }: SkillListingF
   const [tagsInput, setTagsInput] = useState(initialData?.tags?.join(", ") || "");
   const [status, setStatus] = useState(initialData?.status || "draft");
   const [sourceUrl, setSourceUrl] = useState(initialData?.source_url || "");
+  const [skillFileUrl, setSkillFileUrl] = useState(initialData?.skill_file_url || "");
+  const [websiteUrl, setWebsiteUrl] = useState(initialData?.website_url || "");
   const [skillFilePath, setSkillFilePath] = useState(initialData?.skill_file_path || "");
 
   const [loading, setLoading] = useState(false);
@@ -47,7 +51,7 @@ export function SkillListingForm({ slug, listingId, initialData }: SkillListingF
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
 
   async function handleAutofill() {
-    if (!sourceUrl) return;
+    if (!websiteUrl) return;
     setAutofilling(true);
     setError(null);
 
@@ -55,7 +59,7 @@ export function SkillListingForm({ slug, listingId, initialData }: SkillListingF
       const res = await fetch("/api/skills/metadata", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: sourceUrl }),
+        body: JSON.stringify({ url: websiteUrl }),
       });
 
       const data = await res.json();
@@ -143,6 +147,8 @@ export function SkillListingForm({ slug, listingId, initialData }: SkillListingF
       tags,
       status,
       source_url: sourceUrl || undefined,
+      skill_file_url: skillFileUrl || undefined,
+      website_url: websiteUrl || undefined,
     };
 
     try {
@@ -190,19 +196,37 @@ export function SkillListingForm({ slug, listingId, initialData }: SkillListingF
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Source URL + Autofill */}
+      {/* Skill File URL */}
       <div className="space-y-2">
-        <Label htmlFor="source_url">
+        <Label htmlFor="skill_file_url">
           <LinkIcon className="h-3.5 w-3.5 inline mr-1" />
-          Source URL <span className="text-muted-foreground font-normal">(optional)</span>
+          Skill File URL <span className="text-muted-foreground font-normal">(optional)</span>
+        </Label>
+        <Input
+          id="skill_file_url"
+          type="url"
+          value={skillFileUrl}
+          onChange={(e) => setSkillFileUrl(e.target.value)}
+          placeholder="https://github.com/user/repo/blob/main/SKILL.md"
+        />
+        <p className="text-xs text-muted-foreground">
+          Direct link to the skill file (e.g. SKILL.md on GitHub, npm package).
+        </p>
+      </div>
+
+      {/* Website URL + Autofill */}
+      <div className="space-y-2">
+        <Label htmlFor="website_url">
+          <LinkIcon className="h-3.5 w-3.5 inline mr-1" />
+          Website URL <span className="text-muted-foreground font-normal">(optional)</span>
         </Label>
         <div className="flex gap-2">
           <Input
-            id="source_url"
+            id="website_url"
             type="url"
-            value={sourceUrl}
-            onChange={(e) => setSourceUrl(e.target.value)}
-            placeholder="https://github.com/user/skill-repo"
+            value={websiteUrl}
+            onChange={(e) => setWebsiteUrl(e.target.value)}
+            placeholder="https://example.com/my-skill"
             className="flex-1"
           />
           <Button
@@ -210,7 +234,7 @@ export function SkillListingForm({ slug, listingId, initialData }: SkillListingF
             variant="outline"
             size="sm"
             onClick={handleAutofill}
-            disabled={autofilling || !sourceUrl}
+            disabled={autofilling || !websiteUrl}
             className="shrink-0"
           >
             {autofilling ? (
@@ -218,13 +242,30 @@ export function SkillListingForm({ slug, listingId, initialData }: SkillListingF
             ) : (
               <Sparkles className="h-4 w-4" />
             )}
-            <span className="ml-1.5 hidden sm:inline">Autofill</span>
+            <span className="ml-1.5 hidden sm:inline">Autofill from website</span>
           </Button>
         </div>
         <p className="text-xs text-muted-foreground">
-          Paste a GitHub repo, npm package, or website URL and click Autofill to populate fields.
+          Paste a website URL and click Autofill to populate title, description, and tags.
         </p>
       </div>
+
+      {/* Legacy Source URL (hidden if empty, kept for backward compat) */}
+      {sourceUrl && (
+        <div className="space-y-2">
+          <Label htmlFor="source_url">
+            <LinkIcon className="h-3.5 w-3.5 inline mr-1" />
+            Source URL <span className="text-muted-foreground font-normal">(legacy)</span>
+          </Label>
+          <Input
+            id="source_url"
+            type="url"
+            value={sourceUrl}
+            onChange={(e) => setSourceUrl(e.target.value)}
+            placeholder="https://github.com/user/skill-repo"
+          />
+        </div>
+      )}
 
       <div className="space-y-2">
         <Label htmlFor="title">Title *</Label>

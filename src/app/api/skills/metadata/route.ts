@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthContext } from "@/lib/auth/get-user";
-import { extractMetadata, MetadataExtractionError } from "@/lib/skills/metadata-extract";
+import { extractMetadataWithFallback, MetadataExtractionError } from "@/lib/skills/metadata-extract";
 import { z } from "zod";
 
 const metadataRequestSchema = z.object({
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const metadata = await extractMetadata(parsed.data.url);
+    const metadata = await extractMetadataWithFallback(parsed.data.url);
 
     return NextResponse.json({ metadata });
   } catch (err) {

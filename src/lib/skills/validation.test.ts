@@ -83,6 +83,47 @@ describe("skillListingSchema", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it("accepts valid skill_file_url", () => {
+    const result = skillListingSchema.safeParse({
+      ...valid,
+      skill_file_url: "https://github.com/user/repo/blob/main/SKILL.md",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts valid website_url", () => {
+    const result = skillListingSchema.safeParse({
+      ...valid,
+      website_url: "https://example.com/my-skill",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid skill_file_url", () => {
+    const result = skillListingSchema.safeParse({
+      ...valid,
+      skill_file_url: "not-a-url",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid website_url", () => {
+    const result = skillListingSchema.safeParse({
+      ...valid,
+      website_url: "not-a-url",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("allows empty string for skill_file_url and website_url", () => {
+    const result = skillListingSchema.safeParse({
+      ...valid,
+      skill_file_url: "",
+      website_url: "",
+    });
+    expect(result.success).toBe(true);
+  });
 });
 
 describe("skillReviewSchema", () => {

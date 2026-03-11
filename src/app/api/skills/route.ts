@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { title, tagline, description, price_sats, category, tags, status, source_url } = parsed.data;
+    const { title, tagline, description, price_sats, category, tags, status, source_url, skill_file_url, website_url } = parsed.data;
 
     // Generate unique slug
     let slug = slugify(title);
@@ -129,6 +129,8 @@ export async function POST(request: NextRequest) {
         tags: tags || [],
         status: status || "draft",
         source_url: source_url || null,
+        skill_file_url: skill_file_url || null,
+        website_url: website_url || null,
       })
       .select()
       .single();

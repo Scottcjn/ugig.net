@@ -270,6 +270,86 @@ function extractFromJson(json: string, url: string): ExtractedMetadata {
   return result;
 }
 
+// ── Puppeteer-based fallback extraction ────────────────────────────
+
+const PUPPETEER_TIMEOUT_MS = 15_000;
+
+/**
+ * Check whether extracted metadata has sufficient content.
+ * Returns true if we got at least a title and description.
+ */
+export function isMetadataSufficient(meta: ExtractedMetadata): boolean {
+  return !!(meta.title && meta.description);
+}
+
+/**
+ * Extract metadata using Puppeteer (headless browser).
+ * Used as a fallback when fetch-based extraction fails or returns
+ * insufficient data (e.g. SPA pages that require JS rendering).
+ */
+export async function extractMetadataWithPuppeteer(urlString: string): Promise<ExtractedMetadata> {
+  const safety = isUrlSafe(urlString);
+  if (!safety.safe) {
+    throw new MetadataExtractionError(safety.reason || "URL is not safe");
+  }
+
+  let browser;
+  try {
+    // Dynamic import — puppeteer is an optional dependency
+    // Use variable to prevent Vite static analysis from failing on missing dep
+    const puppeteerModule = "puppeteer";
+    const puppeteer = await import(/* @vite-ignore */ puppeteerModule);
+    browser = await puppeteer.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+    });
+
+    const page = await browser.newPage();
+    await page.setUserAgent("ugig-metadata-bot/1.0");
+    await page.goto(urlString, { waitUntil: "networkidle2", timeout: PUPPETEER_TIMEOUT_MS });
+
+    const html = await page.content();
+    return extractFromHtml(html, urlString);
+  } catch (err) {
+    if (err instanceof MetadataExtractionError) throw err;
+    throw new MetadataExtractionError(
+      `Puppeteer extraction failed: ${err instanceof Error ? err.message : "Unknown error"}`
+    );
+  } finally {
+    if (browser) {
+      await browser.close().catch(() => {});
+    }
+  }
+}
+
+/**
+ * Extract metadata with fetch first, then Puppeteer fallback.
+ * This is the main entry point for the metadata API route.
+ */
+export async function extractMetadataWithFallback(urlString: string): Promise<ExtractedMetadata> {
+  try {
+    const meta = await extractMetadata(urlString);
+    if (isMetadataSufficient(meta)) {
+      return meta;
+    }
+    // Fetch succeeded but metadata is insufficient — try Puppeteer
+    try {
+      return await extractMetadataWithPuppeteer(urlString);
+    } catch {
+      // Puppeteer also failed — return whatever fetch got
+      return meta;
+    }
+  } catch (fetchErr) {
+    // Fetch failed entirely — try Puppeteer as fallback
+    try {
+      return await extractMetadataWithPuppeteer(urlString);
+    } catch (puppeteerErr) {
+      // Both failed — throw the original fetch error
+      throw fetchErr;
+    }
+  }
+}
+
 // ── Errors ─────────────────────────────────────────────────────────
 
 export class MetadataExtractionError extends Error {

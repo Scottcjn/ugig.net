@@ -10,7 +10,7 @@ vi.mock("@/lib/auth/get-user", () => ({
 }));
 
 vi.mock("@/lib/skills/metadata-extract", () => ({
-  extractMetadata: vi.fn(),
+  extractMetadataWithFallback: vi.fn(),
   MetadataExtractionError: class extends Error {
     constructor(message: string) {
       super(message);
@@ -21,10 +21,10 @@ vi.mock("@/lib/skills/metadata-extract", () => ({
 
 import { POST } from "./route";
 import { getAuthContext } from "@/lib/auth/get-user";
-import { extractMetadata, MetadataExtractionError } from "@/lib/skills/metadata-extract";
+import { extractMetadataWithFallback, MetadataExtractionError } from "@/lib/skills/metadata-extract";
 
 const mockGetAuthContext = vi.mocked(getAuthContext);
-const mockExtractMetadata = vi.mocked(extractMetadata);
+const mockExtractMetadata = vi.mocked(extractMetadataWithFallback);
 
 function makeRequest(body: unknown) {
   return new NextRequest("http://localhost/api/skills/metadata", {
