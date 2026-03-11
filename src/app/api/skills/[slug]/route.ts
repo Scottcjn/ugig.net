@@ -112,6 +112,7 @@ export async function PATCH(
     if (parsed.data.category !== undefined) updateData.category = parsed.data.category || null;
     if (parsed.data.tags !== undefined) updateData.tags = parsed.data.tags;
     if (parsed.data.status !== undefined) updateData.status = parsed.data.status;
+    if (parsed.data.source_url !== undefined) updateData.source_url = parsed.data.source_url || null;
 
     const { data: listing, error } = await admin
       .from("skill_listings" as any)
