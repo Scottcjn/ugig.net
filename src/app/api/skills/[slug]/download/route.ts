@@ -33,7 +33,7 @@ export async function GET(
     // Fetch listing
     const { data: listing, error: listingError } = await admin
       .from("skill_listings" as any)
-      .select("id, seller_id, skill_file_path, status, price_sats")
+      .select("id, seller_id, skill_file_path, status, price_sats, downloads_count")
       .eq("slug", slug)
       .single();
 
@@ -85,6 +85,13 @@ export async function GET(
         { status: 500 }
       );
     }
+
+    // Track download intent (best-effort). This measures successful entitlement-gated
+    // download link generations via this endpoint.
+    await admin
+      .from("skill_listings" as any)
+      .update({ downloads_count: (l.downloads_count ?? 0) + 1 })
+      .eq("id", l.id);
 
     // Return the signed URL (client redirects)
     return NextResponse.json({
