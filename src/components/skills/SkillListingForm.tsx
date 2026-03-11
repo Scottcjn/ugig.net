@@ -183,6 +183,7 @@ export function SkillListingForm({ slug, listingId, initialData }: SkillListingF
         <p className="text-xs text-muted-foreground">
           Direct link to the skill file (e.g. SKILL.md on GitHub, npm package).
           The file will be automatically imported and security-scanned on save.
+          <strong className="text-foreground"> A passing security scan is required before the listing can be published.</strong>
         </p>
       </div>
 
@@ -337,6 +338,11 @@ export function SkillListingForm({ slug, listingId, initialData }: SkillListingF
             <Shield className="h-3.5 w-3.5 inline mr-1" />
             Security Scan
           </Label>
+          {(skillFilePath || skillFileUrl) && (
+            <p className="text-xs text-muted-foreground mb-1">
+              Scans run automatically when you save. Use the button below to re-scan manually.
+            </p>
+          )}
           <GenerateScanButton
             slug={slug}
             hasScannable={!!skillFilePath || !!skillFileUrl}
@@ -373,6 +379,12 @@ export function SkillListingForm({ slug, listingId, initialData }: SkillListingF
             <span className="text-sm">Active (visible on marketplace)</span>
           </label>
         </div>
+        {skillFileUrl && status === "active" && (
+          <p className="text-xs text-amber-500 flex items-center gap-1">
+            <Shield className="h-3 w-3" />
+            Publishing requires a passing security scan. The scan runs automatically when you save.
+          </p>
+        )}
       </div>
 
       {/* Import status feedback */}

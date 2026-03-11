@@ -27,7 +27,21 @@ vi.mock("@/lib/supabase/service", () => ({
   createServiceClient: vi.fn(() => serviceClient),
 }));
 
-import { GET } from "./route";
+vi.mock("@/lib/skills/url-import", () => ({
+  importSkillFromUrl: vi.fn(),
+}));
+
+vi.mock("@/lib/skills/security-scan", () => ({
+  isScanAcceptable: vi.fn((r: any) => r.status === "clean"),
+  isScanStatusAcceptable: vi.fn((s: string | null) => s === "clean"),
+}));
+
+import { GET, PATCH } from "./route";
+import { getAuthContext } from "@/lib/auth/get-user";
+import { importSkillFromUrl } from "@/lib/skills/url-import";
+
+const mockGetAuthContext = vi.mocked(getAuthContext);
+const mockImportSkillFromUrl = vi.mocked(importSkillFromUrl);
 
 // ── Helpers ────────────────────────────────────────────────────────
 
@@ -283,5 +297,294 @@ describe("GET /api/skills/[slug]", () => {
     expect(json.security_scan.status).toBe("malicious");
     expect(json.security_scan.risk_level).toBe("critical");
     expect(json.security_scan.issues_count).toBe(2);
+  });
+});
+
+// ── PATCH tests ────────────────────────────────────────────────────
+
+function makePatchRequest(slug: string, body: Record<string, unknown>) {
+  return new NextRequest(`http://localhost/api/skills/${slug}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+function setupPatchMocks(opts: {
+  existing?: any;
+  updatedListing?: any;
+}) {
+  const {
+    existing = {
+      id: "listing-1",
+      seller_id: "seller-1",
+      skill_file_url: "https://example.com/SKILL.md",
+      scan_status: null,
+    },
+    updatedListing = {
+      id: "listing-1",
+      slug: "test-skill",
+      title: "Updated",
+      status: "draft",
+      skill_file_url: "https://example.com/SKILL.md",
+    },
+  } = opts;
+
+  serviceClient.from.mockImplementation((table: string) => {
+    if (table === "skill_listings") {
+      return {
+        select: () => ({
+          eq: () => ({
+            single: () =>
+              Promise.resolve({
+                data: existing,
+                error: existing ? null : { message: "not found" },
+              }),
+          }),
+        }),
+        update: () => ({
+          eq: () => ({
+            select: () => ({
+              single: () =>
+                Promise.resolve({ data: updatedListing, error: null }),
+            }),
+          }),
+        }),
+      };
+    }
+    return {};
+  });
+}
+
+describe("PATCH /api/skills/[slug]", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns 401 when unauthenticated", async () => {
+    mockGetAuthContext.mockResolvedValue(null);
+    const res = await PATCH(
+      makePatchRequest("test-skill", { title: "New Title" }),
+      { params: makeParams() }
+    );
+    expect(res.status).toBe(401);
+  });
+
+  it("blocks publish when skill_file_url is set but scan not passed", async () => {
+    mockGetAuthContext.mockResolvedValue({
+      user: { id: "seller-1", authMethod: "session" },
+      supabase: {} as any,
+    });
+
+    setupPatchMocks({
+      existing: {
+        id: "listing-1",
+        seller_id: "seller-1",
+        skill_file_url: "https://example.com/SKILL.md",
+        scan_status: null, // No scan done yet
+      },
+      updatedListing: {
+        id: "listing-1",
+        slug: "test-skill",
+        status: "draft",
+        skill_file_url: "https://example.com/SKILL.md",
+      },
+    });
+
+    const res = await PATCH(
+      makePatchRequest("test-skill", { status: "active" }),
+      { params: makeParams() }
+    );
+
+    expect(res.status).toBe(422);
+    const json = await res.json();
+    expect(json.error).toContain("Security scan must pass");
+    expect(json.listing.status).toBe("draft");
+  });
+
+  it("blocks publish when scan status is suspicious", async () => {
+    mockGetAuthContext.mockResolvedValue({
+      user: { id: "seller-1", authMethod: "session" },
+      supabase: {} as any,
+    });
+
+    setupPatchMocks({
+      existing: {
+        id: "listing-1",
+        seller_id: "seller-1",
+        skill_file_url: "https://example.com/SKILL.md",
+        scan_status: "suspicious",
+      },
+      updatedListing: {
+        id: "listing-1",
+        slug: "test-skill",
+        status: "draft",
+        skill_file_url: "https://example.com/SKILL.md",
+      },
+    });
+
+    const res = await PATCH(
+      makePatchRequest("test-skill", { status: "active" }),
+      { params: makeParams() }
+    );
+
+    expect(res.status).toBe(422);
+    const json = await res.json();
+    expect(json.error).toContain("suspicious");
+  });
+
+  it("allows publish when scan status is clean", async () => {
+    mockGetAuthContext.mockResolvedValue({
+      user: { id: "seller-1", authMethod: "session" },
+      supabase: {} as any,
+    });
+
+    setupPatchMocks({
+      existing: {
+        id: "listing-1",
+        seller_id: "seller-1",
+        skill_file_url: "https://example.com/SKILL.md",
+        scan_status: "clean",
+      },
+      updatedListing: {
+        id: "listing-1",
+        slug: "test-skill",
+        status: "active",
+        skill_file_url: "https://example.com/SKILL.md",
+      },
+    });
+
+    const res = await PATCH(
+      makePatchRequest("test-skill", { status: "active" }),
+      { params: makeParams() }
+    );
+
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.listing.status).toBe("active");
+  });
+
+  it("auto-triggers scan when skill_file_url changes and blocks publish if suspicious", async () => {
+    mockGetAuthContext.mockResolvedValue({
+      user: { id: "seller-1", authMethod: "session" },
+      supabase: {} as any,
+    });
+
+    setupPatchMocks({
+      existing: {
+        id: "listing-1",
+        seller_id: "seller-1",
+        skill_file_url: "https://example.com/OLD.md",
+        scan_status: "clean",
+      },
+      updatedListing: {
+        id: "listing-1",
+        slug: "test-skill",
+        status: "draft",
+        skill_file_url: "https://example.com/NEW.md",
+      },
+    });
+
+    mockImportSkillFromUrl.mockResolvedValue({
+      success: true,
+      storagePath: "seller-1/test-skill/NEW.md",
+      contentHash: "newhash",
+      fileSizeBytes: 200,
+      fileName: "NEW.md",
+      scanResult: { status: "suspicious", fileHash: "h", fileSizeBytes: 200, findings: [{ rule: "no-eval", severity: "high", detail: "eval detected" }], scannerVersion: "v1" },
+      scanSource: "url_import",
+      sourceUrl: "https://example.com/NEW.md",
+      findingsCountBySeverity: { high: 1 },
+    });
+
+    const res = await PATCH(
+      makePatchRequest("test-skill", {
+        skill_file_url: "https://example.com/NEW.md",
+        status: "active",
+      }),
+      { params: makeParams() }
+    );
+
+    expect(res.status).toBe(422);
+    expect(mockImportSkillFromUrl).toHaveBeenCalledOnce();
+    const json = await res.json();
+    expect(json.error).toContain("Security scan must pass");
+    expect(json.import.scan_status).toBe("suspicious");
+  });
+
+  it("allows publish when new skill_file_url scan is clean", async () => {
+    mockGetAuthContext.mockResolvedValue({
+      user: { id: "seller-1", authMethod: "session" },
+      supabase: {} as any,
+    });
+
+    setupPatchMocks({
+      existing: {
+        id: "listing-1",
+        seller_id: "seller-1",
+        skill_file_url: "https://example.com/OLD.md",
+        scan_status: "clean",
+      },
+      updatedListing: {
+        id: "listing-1",
+        slug: "test-skill",
+        status: "active",
+        skill_file_url: "https://example.com/NEW.md",
+      },
+    });
+
+    mockImportSkillFromUrl.mockResolvedValue({
+      success: true,
+      storagePath: "seller-1/test-skill/NEW.md",
+      contentHash: "newhash",
+      fileSizeBytes: 200,
+      fileName: "NEW.md",
+      scanResult: { status: "clean", fileHash: "h", fileSizeBytes: 200, findings: [], scannerVersion: "v1" },
+      scanSource: "url_import",
+      sourceUrl: "https://example.com/NEW.md",
+      findingsCountBySeverity: {},
+    });
+
+    const res = await PATCH(
+      makePatchRequest("test-skill", {
+        skill_file_url: "https://example.com/NEW.md",
+        status: "active",
+      }),
+      { params: makeParams() }
+    );
+
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.listing.status).toBe("active");
+  });
+
+  it("allows publish without scan when no skill_file_url", async () => {
+    mockGetAuthContext.mockResolvedValue({
+      user: { id: "seller-1", authMethod: "session" },
+      supabase: {} as any,
+    });
+
+    setupPatchMocks({
+      existing: {
+        id: "listing-1",
+        seller_id: "seller-1",
+        skill_file_url: null,
+        scan_status: null,
+      },
+      updatedListing: {
+        id: "listing-1",
+        slug: "test-skill",
+        status: "active",
+      },
+    });
+
+    const res = await PATCH(
+      makePatchRequest("test-skill", { status: "active" }),
+      { params: makeParams() }
+    );
+
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.listing.status).toBe("active");
   });
 });

@@ -5,6 +5,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { skillListingSchema } from "@/lib/skills/validation";
 import { slugify } from "@/lib/skills/validation";
 import { importSkillFromUrl } from "@/lib/skills/url-import";
+import { isScanAcceptable } from "@/lib/skills/security-scan";
 
 /**
  * GET /api/skills - Public listing of active skills
@@ -98,7 +99,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { title, tagline, description, price_sats, category, tags, status, source_url, skill_file_url, website_url } = parsed.data;
+    const { title, tagline, description, price_sats, category, tags, status: requestedStatus, source_url, skill_file_url, website_url } = parsed.data;
 
     // Generate unique slug
     let slug = slugify(title);
@@ -117,6 +118,10 @@ export async function POST(request: NextRequest) {
       slug = `${slug}-${Date.now().toString(36)}`;
     }
 
+    // When skill_file_url is provided, always start as draft — the scan
+    // result determines whether we can promote to active.
+    const initialStatus = skill_file_url ? "draft" : (requestedStatus || "draft");
+
     const { data: listing, error } = await admin
       .from("skill_listings" as any)
       .insert({
@@ -128,7 +133,7 @@ export async function POST(request: NextRequest) {
         price_sats,
         category: category || null,
         tags: tags || [],
-        status: status || "draft",
+        status: initialStatus,
         source_url: source_url || null,
         skill_file_url: skill_file_url || null,
         website_url: website_url || null,
@@ -140,7 +145,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Auto-import from skill_file_url if provided
+    // Auto-import and scan from skill_file_url if provided
     let importResult = null;
     if (skill_file_url && listing) {
       const l = listing as any;
@@ -154,6 +159,33 @@ export async function POST(request: NextRequest) {
       } catch (err) {
         console.error("URL import failed during create:", err);
         // Non-fatal: listing is still created, import can be retried via scan
+      }
+    }
+
+    // If user requested active status and skill_file_url is set, enforce scan gate
+    let finalStatus = initialStatus;
+    if (requestedStatus === "active" && skill_file_url) {
+      if (importResult && importResult.success && isScanAcceptable(importResult.scanResult)) {
+        // Scan passed — promote to active
+        finalStatus = "active";
+        await admin
+          .from("skill_listings" as any)
+          .update({ status: "active" })
+          .eq("id", (listing as any).id);
+        (listing as any).status = "active";
+      } else {
+        // Scan failed/not clean — keep as draft, return error context
+        const scanStatus = importResult?.scanResult?.status || "not_scanned";
+        return NextResponse.json({
+          error: `Security scan required before publishing. Scan status: ${scanStatus}. Listing saved as draft.`,
+          listing: { ...(listing as any), status: "draft" },
+          import: importResult ? {
+            success: importResult.success,
+            content_hash: importResult.contentHash,
+            scan_status: importResult.scanResult.status,
+            error: importResult.error || null,
+          } : null,
+        }, { status: 422 });
       }
     }
 

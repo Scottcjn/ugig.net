@@ -4,6 +4,7 @@ import { getAuthContext } from "@/lib/auth/get-user";
 import { createServiceClient } from "@/lib/supabase/service";
 import { skillListingSchema } from "@/lib/skills/validation";
 import { importSkillFromUrl } from "@/lib/skills/url-import";
+import { isScanAcceptable, isScanStatusAcceptable } from "@/lib/skills/security-scan";
 
 /**
  * GET /api/skills/[slug] - Get a single skill listing by slug
@@ -141,7 +142,7 @@ export async function PATCH(
     // Verify ownership
     const { data: existing } = await admin
       .from("skill_listings" as any)
-      .select("id, seller_id")
+      .select("id, seller_id, skill_file_url, scan_status")
       .eq("slug", slug)
       .single();
 
@@ -174,6 +175,74 @@ export async function PATCH(
     if (parsed.data.skill_file_url !== undefined) updateData.skill_file_url = parsed.data.skill_file_url || null;
     if (parsed.data.website_url !== undefined) updateData.website_url = parsed.data.website_url || null;
 
+    // Determine effective skill_file_url (new value or existing)
+    const effectiveSkillFileUrl = parsed.data.skill_file_url !== undefined
+      ? (parsed.data.skill_file_url || null)
+      : (existing as any).skill_file_url;
+
+    const skillFileUrlChanged = parsed.data.skill_file_url !== undefined
+      && parsed.data.skill_file_url !== (existing as any).skill_file_url;
+
+    // Auto-import from skill_file_url if it changed (run BEFORE status enforcement)
+    let importResult = null;
+    if (skillFileUrlChanged && parsed.data.skill_file_url) {
+      try {
+        importResult = await importSkillFromUrl({
+          skillFileUrl: parsed.data.skill_file_url,
+          sellerId: auth.user.id,
+          listingSlug: slug,
+          listingId: (existing as any).id,
+        });
+      } catch (err) {
+        console.error("URL import failed during update:", err);
+      }
+    }
+
+    // ── Enforce scan gate for publishing ─────────────────────────
+    // If the listing has a skill_file_url and the requested status is "active",
+    // verify that the latest scan is acceptable.
+    const requestedStatus = parsed.data.status;
+    if (requestedStatus === "active" && effectiveSkillFileUrl) {
+      let scanPassed = false;
+
+      if (importResult) {
+        // We just ran a scan — use its result
+        scanPassed = importResult.success && isScanAcceptable(importResult.scanResult);
+      } else {
+        // No new scan — check the existing scan_status on the listing
+        scanPassed = isScanStatusAcceptable((existing as any).scan_status);
+      }
+
+      if (!scanPassed) {
+        // Block publishing — force status back to draft
+        updateData.status = "draft";
+
+        // Still apply other field updates
+        const { data: listing, error } = await admin
+          .from("skill_listings" as any)
+          .update(updateData)
+          .eq("id", (existing as any).id)
+          .select()
+          .single();
+
+        if (error) {
+          return NextResponse.json({ error: error.message }, { status: 500 });
+        }
+
+        const scanStatus = importResult?.scanResult?.status || (existing as any).scan_status || "not_scanned";
+        return NextResponse.json({
+          error: `Security scan must pass before publishing. Current scan status: ${scanStatus}. Listing kept as draft.`,
+          listing,
+          import: importResult ? {
+            success: importResult.success,
+            content_hash: importResult.contentHash,
+            scan_status: importResult.scanResult.status,
+            error: importResult.error || null,
+          } : null,
+        }, { status: 422 });
+      }
+    }
+
     const { data: listing, error } = await admin
       .from("skill_listings" as any)
       .update(updateData)
@@ -183,22 +252,6 @@ export async function PATCH(
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    // Auto-import from skill_file_url if it changed
-    let importResult = null;
-    if (parsed.data.skill_file_url && listing) {
-      const l = listing as any;
-      try {
-        importResult = await importSkillFromUrl({
-          skillFileUrl: parsed.data.skill_file_url,
-          sellerId: auth.user.id,
-          listingSlug: l.slug || slug,
-          listingId: (existing as any).id,
-        });
-      } catch (err) {
-        console.error("URL import failed during update:", err);
-      }
     }
 
     return NextResponse.json({
