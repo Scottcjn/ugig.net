@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SKILL_CATEGORIES } from "@/lib/constants";
-import { Loader2, Trash2, Upload, Link as LinkIcon, Sparkles } from "lucide-react";
+import { Loader2, Trash2, Upload, Link as LinkIcon, Sparkles, Shield } from "lucide-react";
+import { GenerateScanButton } from "./GenerateScanButton";
 
 interface SkillListingFormProps {
   slug?: string; // If editing
@@ -380,6 +381,25 @@ export function SkillListingForm({ slug, listingId, initialData }: SkillListingF
           </p>
         )}
       </div>
+
+      {/* Security Scan */}
+      {isEdit && slug && (
+        <div className="space-y-2">
+          <Label>
+            <Shield className="h-3.5 w-3.5 inline mr-1" />
+            Security Scan
+          </Label>
+          <GenerateScanButton
+            slug={slug}
+            hasScannable={!!skillFilePath || !!skillFileUrl}
+          />
+          {!skillFilePath && !skillFileUrl && (
+            <p className="text-xs text-muted-foreground">
+              Upload a file or set a Skill File URL to enable security scanning.
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="space-y-2">
         <Label>Status</Label>
