@@ -5,13 +5,26 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { Header } from "@/components/layout/Header";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Star, Download, Zap, ArrowLeft, Calendar, Package } from "lucide-react";
+import {
+  Star,
+  Download,
+  Zap,
+  ArrowLeft,
+  Calendar,
+  Package,
+  Globe,
+  FileText,
+  Lock,
+  ExternalLink,
+} from "lucide-react";
 import { SkillPurchaseButton } from "@/components/skills/SkillPurchaseButton";
 import { SkillReviewForm } from "@/components/skills/SkillReviewForm";
 import { SkillVoteButton } from "@/components/skills/SkillVoteButton";
 import { SkillZapButton } from "@/components/skills/SkillZapButton";
 import { SkillComments } from "@/components/skills/SkillComments";
 import { SkillDownloadButton } from "@/components/skills/SkillDownloadButton";
+import { SecurityScanBadge } from "@/components/skills/SecurityScanBadge";
+import { CurlSnippet } from "@/components/skills/CurlSnippet";
 
 interface SkillDetailProps {
   params: Promise<{ slug: string }>;
@@ -31,6 +44,23 @@ export async function generateMetadata({ params }: SkillDetailProps) {
     title: `${(listing as any).title} | ugig.net Skills`,
     description: (listing as any).tagline || (listing as any).title,
   };
+}
+
+/** Sanitize a URL for safe external display (must be http/https). */
+function sanitizeUrl(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  try {
+    const u = new URL(raw);
+    if (u.protocol === "http:" || u.protocol === "https:") return u.href;
+  } catch {
+    /* invalid */
+  }
+  return null;
+}
+
+/** Truncate a URL for display (strip protocol, trailing slash). */
+function displayUrl(href: string): string {
+  return href.replace(/^https?:\/\//, "").replace(/\/$/, "");
 }
 
 export default async function SkillDetailPage({ params }: SkillDetailProps) {
@@ -101,10 +131,55 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
     .eq("target_type", "skill")
     .eq("target_id", l.id);
 
-  const zapsTotal = (zapAgg || []).reduce((sum: number, z: any) => sum + (z.amount_sats || 0), 0);
+  const zapsTotal = (zapAgg || []).reduce(
+    (sum: number, z: any) => sum + (z.amount_sats || 0),
+    0
+  );
+
+  // Security scan (latest)
+  const { data: scanRow } = await admin
+    .from("skill_security_scans" as any)
+    .select("scan_status, findings_summary, scanned_at")
+    .eq("listing_id", l.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  let securityScan: {
+    status: string;
+    riskLevel: string | null;
+    issuesCount: number;
+    issues: { severity: string; detail: string }[];
+    scannedAt: string | null;
+  } | null = null;
+
+  if (scanRow) {
+    const s = scanRow as any;
+    const summary = s.findings_summary || {};
+    securityScan = {
+      status: s.scan_status,
+      riskLevel: summary.risk_level ?? null,
+      issuesCount: Array.isArray(summary.issues) ? summary.issues.length : 0,
+      issues: Array.isArray(summary.issues)
+        ? (summary.issues as any[]).map((i: any) => ({
+            severity: i.severity,
+            detail: i.detail,
+          }))
+        : [],
+      scannedAt: s.scanned_at,
+    };
+  }
 
   const hasFile = !!l.skill_file_path;
   const canDownload = isOwner || purchased;
+
+  // Sanitize external URLs
+  const websiteUrl = sanitizeUrl(l.website_url);
+  const skillFileUrl = sanitizeUrl(l.skill_file_url);
+  const sourceUrl = sanitizeUrl(l.source_url);
+
+  // Best URL for curl snippet: prefer skill_file_url, fallback website_url
+  const curlUrl = skillFileUrl || websiteUrl;
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -121,15 +196,21 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
           </Link>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Main content */}
+            {/* ─── Main content ──────────────────────────────────── */}
             <div className="lg:col-span-2 space-y-6">
+              {/* Title + category */}
               <div>
                 <div className="flex items-start gap-3 mb-2">
                   <h1 className="text-3xl font-bold">{l.title}</h1>
                   {l.category && (
-                    <Badge variant="outline" className="capitalize shrink-0 mt-1">
-                      {l.category}
-                    </Badge>
+                    <Link href={`/skills?category=${encodeURIComponent(l.category)}`}>
+                      <Badge
+                        variant="outline"
+                        className="capitalize shrink-0 mt-1 cursor-pointer hover:bg-muted transition-colors"
+                      >
+                        {l.category}
+                      </Badge>
+                    </Link>
                   )}
                 </div>
                 {l.tagline && (
@@ -137,13 +218,21 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
                 )}
               </div>
 
-              {/* Tags */}
+              {/* Tags (linked) */}
               {l.tags && l.tags.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {l.tags.map((tag: string) => (
-                    <Badge key={tag} variant="secondary">
-                      {tag}
-                    </Badge>
+                    <Link
+                      key={tag}
+                      href={`/skills?tag=${encodeURIComponent(tag)}`}
+                    >
+                      <Badge
+                        variant="secondary"
+                        className="cursor-pointer hover:bg-secondary/80 transition-colors"
+                      >
+                        {tag}
+                      </Badge>
+                    </Link>
                   ))}
                 </div>
               )}
@@ -182,8 +271,8 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
                 </span>
               </div>
 
-              {/* Zap button */}
-              {user && !isOwner && (
+              {/* ─── Zap button (always visible when user is logged in) ─── */}
+              {user && (
                 <SkillZapButton
                   listingId={l.id}
                   sellerId={l.seller_id}
@@ -205,18 +294,74 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
                 </div>
               </div>
 
-              {/* Source URL */}
-              {l.source_url && (
+              {/* ─── Install section ───────────────────────────────── */}
+              {curlUrl && (
                 <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-1">Source</h3>
-                  <a
-                    href={l.source_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-primary hover:underline break-all"
-                  >
-                    {l.source_url}
-                  </a>
+                  <h2 className="text-xl font-semibold mb-3">Install</h2>
+                  <CurlSnippet url={curlUrl} />
+                </div>
+              )}
+
+              {/* ─── Links ────────────────────────────────────────── */}
+              {(websiteUrl || skillFileUrl || sourceUrl) && (
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium text-muted-foreground">
+                    Links
+                  </h3>
+                  <div className="flex flex-col gap-1.5">
+                    {websiteUrl && (
+                      <a
+                        href={websiteUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline break-all"
+                      >
+                        <Globe className="h-3.5 w-3.5 shrink-0" />
+                        {displayUrl(websiteUrl)}
+                        <ExternalLink className="h-3 w-3 shrink-0 opacity-50" />
+                      </a>
+                    )}
+                    {skillFileUrl && (
+                      <a
+                        href={skillFileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline break-all"
+                      >
+                        <FileText className="h-3.5 w-3.5 shrink-0" />
+                        {displayUrl(skillFileUrl)}
+                        <ExternalLink className="h-3 w-3 shrink-0 opacity-50" />
+                      </a>
+                    )}
+                    {sourceUrl && (
+                      <a
+                        href={sourceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline break-all"
+                      >
+                        <Package className="h-3.5 w-3.5 shrink-0" />
+                        {displayUrl(sourceUrl)}
+                        <ExternalLink className="h-3 w-3 shrink-0 opacity-50" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* ─── Security scan ────────────────────────────────── */}
+              {securityScan && (
+                <div>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-2">
+                    Security Scan
+                  </h3>
+                  <SecurityScanBadge
+                    status={securityScan.status}
+                    riskLevel={securityScan.riskLevel}
+                    issuesCount={securityScan.issuesCount}
+                    issues={securityScan.issues}
+                    scannedAt={securityScan.scannedAt}
+                  />
                 </div>
               )}
 
@@ -277,7 +422,9 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
                                 />
                               ))}
                               <span className="text-xs text-muted-foreground ml-2">
-                                {new Date(review.created_at).toLocaleDateString()}
+                                {new Date(
+                                  review.created_at
+                                ).toLocaleDateString()}
                               </span>
                             </div>
                           </div>
@@ -298,9 +445,9 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
               </div>
             </div>
 
-            {/* Sidebar */}
+            {/* ─── Sidebar ──────────────────────────────────────── */}
             <div className="space-y-6">
-              {/* Purchase card */}
+              {/* Purchase / download card */}
               <div className="p-6 border border-border rounded-lg bg-card sticky top-6">
                 <div className="text-center mb-4">
                   {l.price_sats === 0 ? (
@@ -334,13 +481,32 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
                     )}
                     <p className="text-xs text-muted-foreground">
                       Available in your{" "}
-                      <Link href="/skills/library" className="text-primary hover:underline">
+                      <Link
+                        href="/skills/library"
+                        className="text-primary hover:underline"
+                      >
                         library
                       </Link>
                     </p>
                   </div>
                 ) : (
-                  <SkillPurchaseButton slug={slug} priceSats={l.price_sats} />
+                  <div className="space-y-3">
+                    <SkillPurchaseButton
+                      slug={slug}
+                      priceSats={l.price_sats}
+                    />
+                    {/* Locked download indicator for non-entitled users */}
+                    {hasFile && (
+                      <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-2">
+                        <Lock className="h-4 w-4" />
+                        <span>
+                          {l.price_sats === 0
+                            ? "Claim to download"
+                            : "Purchase to download"}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
 

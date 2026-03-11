@@ -77,11 +77,40 @@ export async function GET(
 
     const zapsTotal = (zapAgg || []).reduce((sum: number, z: any) => sum + (z.amount_sats || 0), 0);
 
+    // Fetch latest security scan (public-safe fields only)
+    const { data: scanRow } = await admin
+      .from("skill_security_scans" as any)
+      .select("scan_status, findings_summary, scanned_at")
+      .eq("listing_id", (listing as any).id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+
+    let security_scan: Record<string, unknown> | null = null;
+    if (scanRow) {
+      const s = scanRow as any;
+      const summary = s.findings_summary || {};
+      security_scan = {
+        status: s.scan_status,
+        risk_level: summary.risk_level ?? null,
+        issues_count: Array.isArray(summary.issues) ? summary.issues.length : 0,
+        issues: Array.isArray(summary.issues)
+          ? (summary.issues as any[]).map((i: any) => ({
+              severity: i.severity,
+              detail: i.detail,
+            }))
+          : [],
+        scanner_version: summary.scanner_version ?? null,
+        scanned_at: s.scanned_at,
+      };
+    }
+
     return NextResponse.json({
       listing: { ...(listing as any), zaps_total: zapsTotal },
       purchased,
       user_vote: userVote,
       reviews: reviews || [],
+      security_scan,
     });
   } catch {
     return NextResponse.json({ error: "An unexpected error occurred" }, { status: 500 });
