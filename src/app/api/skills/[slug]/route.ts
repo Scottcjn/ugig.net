@@ -1,0 +1,174 @@
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { getAuthContext } from "@/lib/auth/get-user";
+import { createServiceClient } from "@/lib/supabase/service";
+import { skillListingSchema } from "@/lib/skills/validation";
+
+/**
+ * GET /api/skills/[slug] - Get a single skill listing by slug
+ */
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ slug: string }> }
+) {
+  try {
+    const { slug } = await params;
+    const supabase = await createClient();
+
+    const { data: listing, error } = await supabase
+      .from("skill_listings" as any)
+      .select(
+        `*, seller:profiles!seller_id (id, username, full_name, avatar_url, bio, account_type, verified)`
+      )
+      .eq("slug", slug)
+      .single();
+
+    if (error || !listing) {
+      return NextResponse.json({ error: "Skill not found" }, { status: 404 });
+    }
+
+    // Check if current user has purchased
+    let purchased = false;
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      const { data: purchase } = await supabase
+        .from("skill_purchases" as any)
+        .select("id")
+        .eq("listing_id", (listing as any).id)
+        .eq("buyer_id", user.id)
+        .single();
+
+      purchased = !!purchase;
+    }
+
+    // Fetch reviews
+    const { data: reviews } = await supabase
+      .from("skill_reviews" as any)
+      .select(
+        `*, reviewer:profiles!reviewer_id (id, username, full_name, avatar_url)`
+      )
+      .eq("listing_id", (listing as any).id)
+      .order("created_at", { ascending: false })
+      .limit(20);
+
+    return NextResponse.json({
+      listing,
+      purchased,
+      reviews: reviews || [],
+    });
+  } catch {
+    return NextResponse.json({ error: "An unexpected error occurred" }, { status: 500 });
+  }
+}
+
+/**
+ * PATCH /api/skills/[slug] - Update a skill listing (owner only)
+ */
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ slug: string }> }
+) {
+  try {
+    const { slug } = await params;
+    const auth = await getAuthContext(request);
+    if (!auth) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const admin = createServiceClient();
+
+    // Verify ownership
+    const { data: existing } = await admin
+      .from("skill_listings" as any)
+      .select("id, seller_id")
+      .eq("slug", slug)
+      .single();
+
+    if (!existing) {
+      return NextResponse.json({ error: "Skill not found" }, { status: 404 });
+    }
+
+    if ((existing as any).seller_id !== auth.user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const parsed = skillListingSchema.partial().safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0].message },
+        { status: 400 }
+      );
+    }
+
+    const updateData: Record<string, unknown> = {};
+    if (parsed.data.title !== undefined) updateData.title = parsed.data.title;
+    if (parsed.data.tagline !== undefined) updateData.tagline = parsed.data.tagline || null;
+    if (parsed.data.description !== undefined) updateData.description = parsed.data.description;
+    if (parsed.data.price_sats !== undefined) updateData.price_sats = parsed.data.price_sats;
+    if (parsed.data.category !== undefined) updateData.category = parsed.data.category || null;
+    if (parsed.data.tags !== undefined) updateData.tags = parsed.data.tags;
+    if (parsed.data.status !== undefined) updateData.status = parsed.data.status;
+    if (parsed.data.source_url !== undefined) updateData.source_url = parsed.data.source_url || null;
+
+    const { data: listing, error } = await admin
+      .from("skill_listings" as any)
+      .update(updateData)
+      .eq("id", (existing as any).id)
+      .select()
+      .single();
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ listing });
+  } catch {
+    return NextResponse.json({ error: "An unexpected error occurred" }, { status: 500 });
+  }
+}
+
+/**
+ * DELETE /api/skills/[slug] - Archive a skill listing (owner only)
+ */
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ slug: string }> }
+) {
+  try {
+    const { slug } = await params;
+    const auth = await getAuthContext(request);
+    if (!auth) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const admin = createServiceClient();
+
+    const { data: existing } = await admin
+      .from("skill_listings" as any)
+      .select("id, seller_id")
+      .eq("slug", slug)
+      .single();
+
+    if (!existing) {
+      return NextResponse.json({ error: "Skill not found" }, { status: 404 });
+    }
+
+    if ((existing as any).seller_id !== auth.user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // Soft-delete: archive instead of hard delete
+    await admin
+      .from("skill_listings" as any)
+      .update({ status: "archived" })
+      .eq("id", (existing as any).id);
+
+    return NextResponse.json({ ok: true });
+  } catch {
+    return NextResponse.json({ error: "An unexpected error occurred" }, { status: 500 });
+  }
+}

@@ -1,0 +1,336 @@
+import { Suspense } from "react";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
+import { Header } from "@/components/layout/Header";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Package, Star, Download, Zap } from "lucide-react";
+import { SKILL_CATEGORIES } from "@/lib/constants";
+
+export const metadata = {
+  title: "Skill Marketplace | ugig.net",
+  description:
+    "Browse and purchase agent skills — automation, coding, data, and more.",
+};
+
+interface SkillsPageProps {
+  searchParams: Promise<{
+    search?: string;
+    category?: string;
+    sort?: string;
+    page?: string;
+  }>;
+}
+
+async function SkillsList({ searchParams }: { searchParams: SkillsPageProps["searchParams"] }) {
+  const queryParams = await searchParams;
+  const supabase = await createClient();
+
+  const page = parseInt(queryParams.page || "1");
+  const limit = 20;
+  const offset = (page - 1) * limit;
+
+  let query = supabase
+    .from("skill_listings" as any)
+    .select(
+      `*, seller:profiles!seller_id (id, username, full_name, avatar_url, account_type, verified)`,
+      { count: "exact" }
+    )
+    .eq("status", "active");
+
+  if (queryParams.search) {
+    query = query.or(
+      `title.ilike.%${queryParams.search}%,description.ilike.%${queryParams.search}%,tagline.ilike.%${queryParams.search}%`
+    );
+  }
+
+  if (queryParams.category) {
+    query = query.eq("category", queryParams.category);
+  }
+
+  switch (queryParams.sort) {
+    case "popular":
+      query = query.order("downloads_count", { ascending: false });
+      break;
+    case "rating":
+      query = query.order("rating_avg", { ascending: false });
+      break;
+    case "price_low":
+      query = query.order("price_sats", { ascending: true });
+      break;
+    case "price_high":
+      query = query.order("price_sats", { ascending: false });
+      break;
+    default:
+      query = query.order("created_at", { ascending: false });
+  }
+
+  query = query.range(offset, offset + limit - 1);
+  const { data: listings, count } = await query;
+
+  if (!listings || listings.length === 0) {
+    return (
+      <div className="text-center py-12 bg-muted/30 rounded-lg">
+        <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+        <p className="text-muted-foreground mb-2">
+          {queryParams.search || queryParams.category
+            ? "No skills found matching your criteria."
+            : "No skills listed yet. Be the first to publish one!"}
+        </p>
+        <div className="flex items-center justify-center gap-3 mt-4">
+          {(queryParams.search || queryParams.category) && (
+            <Link href="/skills" className="text-primary hover:underline">
+              Clear filters
+            </Link>
+          )}
+          <Link href="/dashboard/skills/new">
+            <Button size="sm">Publish a Skill</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const totalPages = Math.ceil((count || 0) / limit);
+
+  return (
+    <div className="space-y-6">
+      <p className="text-sm text-muted-foreground">
+        Showing {listings.length} of {count} skills
+      </p>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {(listings as any[]).map((listing) => (
+          <Link
+            key={listing.id}
+            href={`/skills/${listing.slug}`}
+            className="group p-5 border border-border rounded-lg bg-card hover:shadow-md hover:border-primary/30 transition-all duration-200"
+          >
+            <div className="flex items-start justify-between mb-3">
+              <h3 className="font-semibold text-lg group-hover:text-primary transition-colors line-clamp-1">
+                {listing.title}
+              </h3>
+              {listing.price_sats === 0 ? (
+                <Badge variant="secondary" className="shrink-0 ml-2">
+                  Free
+                </Badge>
+              ) : (
+                <Badge className="shrink-0 ml-2 bg-amber-500/10 text-amber-600 border-amber-500/20">
+                  <Zap className="h-3 w-3 mr-1" />
+                  {listing.price_sats.toLocaleString()}
+                </Badge>
+              )}
+            </div>
+
+            {listing.tagline && (
+              <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                {listing.tagline}
+              </p>
+            )}
+
+            {listing.tags && listing.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {listing.tags.slice(0, 4).map((tag: string) => (
+                  <span
+                    key={tag}
+                    className="text-xs px-2 py-0.5 bg-muted rounded-full text-muted-foreground"
+                  >
+                    {tag}
+                  </span>
+                ))}
+                {listing.tags.length > 4 && (
+                  <span className="text-xs text-muted-foreground">
+                    +{listing.tags.length - 4}
+                  </span>
+                )}
+              </div>
+            )}
+
+            <div className="flex items-center justify-between text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <Avatar className="h-5 w-5">
+                  {listing.seller?.avatar_url && (
+                    <AvatarImage src={listing.seller.avatar_url} />
+                  )}
+                  <AvatarFallback className="text-[10px]">
+                    {(listing.seller?.username || "?")[0].toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <span>{listing.seller?.username}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                {listing.rating_count > 0 && (
+                  <span className="flex items-center gap-1">
+                    <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
+                    {Number(listing.rating_avg).toFixed(1)}
+                  </span>
+                )}
+                <span className="flex items-center gap-1">
+                  <Download className="h-3.5 w-3.5" />
+                  {listing.downloads_count}
+                </span>
+              </div>
+            </div>
+          </Link>
+        ))}
+      </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex justify-center gap-2">
+          {page > 1 && (
+            <Link
+              href={`/skills?${new URLSearchParams({
+                ...(queryParams.search ? { search: queryParams.search } : {}),
+                ...(queryParams.category ? { category: queryParams.category } : {}),
+                ...(queryParams.sort ? { sort: queryParams.sort } : {}),
+                page: String(page - 1),
+              })}`}
+            >
+              <Button variant="outline">Previous</Button>
+            </Link>
+          )}
+          <span className="flex items-center px-4 text-sm text-muted-foreground">
+            Page {page} of {totalPages}
+          </span>
+          {page < totalPages && (
+            <Link
+              href={`/skills?${new URLSearchParams({
+                ...(queryParams.search ? { search: queryParams.search } : {}),
+                ...(queryParams.category ? { category: queryParams.category } : {}),
+                ...(queryParams.sort ? { sort: queryParams.sort } : {}),
+                page: String(page + 1),
+              })}`}
+            >
+              <Button variant="outline">Next</Button>
+            </Link>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SkillsListSkeleton() {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {[1, 2, 3, 4, 5, 6].map((i) => (
+        <div key={i} className="p-5 border border-border rounded-lg">
+          <Skeleton className="h-6 w-3/4 mb-3" />
+          <Skeleton className="h-4 w-full mb-3" />
+          <div className="flex gap-2 mb-3">
+            <Skeleton className="h-5 w-16" />
+            <Skeleton className="h-5 w-16" />
+          </div>
+          <div className="flex justify-between">
+            <Skeleton className="h-5 w-24" />
+            <Skeleton className="h-5 w-16" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default async function SkillsPage({ searchParams }: SkillsPageProps) {
+  const queryParams = await searchParams;
+
+  return (
+    <div className="flex flex-col min-h-screen">
+      <Header />
+
+      <main className="flex-1 container mx-auto px-4 py-8">
+        <div className="max-w-5xl mx-auto">
+          <div className="flex items-center justify-between mb-2">
+            <h1 className="text-3xl font-bold">Skill Marketplace</h1>
+            <Link href="/dashboard/skills/new">
+              <Button size="sm">
+                <Package className="h-4 w-4 mr-2" />
+                Publish a Skill
+              </Button>
+            </Link>
+          </div>
+          <p className="text-muted-foreground mb-8">
+            Browse agent skills — install tools, automations, and workflows.
+          </p>
+
+          {/* Filters */}
+          <div className="flex flex-wrap gap-3 mb-6">
+            {/* Search */}
+            <form method="GET" action="/skills" className="flex gap-2">
+              <input
+                type="text"
+                name="search"
+                placeholder="Search skills..."
+                defaultValue={queryParams.search || ""}
+                className="px-3 py-1.5 border border-border rounded-lg bg-background text-sm w-48 focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+              {queryParams.category && (
+                <input type="hidden" name="category" value={queryParams.category} />
+              )}
+              {queryParams.sort && (
+                <input type="hidden" name="sort" value={queryParams.sort} />
+              )}
+              <Button type="submit" variant="outline" size="sm">
+                Search
+              </Button>
+            </form>
+
+            {/* Category filter */}
+            <div className="flex flex-wrap gap-1.5">
+              <Link href={`/skills?${queryParams.search ? `search=${queryParams.search}&` : ""}${queryParams.sort ? `sort=${queryParams.sort}` : ""}`}>
+                <Badge
+                  variant={!queryParams.category ? "default" : "outline"}
+                  className="cursor-pointer"
+                >
+                  All
+                </Badge>
+              </Link>
+              {SKILL_CATEGORIES.map((cat) => (
+                <Link
+                  key={cat}
+                  href={`/skills?category=${cat}${queryParams.search ? `&search=${queryParams.search}` : ""}${queryParams.sort ? `&sort=${queryParams.sort}` : ""}`}
+                >
+                  <Badge
+                    variant={queryParams.category === cat ? "default" : "outline"}
+                    className="cursor-pointer capitalize"
+                  >
+                    {cat}
+                  </Badge>
+                </Link>
+              ))}
+            </div>
+
+            {/* Sort */}
+            <div className="ml-auto flex items-center gap-2 text-sm">
+              <span className="text-muted-foreground">Sort:</span>
+              {[
+                { value: "newest", label: "Newest" },
+                { value: "popular", label: "Popular" },
+                { value: "rating", label: "Top Rated" },
+              ].map(({ value, label }) => (
+                <Link
+                  key={value}
+                  href={`/skills?sort=${value}${queryParams.search ? `&search=${queryParams.search}` : ""}${queryParams.category ? `&category=${queryParams.category}` : ""}`}
+                  className={`hover:text-primary transition-colors ${
+                    (queryParams.sort || "newest") === value
+                      ? "text-primary font-medium"
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  {label}
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <Suspense fallback={<SkillsListSkeleton />}>
+            <SkillsList searchParams={searchParams} />
+          </Suspense>
+        </div>
+      </main>
+    </div>
+  );
+}
