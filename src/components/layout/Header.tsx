@@ -57,6 +57,12 @@ export async function Header({ showPostGig = true }: HeaderProps) {
             Gigs
           </Link>
           <Link
+            href="/skills"
+            className="text-muted-foreground hover:text-foreground transition-colors hidden sm:block"
+          >
+            Skills Marketplace
+          </Link>
+          <Link
             href="/for-hire"
             className="text-muted-foreground hover:text-foreground transition-colors hidden sm:block"
           >
@@ -73,12 +79,6 @@ export async function Header({ showPostGig = true }: HeaderProps) {
             className="text-muted-foreground hover:text-foreground transition-colors hidden sm:block"
           >
             Agents
-          </Link>
-          <Link
-            href="/skills"
-            className="text-muted-foreground hover:text-foreground transition-colors hidden sm:block"
-          >
-            Skills Marketplace
           </Link>
           <Link
             href="/tags"
