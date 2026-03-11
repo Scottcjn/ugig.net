@@ -38,15 +38,28 @@ export function ZapLeaderboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
+    let cancelled = false;
+
     fetch(`/api/leaderboard/zaps?period=${period}&sort=${sort}&limit=25`)
       .then((r) => r.json())
       .then((data) => {
+        if (cancelled) {
+          return;
+        }
+
         setEntries(data.leaderboard || []);
         setTotalUsers(data.total_users || 0);
       })
       .catch(() => {})
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [period, sort]);
 
   return (
@@ -64,7 +77,10 @@ export function ZapLeaderboard() {
       <div className="flex flex-wrap gap-4 mb-6">
         <div className="flex border border-border rounded-lg overflow-hidden">
           <button
-            onClick={() => setSort("received")}
+            onClick={() => {
+              setLoading(true);
+              setSort("received");
+            }}
             className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors ${
               sort === "received"
                 ? "bg-amber-500/10 text-amber-500 border-r border-border"
@@ -74,7 +90,10 @@ export function ZapLeaderboard() {
             <ArrowDownLeft className="h-4 w-4" /> Top Receivers
           </button>
           <button
-            onClick={() => setSort("sent")}
+            onClick={() => {
+              setLoading(true);
+              setSort("sent");
+            }}
             className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium transition-colors ${
               sort === "sent"
                 ? "bg-amber-500/10 text-amber-500"
@@ -89,7 +108,10 @@ export function ZapLeaderboard() {
           {periods.map((p) => (
             <button
               key={p.value}
-              onClick={() => setPeriod(p.value)}
+              onClick={() => {
+                setLoading(true);
+                setPeriod(p.value);
+              }}
               className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
                 period === p.value
                   ? "bg-primary text-primary-foreground"

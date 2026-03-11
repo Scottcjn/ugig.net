@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Zap, ArrowDownLeft, ArrowUpRight } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -59,18 +59,12 @@ export default function ZapsPage() {
   const [offset, setOffset] = useState(0);
   const limit = 25;
 
-  useEffect(() => {
-    setLoading(true);
-    setOffset(0);
-    fetchZaps(0);
-  }, [direction]);
-
   async function fetchZaps(off: number) {
     try {
       const res = await fetch(`/api/zaps/history?direction=${direction}&limit=${limit}&offset=${off}`);
       const data = await res.json();
       if (data.zaps) {
-        setZaps(off === 0 ? data.zaps : [...zaps, ...data.zaps]);
+        setZaps((current) => (off === 0 ? data.zaps : [...current, ...data.zaps]));
         setTotal(data.total);
       }
     } catch {
@@ -79,8 +73,14 @@ export default function ZapsPage() {
     setLoading(false);
   }
 
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchZaps(0);
+  }, [direction]);
+
   function loadMore() {
     const newOffset = offset + limit;
+    setLoading(true);
     setOffset(newOffset);
     fetchZaps(newOffset);
   }
@@ -97,7 +97,11 @@ export default function ZapsPage() {
       {/* Tabs */}
       <div className="flex border-b border-border mb-6">
         <button
-          onClick={() => setDirection("received")}
+          onClick={() => {
+            setLoading(true);
+            setOffset(0);
+            setDirection("received");
+          }}
           className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
             direction === "received"
               ? "border-amber-500 text-amber-500"
@@ -107,7 +111,11 @@ export default function ZapsPage() {
           <ArrowDownLeft className="h-4 w-4" /> Received
         </button>
         <button
-          onClick={() => setDirection("sent")}
+          onClick={() => {
+            setLoading(true);
+            setOffset(0);
+            setDirection("sent");
+          }}
           className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
             direction === "sent"
               ? "border-amber-500 text-amber-500"

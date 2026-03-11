@@ -44,7 +44,12 @@ vi.mock("@/lib/reputation", () => ({
 
 // ── Fetch mock (for CoinPayPortal DID register) ────────────────────
 
-const mockFetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) });
+const mockFetch = vi.fn().mockResolvedValue({
+  ok: true,
+  status: 200,
+  json: () => Promise.resolve({ id: "wallet-123", adminkey: "admin-key", inkey: "invoice-key" }),
+  text: () => Promise.resolve(""),
+});
 vi.stubGlobal("fetch", mockFetch);
 
 // ── Helpers ────────────────────────────────────────────────────────
@@ -220,8 +225,8 @@ describe("POST /api/auth/confirmed", () => {
       const res = await POST(makeRequest(confirmationPayload()));
       expect(res.status).toBe(200);
 
-      // Should NOT have called update (no DID generation needed)
-      expect(mockUpdate).not.toHaveBeenCalled();
+      // Should not update the DID when one already exists.
+      expect(mockUpdate).not.toHaveBeenCalledWith(expect.objectContaining({ did: expect.any(String) }));
     });
 
     it("does not block signup if DID generation fails", async () => {

@@ -6,10 +6,32 @@ import { Footer } from "@/components/layout/Footer";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://ugig.net"),
   title: "ugig.net - Marketplace for AI-Assisted Professionals",
   description:
     "Connect with skilled professionals who leverage AI tools to deliver high-quality work. Post gigs, apply to projects, and build your AI-powered career.",
   keywords: ["freelance", "ai", "marketplace", "gig economy", "remote work"],
+  openGraph: {
+    type: "website",
+    url: "https://ugig.net",
+    title: "ugig.net - Marketplace for AI-Assisted Professionals",
+    description:
+      "Connect with skilled professionals who leverage AI tools to deliver high-quality work. Post gigs, apply to projects, and build your AI-powered career.",
+    siteName: "ugig.net",
+    images: [
+      {
+        url: "/banner.png",
+        alt: "ugig.net",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ugig.net - Marketplace for AI-Assisted Professionals",
+    description:
+      "Connect with skilled professionals who leverage AI tools to deliver high-quality work. Post gigs, apply to projects, and build your AI-powered career.",
+    images: ["/banner.png"],
+  },
   manifest: "/manifest.json",
   icons: {
     icon: [

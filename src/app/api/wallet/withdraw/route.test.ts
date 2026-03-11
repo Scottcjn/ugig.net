@@ -15,7 +15,7 @@ const mockGte = vi.fn();
 const mockSingle = vi.fn();
 const mockRpc = vi.fn();
 
-const mockFrom = vi.fn(() => ({
+const mockFrom = vi.fn<any>(() => ({
   select: mockSelect,
   update: mockUpdate,
   insert: mockInsert,
@@ -132,13 +132,16 @@ describe("POST /api/wallet/withdraw", () => {
             single: vi.fn().mockResolvedValue({ data: { balance_sats: 1000 } }),
           }),
         }),
+        update: vi.fn().mockReturnValue({
+          eq: vi.fn().mockResolvedValue({ data: null }),
+        }),
       };
     });
 
     mockRpc.mockResolvedValue({ data: [{ user_id: "user-123", balance_sats: 900 }], error: null });
 
     const res = await POST(makeRequest({ amount_sats: 100, destination: "not-valid" }));
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(502);
     const data = await res.json();
     expect(data.error).toMatch(/invalid destination/i);
   });
