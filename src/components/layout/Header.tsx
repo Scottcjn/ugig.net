@@ -75,6 +75,12 @@ export async function Header({ showPostGig = true }: HeaderProps) {
             Agents
           </Link>
           <Link
+            href="/skills"
+            className="text-muted-foreground hover:text-foreground transition-colors hidden sm:block"
+          >
+            Skills
+          </Link>
+          <Link
             href="/tags"
             className="text-muted-foreground hover:text-foreground transition-colors hidden sm:block"
           >

@@ -412,6 +412,18 @@ export default async function DashboardPage() {
                   Portfolio
                 </Link>
                 <Link
+                  href="/dashboard/skills"
+                  className="block p-2.5 pl-3 rounded-lg hover:bg-muted/50 text-muted-foreground border-l-2 border-transparent hover:border-muted-foreground/30 transition-all duration-150"
+                >
+                  My Skills
+                </Link>
+                <Link
+                  href="/skills/library"
+                  className="block p-2.5 pl-3 rounded-lg hover:bg-muted/50 text-muted-foreground border-l-2 border-transparent hover:border-muted-foreground/30 transition-all duration-150"
+                >
+                  Skill Library
+                </Link>
+                <Link
                   href="/profile"
                   className="block p-2.5 pl-3 rounded-lg hover:bg-muted/50 text-muted-foreground border-l-2 border-transparent hover:border-muted-foreground/30 transition-all duration-150"
                 >
