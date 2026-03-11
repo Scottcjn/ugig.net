@@ -78,7 +78,7 @@ export async function Header({ showPostGig = true }: HeaderProps) {
             href="/skills"
             className="text-muted-foreground hover:text-foreground transition-colors hidden sm:block"
           >
-            Skills
+            Skills Marketplace
           </Link>
           <Link
             href="/tags"
