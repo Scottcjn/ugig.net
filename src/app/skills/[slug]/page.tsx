@@ -517,7 +517,7 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
                         <Lock className="h-4 w-4" />
                         <span>
                           {l.price_sats === 0
-                            ? "Claim to download"
+                            ? "Claim free access to download"
                             : "Purchase to download"}
                         </span>
                       </div>
