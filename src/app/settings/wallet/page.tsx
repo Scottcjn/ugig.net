@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Zap, ArrowDownToLine, ArrowUpFromLine, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { QRCodeSVG } from "qrcode.react";
 
 interface Transaction {
   id: string;
@@ -273,7 +272,13 @@ export default function WalletPage() {
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">Pay this Lightning invoice for <strong>{invoice.amount_sats.toLocaleString()} sats</strong>:</p>
             <div className="flex justify-center bg-white rounded-lg p-4">
-              <QRCodeSVG value={invoice.payment_request} size={220} />
+              <img
+                alt="Lightning invoice QR code"
+                className="h-[220px] w-[220px]"
+                height={220}
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(invoice.payment_request)}`}
+                width={220}
+              />
             </div>
             <div className="relative">
               <div className="bg-muted rounded-md p-3 text-xs font-mono break-all max-h-24 overflow-y-auto">

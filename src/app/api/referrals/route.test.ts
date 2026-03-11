@@ -9,6 +9,11 @@ vi.mock("@/lib/auth/get-user", () => ({
   getAuthContext: (...args: unknown[]) => mockGetAuthContext(...args),
 }));
 
+const mockCreateServiceClient = vi.fn();
+vi.mock("@/lib/supabase/service", () => ({
+  createServiceClient: () => mockCreateServiceClient(),
+}));
+
 const mockSelect = vi.fn();
 const mockInsert = vi.fn();
 const mockEq = vi.fn();
@@ -21,6 +26,27 @@ const mockSupabase = {
     insert: mockInsert,
   })),
 };
+
+function makeServiceClientWithNoExistingReferrals() {
+  let referralsQueryCount = 0;
+
+  return {
+    from: vi.fn(() => ({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          gte: vi.fn().mockImplementation(() => {
+            referralsQueryCount += 1;
+            if (referralsQueryCount <= 2) {
+              return Promise.resolve({ count: 0, error: null });
+            }
+            return Promise.resolve({ data: [], error: null });
+          }),
+          in: vi.fn().mockResolvedValue({ data: [], error: null }),
+        }),
+      }),
+    })),
+  };
+}
 
 function makeGetRequest() {
   return new NextRequest("http://localhost/api/referrals", { method: "GET" });
@@ -37,6 +63,7 @@ function makePostRequest(body: Record<string, unknown>) {
 describe("GET /api/referrals", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockCreateServiceClient.mockReturnValue(makeServiceClientWithNoExistingReferrals());
   });
 
   it("should return 401 when not authenticated", async () => {
@@ -73,6 +100,7 @@ describe("GET /api/referrals", () => {
 describe("POST /api/referrals", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockCreateServiceClient.mockReturnValue(makeServiceClientWithNoExistingReferrals());
   });
 
   it("should return 401 when not authenticated", async () => {

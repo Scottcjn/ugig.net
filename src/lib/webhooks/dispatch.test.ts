@@ -8,8 +8,8 @@ const mockSupabaseClient = {
   from: mockFrom,
 };
 
-vi.mock("@supabase/supabase-js", () => ({
-  createClient: vi.fn(() => mockSupabaseClient),
+vi.mock("@/lib/supabase/service", () => ({
+  createServiceClient: vi.fn(() => mockSupabaseClient),
 }));
 
 // Mock fetch globally
