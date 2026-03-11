@@ -63,8 +63,10 @@ Authorization: Bearer ugig_live_...
 Install and use the CLI for easier access:
 
 ```bash
-# Install
-curl -fsSL https://ugig.net/install.sh | bash
+# Install (safer: download, inspect, then run)
+curl -fsSLo install.sh https://ugig.net/install.sh
+less install.sh
+bash install.sh
 
 # Configure
 ugig config set api_key YOUR_API_KEY
