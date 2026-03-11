@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getAuthContext } from "@/lib/auth/get-user";
 import { createServiceClient } from "@/lib/supabase/service";
 import { skillListingSchema } from "@/lib/skills/validation";
+import { importSkillFromUrl } from "@/lib/skills/url-import";
 
 /**
  * GET /api/skills/[slug] - Get a single skill listing by slug
@@ -80,7 +81,7 @@ export async function GET(
     // Fetch latest security scan (public-safe fields only)
     const { data: scanRow } = await admin
       .from("skill_security_scans" as any)
-      .select("scan_status, findings_summary, scanned_at")
+      .select("scan_status, findings_summary, scanned_at, scan_source, source_url, content_hash, scanner_version, findings_count_by_severity")
       .eq("listing_id", (listing as any).id)
       .order("created_at", { ascending: false })
       .limit(1)
@@ -100,8 +101,12 @@ export async function GET(
               detail: i.detail,
             }))
           : [],
-        scanner_version: summary.scanner_version ?? null,
+        scanner_version: s.scanner_version ?? summary.scanner_version ?? null,
         scanned_at: s.scanned_at,
+        scan_source: s.scan_source ?? null,
+        source_url: s.source_url ?? null,
+        content_hash: s.content_hash ?? null,
+        findings_count_by_severity: s.findings_count_by_severity ?? {},
       };
     }
 
@@ -180,7 +185,31 @@ export async function PATCH(
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ listing });
+    // Auto-import from skill_file_url if it changed
+    let importResult = null;
+    if (parsed.data.skill_file_url && listing) {
+      const l = listing as any;
+      try {
+        importResult = await importSkillFromUrl({
+          skillFileUrl: parsed.data.skill_file_url,
+          sellerId: auth.user.id,
+          listingSlug: l.slug || slug,
+          listingId: (existing as any).id,
+        });
+      } catch (err) {
+        console.error("URL import failed during update:", err);
+      }
+    }
+
+    return NextResponse.json({
+      listing,
+      import: importResult ? {
+        success: importResult.success,
+        content_hash: importResult.contentHash,
+        scan_status: importResult.scanResult.status,
+        error: importResult.error || null,
+      } : null,
+    });
   } catch {
     return NextResponse.json({ error: "An unexpected error occurred" }, { status: 500 });
   }

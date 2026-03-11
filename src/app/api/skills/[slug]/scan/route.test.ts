@@ -4,6 +4,7 @@ import { NextRequest } from "next/server";
 // ── Mocks ──────────────────────────────────────────────────────────
 
 const mockDownload = vi.fn();
+const mockUpload = vi.fn().mockResolvedValue({ error: null });
 const mockInsert = vi.fn();
 const mockUpdate = vi.fn();
 
@@ -12,6 +13,7 @@ const serviceClient = {
   storage: {
     from: vi.fn(() => ({
       download: mockDownload,
+      upload: mockUpload,
     })),
   },
 };
@@ -275,6 +277,9 @@ describe("POST /api/skills/[slug]/scan", () => {
     const json = await res.json();
     expect(json.scan.status).toBe("clean");
     expect(json.scan.risk_level).toBe("none");
+    expect(json.scan.content_hash).toBeTruthy();
+    expect(json.scan.scan_source).toBe("url_import");
+    expect(json.scan.source_url).toBe("https://example.com/SKILL.md");
 
     global.fetch = originalFetch;
   });

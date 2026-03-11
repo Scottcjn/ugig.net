@@ -137,8 +137,41 @@ export async function POST(
       }
     }
 
+    // ── Compute content hash + findings by severity ─────────────
+    const { createHash } = await import("crypto");
+    const contentHash = createHash("sha256").update(buffer).digest("hex");
+
+    const findingsCountBySeverity: Record<string, number> = {};
+    for (const f of scanResult.findings) {
+      findingsCountBySeverity[f.severity] = (findingsCountBySeverity[f.severity] || 0) + 1;
+    }
+
+    // Determine scan source
+    const scanSource = l.skill_file_path ? "rescan" : "url_import";
+    const sourceUrl = l.skill_file_url || null;
+
+    // ── If content came from URL and no stored file, persist to storage ──
+    if (!l.skill_file_path && l.skill_file_url && scanResult.status !== "malicious") {
+      const storagePath = `${l.seller_id}/${l.slug}/${fileName}`;
+      const { error: uploadErr } = await admin.storage
+        .from(BUCKET)
+        .upload(storagePath, buffer, {
+          contentType: "application/octet-stream",
+          upsert: true,
+        });
+
+      if (!uploadErr) {
+        // Update listing with imported file path
+        await admin
+          .from("skill_listings" as any)
+          .update({ skill_file_path: storagePath })
+          .eq("id", l.id);
+      }
+    }
+
     // ── Persist scan record ───────────────────────────────────────
     const filePath = l.skill_file_path || l.skill_file_url || "url-scan";
+    const scannedAt = new Date().toISOString();
 
     const { data: scanRecord, error: scanInsertError } = await admin
       .from("skill_security_scans" as any)
@@ -148,6 +181,11 @@ export async function POST(
         file_hash: scanResult.fileHash,
         file_size_bytes: scanResult.fileSizeBytes,
         scan_status: scanResult.status,
+        scan_source: scanSource,
+        source_url: sourceUrl,
+        content_hash: contentHash,
+        scanner_version: scanResult.scannerVersion,
+        findings_count_by_severity: findingsCountBySeverity,
         findings_summary: {
           risk_level: riskLevel,
           issues: scanResult.findings.map((f) => ({
@@ -156,7 +194,7 @@ export async function POST(
           })),
           scanner_version: scanResult.scannerVersion,
         },
-        scanned_at: new Date().toISOString(),
+        scanned_at: scannedAt,
       })
       .select("id")
       .single();
@@ -165,10 +203,14 @@ export async function POST(
       console.error("Failed to persist scan record:", scanInsertError);
     }
 
-    // Update listing cached scan_status
+    // Update listing cached scan_status + metadata
     await admin
       .from("skill_listings" as any)
-      .update({ scan_status: scanResult.status })
+      .update({
+        scan_status: scanResult.status,
+        content_hash: contentHash,
+        scan_source: scanSource,
+      })
       .eq("id", l.id);
 
     // ── Return sanitised response ─────────────────────────────────
@@ -185,7 +227,11 @@ export async function POST(
         file_size_bytes: scanResult.fileSizeBytes,
         scanner_version: scanResult.scannerVersion,
         scan_id: (scanRecord as any)?.id ?? null,
-        scanned_at: new Date().toISOString(),
+        scanned_at: scannedAt,
+        content_hash: contentHash,
+        scan_source: scanSource,
+        source_url: sourceUrl,
+        findings_count_by_severity: findingsCountBySeverity,
       },
     });
   } catch (err) {

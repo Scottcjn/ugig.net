@@ -196,11 +196,16 @@ describe("GET /api/skills/[slug]", () => {
     expect(json.user_vote).toBeNull();
   });
 
-  it("returns security_scan with sanitized findings when scan exists", async () => {
+  it("returns security_scan with sanitized findings and enriched metadata when scan exists", async () => {
     setupMocks({
       scanRow: {
         scan_status: "clean",
         scanned_at: "2026-03-10T00:00:00Z",
+        scan_source: "url_import",
+        source_url: "https://example.com/SKILL.md",
+        content_hash: "abc123def456",
+        scanner_version: "secureclaw-0.1.0",
+        findings_count_by_severity: { low: 1 },
         findings_summary: {
           risk_level: "low",
           scanner_version: "secureclaw-0.1.0",
@@ -225,6 +230,12 @@ describe("GET /api/skills/[slug]", () => {
     });
     expect(json.security_scan.issues[0].rule).toBeUndefined();
     expect(json.security_scan.scanned_at).toBe("2026-03-10T00:00:00Z");
+    // Enriched metadata
+    expect(json.security_scan.scan_source).toBe("url_import");
+    expect(json.security_scan.source_url).toBe("https://example.com/SKILL.md");
+    expect(json.security_scan.content_hash).toBe("abc123def456");
+    expect(json.security_scan.scanner_version).toBe("secureclaw-0.1.0");
+    expect(json.security_scan.findings_count_by_severity).toEqual({ low: 1 });
   });
 
   it("returns purchased=true and user_vote for authenticated buyer", async () => {

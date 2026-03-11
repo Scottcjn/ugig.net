@@ -12,6 +12,11 @@ interface SecurityScanProps {
   issuesCount: number;
   issues?: ScanIssue[];
   scannedAt?: string | null;
+  scannerVersion?: string | null;
+  contentHash?: string | null;
+  scanSource?: string | null;
+  sourceUrl?: string | null;
+  findingsCountBySeverity?: Record<string, number> | null;
 }
 
 const STATUS_CONFIG: Record<
@@ -75,6 +80,11 @@ export function SecurityScanBadge({
   issuesCount,
   issues,
   scannedAt,
+  scannerVersion,
+  contentHash,
+  scanSource,
+  sourceUrl,
+  findingsCountBySeverity,
 }: SecurityScanProps) {
   const config = STATUS_CONFIG[status] ?? STATUS_CONFIG.error;
   const Icon = config.icon;
@@ -94,6 +104,21 @@ export function SecurityScanBadge({
         )}
       </div>
 
+      {/* Findings by severity summary */}
+      {findingsCountBySeverity && Object.keys(findingsCountBySeverity).length > 0 && (
+        <div className="flex gap-2 ml-6">
+          {["critical", "high", "medium", "low"].map((sev) => {
+            const count = findingsCountBySeverity[sev];
+            if (!count) return null;
+            return (
+              <span key={sev} className={`text-xs font-medium ${SEVERITY_COLORS[sev] ?? ""}`}>
+                {count} {sev}
+              </span>
+            );
+          })}
+        </div>
+      )}
+
       {issues && issues.length > 0 && (
         <ul className="text-xs text-muted-foreground space-y-0.5 ml-6">
           {issues.slice(0, 5).map((issue, i) => (
@@ -112,11 +137,21 @@ export function SecurityScanBadge({
         </ul>
       )}
 
-      {scannedAt && (
-        <p className="text-xs text-muted-foreground/70 ml-6">
-          Scanned {new Date(scannedAt).toLocaleDateString()}
-        </p>
-      )}
+      {/* Scan metadata */}
+      <div className="text-xs text-muted-foreground/70 ml-6 space-y-0.5">
+        {scannedAt && (
+          <p>Scanned {new Date(scannedAt).toLocaleDateString()}</p>
+        )}
+        {scanSource && (
+          <p>Source: {scanSource === "url_import" ? "URL import" : scanSource === "rescan" ? "Re-scan" : scanSource}</p>
+        )}
+        {contentHash && (
+          <p className="font-mono">SHA-256: {contentHash.slice(0, 16)}…</p>
+        )}
+        {scannerVersion && (
+          <p>Scanner: {scannerVersion}</p>
+        )}
+      </div>
     </div>
   );
 }

@@ -139,7 +139,7 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
   // Security scan (latest)
   const { data: scanRow } = await admin
     .from("skill_security_scans" as any)
-    .select("scan_status, findings_summary, scanned_at")
+    .select("scan_status, findings_summary, scanned_at, scan_source, source_url, content_hash, scanner_version, findings_count_by_severity")
     .eq("listing_id", l.id)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -151,6 +151,11 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
     issuesCount: number;
     issues: { severity: string; detail: string }[];
     scannedAt: string | null;
+    scannerVersion: string | null;
+    contentHash: string | null;
+    scanSource: string | null;
+    sourceUrl: string | null;
+    findingsCountBySeverity: Record<string, number> | null;
   } | null = null;
 
   if (scanRow) {
@@ -167,6 +172,11 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
           }))
         : [],
       scannedAt: s.scanned_at,
+      scannerVersion: s.scanner_version ?? summary.scanner_version ?? null,
+      contentHash: s.content_hash ?? null,
+      scanSource: s.scan_source ?? null,
+      sourceUrl: s.source_url ?? null,
+      findingsCountBySeverity: s.findings_count_by_severity ?? null,
     };
   }
 
@@ -362,6 +372,11 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
                     issuesCount={securityScan.issuesCount}
                     issues={securityScan.issues}
                     scannedAt={securityScan.scannedAt}
+                    scannerVersion={securityScan.scannerVersion}
+                    contentHash={securityScan.contentHash}
+                    scanSource={securityScan.scanSource}
+                    sourceUrl={securityScan.sourceUrl}
+                    findingsCountBySeverity={securityScan.findingsCountBySeverity}
                   />
                 </div>
               )}

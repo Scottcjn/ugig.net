@@ -4,6 +4,7 @@ import { getAuthContext } from "@/lib/auth/get-user";
 import { createServiceClient } from "@/lib/supabase/service";
 import { skillListingSchema } from "@/lib/skills/validation";
 import { slugify } from "@/lib/skills/validation";
+import { importSkillFromUrl } from "@/lib/skills/url-import";
 
 /**
  * GET /api/skills - Public listing of active skills
@@ -139,7 +140,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ listing }, { status: 201 });
+    // Auto-import from skill_file_url if provided
+    let importResult = null;
+    if (skill_file_url && listing) {
+      const l = listing as any;
+      try {
+        importResult = await importSkillFromUrl({
+          skillFileUrl: skill_file_url,
+          sellerId: auth.user.id,
+          listingSlug: l.slug,
+          listingId: l.id,
+        });
+      } catch (err) {
+        console.error("URL import failed during create:", err);
+        // Non-fatal: listing is still created, import can be retried via scan
+      }
+    }
+
+    return NextResponse.json({
+      listing,
+      import: importResult ? {
+        success: importResult.success,
+        content_hash: importResult.contentHash,
+        scan_status: importResult.scanResult.status,
+        error: importResult.error || null,
+      } : null,
+    }, { status: 201 });
   } catch {
     return NextResponse.json({ error: "An unexpected error occurred" }, { status: 500 });
   }

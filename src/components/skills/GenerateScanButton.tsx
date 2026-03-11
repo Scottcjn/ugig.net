@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Shield, Loader2 } from "lucide-react";
+import { Shield, Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SecurityScanBadge } from "./SecurityScanBadge";
 
@@ -18,6 +18,10 @@ interface ScanResponse {
   file_hash: string;
   scanner_version: string;
   scanned_at: string;
+  content_hash?: string;
+  scan_source?: string;
+  source_url?: string;
+  findings_count_by_severity?: Record<string, number>;
 }
 
 interface GenerateScanButtonProps {
@@ -66,10 +70,12 @@ export function GenerateScanButton({ slug, hasScannable }: GenerateScanButtonPro
       >
         {loading ? (
           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+        ) : scanResult ? (
+          <RefreshCw className="h-4 w-4 mr-2" />
         ) : (
           <Shield className="h-4 w-4 mr-2" />
         )}
-        {loading ? "Scanning…" : "Generate Security Report"}
+        {loading ? "Scanning…" : scanResult ? "Re-scan" : "Generate Security Report"}
       </Button>
 
       {error && (
@@ -84,6 +90,11 @@ export function GenerateScanButton({ slug, hasScannable }: GenerateScanButtonPro
             issuesCount={scanResult.issues_count}
             issues={scanResult.issues}
             scannedAt={scanResult.scanned_at}
+            scannerVersion={scanResult.scanner_version}
+            contentHash={scanResult.content_hash}
+            scanSource={scanResult.scan_source}
+            sourceUrl={scanResult.source_url}
+            findingsCountBySeverity={scanResult.findings_count_by_severity}
           />
         </div>
       )}

@@ -52,6 +52,9 @@ function mockListing(listing: any) {
             }),
           }),
         }),
+        update: () => ({
+          eq: () => Promise.resolve({ error: null }),
+        }),
       };
     }
     if (table === "skill_purchases") {
@@ -80,6 +83,9 @@ function mockListingWithPurchase(listing: any, hasPurchase: boolean) {
               error: listing ? null : { message: "not found" },
             }),
           }),
+        }),
+        update: () => ({
+          eq: () => Promise.resolve({ error: null }),
         }),
       };
     }

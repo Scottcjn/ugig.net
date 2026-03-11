@@ -1,17 +1,17 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SKILL_CATEGORIES } from "@/lib/constants";
-import { Loader2, Trash2, Upload, Link as LinkIcon, Sparkles, Shield } from "lucide-react";
+import { Loader2, Trash2, Link as LinkIcon, Sparkles, Shield, CheckCircle, AlertCircle } from "lucide-react";
 import { GenerateScanButton } from "./GenerateScanButton";
 
 interface SkillListingFormProps {
   slug?: string; // If editing
-  listingId?: string; // For file upload
+  listingId?: string; // For scan operations
   initialData?: {
     title: string;
     tagline: string;
@@ -30,7 +30,6 @@ interface SkillListingFormProps {
 export function SkillListingForm({ slug, listingId, initialData }: SkillListingFormProps) {
   const router = useRouter();
   const isEdit = !!slug;
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [title, setTitle] = useState(initialData?.title || "");
   const [tagline, setTagline] = useState(initialData?.tagline || "");
@@ -42,14 +41,13 @@ export function SkillListingForm({ slug, listingId, initialData }: SkillListingF
   const [sourceUrl, setSourceUrl] = useState(initialData?.source_url || "");
   const [skillFileUrl, setSkillFileUrl] = useState(initialData?.skill_file_url || "");
   const [websiteUrl, setWebsiteUrl] = useState(initialData?.website_url || "");
-  const [skillFilePath, setSkillFilePath] = useState(initialData?.skill_file_path || "");
+  const [skillFilePath] = useState(initialData?.skill_file_path || "");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [autofilling, setAutofilling] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+  const [importStatus, setImportStatus] = useState<{ success: boolean; message: string } | null>(null);
 
   async function handleAutofill() {
     if (!websiteUrl) return;
@@ -81,58 +79,11 @@ export function SkillListingForm({ slug, listingId, initialData }: SkillListingF
     }
   }
 
-  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Need a listing ID to upload
-    const targetListingId = listingId;
-    if (!targetListingId) {
-      setError("Save the listing first before uploading a file.");
-      return;
-    }
-
-    setUploading(true);
-    setUploadStatus(null);
-    setError(null);
-
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("listing_id", targetListingId);
-
-      const res = await fetch("/api/skills/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        if (data.scan?.findings?.length) {
-          setError(
-            `Security scan: ${data.error} — ${data.scan.findings.map((f: any) => f.detail).join(", ")}`
-          );
-        } else {
-          setError(data.error || "Upload failed");
-        }
-        return;
-      }
-
-      setSkillFilePath(data.file_path);
-      setUploadStatus(`Uploaded (${data.scan.status}) — ${file.name}`);
-    } catch {
-      setError("Upload failed");
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-  }
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setImportStatus(null);
 
     const tags = tagsInput
       .split(",")
@@ -169,7 +120,26 @@ export function SkillListingForm({ slug, listingId, initialData }: SkillListingF
         return;
       }
 
+      // Show import result feedback
+      if (data.import) {
+        if (data.import.success) {
+          setImportStatus({
+            success: true,
+            message: `Skill file imported and scanned (${data.import.scan_status}). Hash: ${data.import.content_hash?.slice(0, 12)}…`,
+          });
+        } else {
+          setImportStatus({
+            success: false,
+            message: `Import failed: ${data.import.error || "Unknown error"}. You can retry via "Generate Security Report".`,
+          });
+        }
+      }
+
       const newSlug = data.listing?.slug || slug;
+      // Small delay so user can see import feedback
+      if (data.import) {
+        await new Promise((r) => setTimeout(r, 1500));
+      }
       router.push(`/skills/${newSlug}`);
       router.refresh();
     } catch {
@@ -201,7 +171,7 @@ export function SkillListingForm({ slug, listingId, initialData }: SkillListingF
       <div className="space-y-2">
         <Label htmlFor="skill_file_url">
           <LinkIcon className="h-3.5 w-3.5 inline mr-1" />
-          Skill File URL <span className="text-muted-foreground font-normal">(optional)</span>
+          Skill File URL
         </Label>
         <Input
           id="skill_file_url"
@@ -212,6 +182,7 @@ export function SkillListingForm({ slug, listingId, initialData }: SkillListingF
         />
         <p className="text-xs text-muted-foreground">
           Direct link to the skill file (e.g. SKILL.md on GitHub, npm package).
+          The file will be automatically imported and security-scanned on save.
         </p>
       </div>
 
@@ -349,38 +320,15 @@ export function SkillListingForm({ slug, listingId, initialData }: SkillListingF
         />
       </div>
 
-      {/* File Upload */}
-      <div className="space-y-2">
-        <Label>
-          <Upload className="h-3.5 w-3.5 inline mr-1" />
-          Skill File
-        </Label>
-        {skillFilePath && (
-          <p className="text-xs text-green-500">
-            ✓ {uploadStatus || `File: ${skillFilePath.split("/").pop()}`}
+      {/* Imported file status */}
+      {skillFilePath && (
+        <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+          <p className="text-xs text-green-500 flex items-center gap-1.5">
+            <CheckCircle className="h-3.5 w-3.5" />
+            Imported file: {skillFilePath.split("/").pop()}
           </p>
-        )}
-        <div className="flex items-center gap-3">
-          <input
-            ref={fileInputRef}
-            type="file"
-            onChange={handleFileUpload}
-            disabled={uploading || (!isEdit && !listingId)}
-            className="text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20 disabled:opacity-50"
-          />
-          {uploading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
         </div>
-        {!isEdit && !listingId && (
-          <p className="text-xs text-muted-foreground">
-            Save the listing first, then upload a file.
-          </p>
-        )}
-        {isEdit && !listingId && (
-          <p className="text-xs text-amber-500">
-            Listing ID needed for upload — refresh the page.
-          </p>
-        )}
-      </div>
+      )}
 
       {/* Security Scan */}
       {isEdit && slug && (
@@ -395,7 +343,7 @@ export function SkillListingForm({ slug, listingId, initialData }: SkillListingF
           />
           {!skillFilePath && !skillFileUrl && (
             <p className="text-xs text-muted-foreground">
-              Upload a file or set a Skill File URL to enable security scanning.
+              Set a Skill File URL to enable security scanning and file import.
             </p>
           )}
         </div>
@@ -426,6 +374,22 @@ export function SkillListingForm({ slug, listingId, initialData }: SkillListingF
           </label>
         </div>
       </div>
+
+      {/* Import status feedback */}
+      {importStatus && (
+        <div className={`p-3 rounded-lg border text-sm flex items-start gap-2 ${
+          importStatus.success
+            ? "bg-green-500/10 border-green-500/20 text-green-500"
+            : "bg-amber-500/10 border-amber-500/20 text-amber-500"
+        }`}>
+          {importStatus.success ? (
+            <CheckCircle className="h-4 w-4 mt-0.5 shrink-0" />
+          ) : (
+            <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+          )}
+          {importStatus.message}
+        </div>
+      )}
 
       {error && (
         <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-sm">
