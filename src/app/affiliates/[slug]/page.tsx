@@ -50,11 +50,11 @@ export default function OfferDetailPage() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch(`/api/affiliates/offers?q=${encodeURIComponent(slug)}&limit=1`)
+    fetch(`/api/affiliates/offers?slug=${encodeURIComponent(slug)}&limit=1`)
       .then((res) => res.json())
       .then(async (data) => {
         if (cancelled) return;
-        const found = data.offers?.find((o: AffiliateOffer) => o.slug === slug);
+        const found = data.offers?.[0];
         if (found) {
           const detailRes = await fetch(`/api/affiliates/offers/${found.id}`);
           const detail = await detailRes.json();

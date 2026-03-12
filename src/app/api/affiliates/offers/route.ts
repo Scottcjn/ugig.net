@@ -49,7 +49,10 @@ export async function GET(request: NextRequest) {
       query = query.contains("tags", [tag]);
     }
 
-    if (search) {
+    const slugFilter = searchParams.get("slug");
+    if (slugFilter) {
+      query = query.eq("slug", slugFilter);
+    } else if (search) {
       query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%`);
     }
 
