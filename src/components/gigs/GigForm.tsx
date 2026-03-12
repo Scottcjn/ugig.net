@@ -44,7 +44,7 @@ export function GigForm({ initialData, gigId, mode = "create" }: GigFormProps) {
       ai_tools_preferred: [],
       budget_type: "fixed",
       location_type: "remote",
-      status: "draft",
+      status: "active",
       listing_type: (typeParam === "for_hire" ? "for_hire" : "hiring") as "hiring" | "for_hire",
       ...initialData,
     },
@@ -401,18 +401,21 @@ export function GigForm({ initialData, gigId, mode = "create" }: GigFormProps) {
         />
       </div>
 
-      {/* Status */}
-      <div className="space-y-2">
-        <Label>Status</Label>
-        <select
-          {...register("status")}
-          disabled={isLoading}
-          className="w-full border border-input rounded-md px-3 py-2 bg-background"
-        >
-          <option value="draft">Draft (save for later)</option>
-          <option value="active">Active (publish now)</option>
-        </select>
-      </div>
+      {/* Status (edit only) */}
+      {mode === "edit" && (
+        <div className="space-y-2">
+          <Label>Status</Label>
+          <select
+            {...register("status")}
+            disabled={isLoading}
+            className="w-full border border-input rounded-md px-3 py-2 bg-background"
+          >
+            <option value="draft">Draft</option>
+            <option value="active">Active</option>
+            <option value="paused">Paused</option>
+          </select>
+        </div>
+      )}
 
       {/* Submit */}
       <div className="flex gap-4">

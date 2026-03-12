@@ -37,7 +37,7 @@ export function SkillListingForm({ slug, listingId, initialData }: SkillListingF
   const [priceSats, setPriceSats] = useState(initialData?.price_sats?.toString() || "0");
   const [category, setCategory] = useState(initialData?.category || "");
   const [tagsInput, setTagsInput] = useState(initialData?.tags?.join(", ") || "");
-  const [status, setStatus] = useState(initialData?.status || "draft");
+  const [status, setStatus] = useState(initialData?.status || (isEdit ? "draft" : "active"));
   const [sourceUrl, setSourceUrl] = useState(initialData?.source_url || "");
   const [skillFileUrl, setSkillFileUrl] = useState(initialData?.skill_file_url || "");
   const [websiteUrl, setWebsiteUrl] = useState(initialData?.website_url || "");
@@ -355,37 +355,39 @@ export function SkillListingForm({ slug, listingId, initialData }: SkillListingF
         </div>
       )}
 
-      <div className="space-y-2">
-        <Label>Status</Label>
-        <div className="flex gap-4">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="status"
-              value="draft"
-              checked={status === "draft"}
-              onChange={(e) => setStatus(e.target.value)}
-            />
-            <span className="text-sm">Draft</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="status"
-              value="active"
-              checked={status === "active"}
-              onChange={(e) => setStatus(e.target.value)}
-            />
-            <span className="text-sm">Active (visible on marketplace)</span>
-          </label>
+      {isEdit && (
+        <div className="space-y-2">
+          <Label>Status</Label>
+          <div className="flex gap-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="status"
+                value="draft"
+                checked={status === "draft"}
+                onChange={(e) => setStatus(e.target.value)}
+              />
+              <span className="text-sm">Draft</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="status"
+                value="active"
+                checked={status === "active"}
+                onChange={(e) => setStatus(e.target.value)}
+              />
+              <span className="text-sm">Active (visible on marketplace)</span>
+            </label>
+          </div>
+          {skillFileUrl && status === "active" && (
+            <p className="text-xs text-amber-500 flex items-center gap-1">
+              <Shield className="h-3 w-3" />
+              Publishing requires a passing security scan. The scan runs automatically when you save.
+            </p>
+          )}
         </div>
-        {skillFileUrl && status === "active" && (
-          <p className="text-xs text-amber-500 flex items-center gap-1">
-            <Shield className="h-3 w-3" />
-            Publishing requires a passing security scan. The scan runs automatically when you save.
-          </p>
-        )}
-      </div>
+      )}
 
       {/* Import status feedback */}
       {importStatus && (

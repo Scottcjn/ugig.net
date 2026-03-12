@@ -99,7 +99,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { title, tagline, description, price_sats, category, tags, status: requestedStatus, source_url, skill_file_url, website_url } = parsed.data;
+    const { title, tagline, description, price_sats, category, tags, status: requestedStatusRaw, source_url, skill_file_url, website_url } = parsed.data;
+    const requestedStatus = requestedStatusRaw || "active";
 
     // Generate unique slug
     let slug = slugify(title);
@@ -120,7 +121,7 @@ export async function POST(request: NextRequest) {
 
     // When skill_file_url is provided, always start as draft — the scan
     // result determines whether we can promote to active.
-    const initialStatus = skill_file_url ? "draft" : (requestedStatus || "draft");
+    const initialStatus = skill_file_url ? "draft" : requestedStatus;
 
     const { data: listing, error } = await admin
       .from("skill_listings" as any)
