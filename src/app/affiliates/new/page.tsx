@@ -212,7 +212,6 @@ export default function NewOfferPage() {
                 placeholder="20"
                 min={1}
                 max={90}
-                required
               />
               <p className="text-xs text-muted-foreground">Percentage of the sale price</p>
             </>
@@ -226,7 +225,6 @@ export default function NewOfferPage() {
                 onChange={(e) => updateForm("commission_flat_sats", e.target.value)}
                 placeholder="2000"
                 min={1}
-                required
               />
               <p className="text-xs text-muted-foreground">Fixed sats paid per conversion</p>
             </>
