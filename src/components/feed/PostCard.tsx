@@ -86,7 +86,12 @@ export function PostCard({ post, showFollowButtons, followedTags, expanded }: Po
         </div>
 
         {/* Content */}
-        <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+        <div className="mt-2" onClick={(e) => {
+          // Only stop propagation if clicking an actual link
+          if ((e.target as HTMLElement).closest('a')) {
+            e.stopPropagation();
+          }
+        }}>
           <MarkdownContent
             content={post.content || ""}
             clamp={expanded ? undefined : "line-clamp-6"}
