@@ -36,6 +36,7 @@ interface SkillsPageProps {
   searchParams: Promise<{
     search?: string;
     category?: string;
+    tag?: string;
     sort?: string;
     page?: string;
   }>;
@@ -67,6 +68,10 @@ async function SkillsList({ searchParams }: { searchParams: SkillsPageProps["sea
     query = query.eq("category", queryParams.category);
   }
 
+  if (queryParams.tag) {
+    query = query.contains("tags", [queryParams.tag]);
+  }
+
   switch (queryParams.sort) {
     case "popular":
       query = query.order("downloads_count", { ascending: false });
@@ -92,12 +97,12 @@ async function SkillsList({ searchParams }: { searchParams: SkillsPageProps["sea
       <div className="text-center py-12 bg-muted/30 rounded-lg">
         <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
         <p className="text-muted-foreground mb-2">
-          {queryParams.search || queryParams.category
+          {queryParams.search || queryParams.category || queryParams.tag
             ? "No skills found matching your criteria."
             : "No skills listed yet. Be the first to publish one!"}
         </p>
         <div className="flex items-center justify-center gap-3 mt-4">
-          {(queryParams.search || queryParams.category) && (
+          {(queryParams.search || queryParams.category || queryParams.tag) && (
             <Link href="/skills" className="text-primary hover:underline">
               Clear filters
             </Link>
@@ -202,6 +207,7 @@ async function SkillsList({ searchParams }: { searchParams: SkillsPageProps["sea
               href={`/skills?${new URLSearchParams({
                 ...(queryParams.search ? { search: queryParams.search } : {}),
                 ...(queryParams.category ? { category: queryParams.category } : {}),
+                ...(queryParams.tag ? { tag: queryParams.tag } : {}),
                 ...(queryParams.sort ? { sort: queryParams.sort } : {}),
                 page: String(page - 1),
               })}`}
@@ -217,6 +223,7 @@ async function SkillsList({ searchParams }: { searchParams: SkillsPageProps["sea
               href={`/skills?${new URLSearchParams({
                 ...(queryParams.search ? { search: queryParams.search } : {}),
                 ...(queryParams.category ? { category: queryParams.category } : {}),
+                ...(queryParams.tag ? { tag: queryParams.tag } : {}),
                 ...(queryParams.sort ? { sort: queryParams.sort } : {}),
                 page: String(page + 1),
               })}`}
@@ -287,6 +294,9 @@ export default async function SkillsPage({ searchParams }: SkillsPageProps) {
               {queryParams.category && (
                 <input type="hidden" name="category" value={queryParams.category} />
               )}
+              {queryParams.tag && (
+                <input type="hidden" name="tag" value={queryParams.tag} />
+              )}
               {queryParams.sort && (
                 <input type="hidden" name="sort" value={queryParams.sort} />
               )}
@@ -297,7 +307,7 @@ export default async function SkillsPage({ searchParams }: SkillsPageProps) {
 
             {/* Category filter */}
             <div className="flex flex-wrap gap-1.5">
-              <Link href={`/skills?${queryParams.search ? `search=${queryParams.search}&` : ""}${queryParams.sort ? `sort=${queryParams.sort}` : ""}`}>
+              <Link href={`/skills?${queryParams.search ? `search=${queryParams.search}&` : ""}${queryParams.tag ? `tag=${queryParams.tag}&` : ""}${queryParams.sort ? `sort=${queryParams.sort}` : ""}`}>
                 <Badge
                   variant={!queryParams.category ? "default" : "outline"}
                   className="cursor-pointer"
@@ -308,7 +318,7 @@ export default async function SkillsPage({ searchParams }: SkillsPageProps) {
               {SKILL_CATEGORIES.map((cat) => (
                 <Link
                   key={cat}
-                  href={`/skills?category=${cat}${queryParams.search ? `&search=${queryParams.search}` : ""}${queryParams.sort ? `&sort=${queryParams.sort}` : ""}`}
+                  href={`/skills?category=${cat}${queryParams.search ? `&search=${queryParams.search}` : ""}${queryParams.tag ? `&tag=${queryParams.tag}` : ""}${queryParams.sort ? `&sort=${queryParams.sort}` : ""}`}
                 >
                   <Badge
                     variant={queryParams.category === cat ? "default" : "outline"}
@@ -330,7 +340,7 @@ export default async function SkillsPage({ searchParams }: SkillsPageProps) {
               ].map(({ value, label }) => (
                 <Link
                   key={value}
-                  href={`/skills?sort=${value}${queryParams.search ? `&search=${queryParams.search}` : ""}${queryParams.category ? `&category=${queryParams.category}` : ""}`}
+                  href={`/skills?sort=${value}${queryParams.search ? `&search=${queryParams.search}` : ""}${queryParams.category ? `&category=${queryParams.category}` : ""}${queryParams.tag ? `&tag=${queryParams.tag}` : ""}`}
                   className={`hover:text-primary transition-colors ${
                     (queryParams.sort || "newest") === value
                       ? "text-primary font-medium"
@@ -342,6 +352,23 @@ export default async function SkillsPage({ searchParams }: SkillsPageProps) {
               ))}
             </div>
           </div>
+
+          {/* Active tag filter */}
+          {queryParams.tag && (
+            <div className="flex items-center gap-2 mb-6">
+              <span className="text-sm text-muted-foreground">Filtered by tag:</span>
+              <Badge variant="secondary" className="gap-1">
+                {queryParams.tag}
+                <Link href={`/skills?${new URLSearchParams({
+                  ...(queryParams.search ? { search: queryParams.search } : {}),
+                  ...(queryParams.category ? { category: queryParams.category } : {}),
+                  ...(queryParams.sort ? { sort: queryParams.sort } : {}),
+                })}`} className="ml-1 hover:text-destructive">
+                  ✕
+                </Link>
+              </Badge>
+            </div>
+          )}
 
           <Suspense fallback={<SkillsListSkeleton />}>
             <SkillsList searchParams={searchParams} />
