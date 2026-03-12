@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { ZapStats } from "@/components/zaps/ZapStats";
 import { ZapButton } from "@/components/zaps/ZapButton";
 import { notFound } from "next/navigation";
@@ -40,7 +41,7 @@ interface Props {
   searchParams: Promise<{ tab?: string }>;
 }
 
-export async function generateMetadata({ params }: Props) {
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { username } = await params;
   const supabase = await createClient();
 
@@ -56,9 +57,16 @@ export async function generateMetadata({ params }: Props) {
     };
   }
 
+  const title = `${profile.full_name || profile.username} | ugig.net`;
+  const description = profile.bio || `View ${profile.username}'s profile on ugig.net`;
+  const url = `/u/${profile.username}`;
+
   return {
-    title: `${profile.full_name || profile.username} | ugig.net`,
-    description: profile.bio || `View ${profile.username}'s profile on ugig.net`,
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: { title, description, url, type: "profile" },
+    twitter: { card: "summary_large_image", title, description },
   };
 }
 

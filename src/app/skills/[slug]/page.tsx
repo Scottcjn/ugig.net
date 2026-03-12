@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Header } from "@/components/layout/Header";
@@ -12,7 +13,7 @@ interface SkillDetailProps {
   params: Promise<{ slug: string }>;
 }
 
-export async function generateMetadata({ params }: SkillDetailProps) {
+export async function generateMetadata({ params }: SkillDetailProps): Promise<Metadata> {
   const { slug } = await params;
   const supabase = await createClient();
   const { data: listing } = await supabase
@@ -22,9 +23,17 @@ export async function generateMetadata({ params }: SkillDetailProps) {
     .single();
 
   if (!listing) return { title: "Skill Not Found | ugig.net" };
+
+  const title = `${(listing as any).title} | ugig.net Skills`;
+  const description = (listing as any).tagline || (listing as any).title;
+  const url = `/skills/${slug}`;
+
   return {
-    title: `${(listing as any).title} | ugig.net Skills`,
-    description: (listing as any).tagline || (listing as any).title,
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: { title, description, url, type: "article" },
+    twitter: { card: "summary_large_image", title, description },
   };
 }
 

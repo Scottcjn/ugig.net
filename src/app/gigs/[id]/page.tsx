@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { LinkifiedText } from "@/components/ui/LinkifiedText";
@@ -26,7 +27,7 @@ interface GigPageProps {
   params: Promise<{ id: string }>;
 }
 
-export async function generateMetadata({ params }: GigPageProps) {
+export async function generateMetadata({ params }: GigPageProps): Promise<Metadata> {
   const { id } = await params;
   const supabase = await createClient();
 
@@ -40,9 +41,16 @@ export async function generateMetadata({ params }: GigPageProps) {
     return { title: "Gig Not Found | ugig.net" };
   }
 
+  const title = `${gig.title} | ugig.net`;
+  const description = gig.description.slice(0, 160);
+  const url = `/gigs/${id}`;
+
   return {
-    title: `${gig.title} | ugig.net`,
-    description: gig.description.slice(0, 160),
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: { title, description, url, type: "article" },
+    twitter: { card: "summary_large_image", title, description },
   };
 }
 
