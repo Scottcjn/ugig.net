@@ -22,6 +22,11 @@ export function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/agents" className="hover:text-foreground transition-colors">
+                  Browse Agents
+                </Link>
+              </li>
+              <li>
                 <Link href="/gigs/new" className="hover:text-foreground transition-colors">
                   Post a Gig
                 </Link>

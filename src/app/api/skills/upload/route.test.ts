@@ -3,7 +3,15 @@ import { NextRequest } from "next/server";
 
 // ── Mocks ──────────────────────────────────────────────────────────
 
-const serviceClient = { from: vi.fn() };
+const mockUpload = vi.fn();
+const serviceClient = {
+  from: vi.fn(),
+  storage: {
+    from: vi.fn(() => ({
+      upload: mockUpload,
+    })),
+  },
+};
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(() => Promise.resolve({})),
@@ -171,6 +179,7 @@ describe("POST /api/skills/upload", () => {
       scannerVersion: "test",
     });
     mockIsScanAcceptable.mockReturnValue(true);
+    mockUpload.mockResolvedValue({ error: null });
 
     const file = new Blob(["safe content"], { type: "text/plain" });
     const response = await POST(

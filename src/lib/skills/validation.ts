@@ -40,6 +40,8 @@ export const skillListingSchema = z.object({
     .default([]),
   status: z.enum(["draft", "active"]).optional().default("draft"),
   source_url: z.string().url().optional().or(z.literal("")),
+  skill_file_url: z.string().url().optional().or(z.literal("")),
+  website_url: z.string().url().optional().or(z.literal("")),
 });
 
 export type SkillListingInput = z.infer<typeof skillListingSchema>;

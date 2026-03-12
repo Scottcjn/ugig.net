@@ -65,7 +65,7 @@ export function SkillPurchaseButton({ slug, priceSats }: SkillPurchaseButtonProp
         {loading ? (
           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
         ) : priceSats === 0 ? (
-          "Get for Free"
+          "Claim Free Access"
         ) : (
           <>
             <Zap className="h-4 w-4 mr-2" />

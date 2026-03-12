@@ -1,7 +1,6 @@
 import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { Header } from "@/components/layout/Header";
 import { SkillListingForm } from "@/components/skills/SkillListingForm";
 
 interface EditSkillPageProps {
@@ -38,28 +37,30 @@ export default async function EditSkillPage({ params }: EditSkillPageProps) {
   }
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <Header />
-      <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto">
-          <h1 className="text-3xl font-bold mb-2">Edit Skill</h1>
-          <p className="text-muted-foreground mb-8">
-            Update your skill listing.
-          </p>
-          <SkillListingForm
-            slug={l.slug}
-            initialData={{
-              title: l.title,
-              tagline: l.tagline || "",
-              description: l.description,
-              price_sats: l.price_sats,
-              category: l.category || "",
-              tags: l.tags || [],
-              status: l.status,
-            }}
-          />
-        </div>
-      </main>
-    </div>
+    <main className="container mx-auto px-4 py-8">
+      <div className="max-w-2xl mx-auto">
+        <h1 className="text-3xl font-bold mb-2">Edit Skill</h1>
+        <p className="text-muted-foreground mb-8">
+          Update your skill listing.
+        </p>
+        <SkillListingForm
+          slug={l.slug}
+          listingId={l.id}
+          initialData={{
+            title: l.title,
+            tagline: l.tagline || "",
+            description: l.description,
+            price_sats: l.price_sats,
+            category: l.category || "",
+            tags: l.tags || [],
+            status: l.status,
+            source_url: l.source_url || "",
+            skill_file_url: l.skill_file_url || "",
+            website_url: l.website_url || "",
+            skill_file_path: l.skill_file_path || "",
+          }}
+        />
+      </div>
+    </main>
   );
 }

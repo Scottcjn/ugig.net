@@ -180,6 +180,22 @@ export function setDefaultScanner(scanner: SecurityScanner): void {
 
 // ── Helper: is result acceptable for publishing? ───────────────────
 
+/** Statuses that allow a listing to be published (active). */
+export const PUBLISHABLE_SCAN_STATUSES: ScanStatus[] = ["clean"];
+
+/**
+ * Whether a scan result permits publishing.
+ * Only "clean" is acceptable. "suspicious", "malicious", "error", "timeout"
+ * all block publishing.
+ */
 export function isScanAcceptable(result: ScanResult): boolean {
-  return result.status === "clean";
+  return PUBLISHABLE_SCAN_STATUSES.includes(result.status);
+}
+
+/**
+ * Whether a persisted scan_status string permits publishing.
+ */
+export function isScanStatusAcceptable(status: string | null | undefined): boolean {
+  if (!status) return false;
+  return PUBLISHABLE_SCAN_STATUSES.includes(status as ScanStatus);
 }

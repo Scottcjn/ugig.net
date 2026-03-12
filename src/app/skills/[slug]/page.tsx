@@ -2,13 +2,31 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { Header } from "@/components/layout/Header";
 import { Badge } from "@/components/ui/badge";
 import { SUPPORTED_AGENT_OPTIONS } from "@/lib/constants";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Star, Download, Zap, ArrowLeft, Calendar, Package } from "lucide-react";
+import {
+  Star,
+  Download,
+  Zap,
+  ArrowLeft,
+  Calendar,
+  Package,
+  Globe,
+  FileText,
+  Lock,
+  ExternalLink,
+} from "lucide-react";
 import { SkillPurchaseButton } from "@/components/skills/SkillPurchaseButton";
 import { SkillReviewForm } from "@/components/skills/SkillReviewForm";
+import { SkillVoteButton } from "@/components/skills/SkillVoteButton";
+import { ZapButton } from "@/components/zaps/ZapButton";
+import { SkillComments } from "@/components/skills/SkillComments";
+import { SkillDownloadButton } from "@/components/skills/SkillDownloadButton";
+import { SecurityScanBadge } from "@/components/skills/SecurityScanBadge";
+import { CurlSnippet } from "@/components/skills/CurlSnippet";
 
 interface SkillDetailProps {
   params: Promise<{ slug: string }>;
@@ -38,6 +56,23 @@ export async function generateMetadata({ params }: SkillDetailProps): Promise<Me
   };
 }
 
+/** Sanitize a URL for safe external display (must be http/https). */
+function sanitizeUrl(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  try {
+    const u = new URL(raw);
+    if (u.protocol === "http:" || u.protocol === "https:") return u.href;
+  } catch {
+    /* invalid */
+  }
+  return null;
+}
+
+/** Truncate a URL for display (strip protocol, trailing slash). */
+function displayUrl(href: string): string {
+  return href.replace(/^https?:\/\//, "").replace(/\/$/, "");
+}
+
 export default async function SkillDetailPage({ params }: SkillDetailProps) {
   const { slug } = await params;
   const supabase = await createClient();
@@ -60,13 +95,15 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
     (tag: string) => !SUPPORTED_AGENT_OPTIONS.includes(tag as (typeof SUPPORTED_AGENT_OPTIONS)[number])
   );
 
-  // Check auth + purchase status
+  // Check auth + purchase status + user vote
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   let purchased = false;
   let isOwner = false;
+  let userVote: number | null = null;
+
   if (user) {
     isOwner = user.id === l.seller_id;
     if (!isOwner) {
@@ -77,6 +114,18 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
         .eq("buyer_id", user.id)
         .single();
       purchased = !!purchase;
+    }
+
+    // Get user's vote
+    const { data: vote } = await supabase
+      .from("skill_votes" as any)
+      .select("vote_type")
+      .eq("listing_id", l.id)
+      .eq("user_id", user.id)
+      .single();
+
+    if (vote) {
+      userVote = (vote as any).vote_type;
     }
   }
 
@@ -89,6 +138,74 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
     .eq("listing_id", l.id)
     .order("created_at", { ascending: false })
     .limit(20);
+
+  // Zap totals
+  const admin = createServiceClient();
+  const { data: zapAgg } = await admin
+    .from("zaps" as any)
+    .select("amount_sats")
+    .eq("target_type", "skill")
+    .eq("target_id", l.id);
+
+  const zapsTotal = (zapAgg || []).reduce(
+    (sum: number, z: any) => sum + (z.amount_sats || 0),
+    0
+  );
+
+  // Security scan (latest)
+  const { data: scanRow } = await admin
+    .from("skill_security_scans" as any)
+    .select("scan_status, findings_summary, scanned_at, scan_source, source_url, content_hash, scanner_version, findings_count_by_severity")
+    .eq("listing_id", l.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  let securityScan: {
+    status: string;
+    riskLevel: string | null;
+    issuesCount: number;
+    issues: { severity: string; detail: string }[];
+    scannedAt: string | null;
+    scannerVersion: string | null;
+    contentHash: string | null;
+    scanSource: string | null;
+    sourceUrl: string | null;
+    findingsCountBySeverity: Record<string, number> | null;
+  } | null = null;
+
+  if (scanRow) {
+    const s = scanRow as any;
+    const summary = s.findings_summary || {};
+    securityScan = {
+      status: s.scan_status,
+      riskLevel: summary.risk_level ?? null,
+      issuesCount: Array.isArray(summary.issues) ? summary.issues.length : 0,
+      issues: Array.isArray(summary.issues)
+        ? (summary.issues as any[]).map((i: any) => ({
+            severity: i.severity,
+            detail: i.detail,
+          }))
+        : [],
+      scannedAt: s.scanned_at,
+      scannerVersion: s.scanner_version ?? summary.scanner_version ?? null,
+      contentHash: s.content_hash ?? null,
+      scanSource: s.scan_source ?? null,
+      sourceUrl: s.source_url ?? null,
+      findingsCountBySeverity: s.findings_count_by_severity ?? null,
+    };
+  }
+
+  const hasFile = !!l.skill_file_path;
+  const canDownload = isOwner || purchased;
+
+  // Sanitize external URLs
+  const websiteUrl = sanitizeUrl(l.website_url);
+  const skillFileUrl = sanitizeUrl(l.skill_file_url);
+  const sourceUrl = sanitizeUrl(l.source_url);
+
+  // Best URL for curl snippet: prefer skill_file_url, fallback website_url
+  const curlUrl = skillFileUrl || websiteUrl;
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -105,15 +222,21 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
           </Link>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Main content */}
+            {/* ─── Main content ──────────────────────────────────── */}
             <div className="lg:col-span-2 space-y-6">
+              {/* Title + category */}
               <div>
                 <div className="flex items-start gap-3 mb-2">
                   <h1 className="text-3xl font-bold">{l.title}</h1>
                   {l.category && (
-                    <Badge variant="outline" className="capitalize shrink-0 mt-1">
-                      {l.category}
-                    </Badge>
+                    <Link href={`/skills?category=${encodeURIComponent(l.category)}`}>
+                      <Badge
+                        variant="outline"
+                        className="capitalize shrink-0 mt-1 cursor-pointer hover:bg-muted transition-colors"
+                      >
+                        {l.category}
+                      </Badge>
+                    </Link>
                   )}
                 </div>
                 {l.tagline && (
@@ -127,9 +250,14 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
                   <h2 className="text-sm font-medium text-muted-foreground mb-2">Supported agents</h2>
                   <div className="flex flex-wrap gap-2">
                     {supportedAgents.map((tag: string) => (
-                      <Badge key={tag} variant="default">
-                        {tag}
-                      </Badge>
+                      <Link
+                        key={tag}
+                        href={`/skills?tag=${encodeURIComponent(tag)}`}
+                      >
+                        <Badge className="cursor-pointer hover:opacity-90 transition-opacity">
+                          {tag}
+                        </Badge>
+                      </Link>
                     ))}
                   </div>
                 </div>
@@ -141,16 +269,39 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
                   <h2 className="text-sm font-medium text-muted-foreground mb-2">Tags</h2>
                   <div className="flex flex-wrap gap-2">
                     {generalTags.map((tag: string) => (
-                      <Badge key={tag} variant="secondary">
-                        {tag}
-                      </Badge>
+                      <Link
+                        key={tag}
+                        href={`/skills?tag=${encodeURIComponent(tag)}`}
+                      >
+                        <Badge
+                          variant="secondary"
+                          className="cursor-pointer hover:bg-secondary/80 transition-colors"
+                        >
+                          {tag}
+                        </Badge>
+                      </Link>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Stats */}
-              <div className="flex items-center gap-6 text-sm text-muted-foreground border-y border-border py-3">
+              {/* Stats + Social row */}
+              <div className="flex items-center gap-6 text-sm text-muted-foreground border-y border-border py-3 flex-wrap">
+                {/* Vote */}
+                {user ? (
+                  <SkillVoteButton
+                    slug={slug}
+                    initialUpvotes={l.upvotes ?? 0}
+                    initialDownvotes={l.downvotes ?? 0}
+                    initialScore={l.score ?? 0}
+                    initialUserVote={userVote}
+                  />
+                ) : (
+                  <span className="flex items-center gap-1">
+                    👍 {l.upvotes ?? 0}
+                  </span>
+                )}
+
                 <span className="flex items-center gap-1.5">
                   <Download className="h-4 w-4" />
                   {l.downloads_count} downloads
@@ -168,6 +319,22 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
                 </span>
               </div>
 
+              {/* ─── Zap button (always visible when user is logged in) ─── */}
+              {user && (
+                <ZapButton
+                  targetType="skill"
+                  targetId={l.id}
+                  recipientId={l.seller_id}
+                  totalSats={zapsTotal}
+                />
+              )}
+              {!user && zapsTotal > 0 && (
+                <span className="text-sm text-amber-500 flex items-center gap-1">
+                  <Zap className="h-4 w-4 fill-amber-500" />
+                  {zapsTotal.toLocaleString()} sats zapped
+                </span>
+              )}
+
               {/* Description */}
               <div className="prose prose-invert max-w-none">
                 <h2 className="text-xl font-semibold mb-3">Description</h2>
@@ -175,6 +342,85 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
                   {l.description}
                 </div>
               </div>
+
+              {/* ─── Install section ───────────────────────────────── */}
+              {curlUrl && (
+                <div>
+                  <h2 className="text-xl font-semibold mb-3">Install</h2>
+                  <CurlSnippet url={curlUrl} />
+                </div>
+              )}
+
+              {/* ─── Links ────────────────────────────────────────── */}
+              {(websiteUrl || skillFileUrl || sourceUrl) && (
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium text-muted-foreground">
+                    Links
+                  </h3>
+                  <div className="flex flex-col gap-1.5">
+                    {websiteUrl && (
+                      <a
+                        href={websiteUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline break-all"
+                      >
+                        <Globe className="h-3.5 w-3.5 shrink-0" />
+                        {displayUrl(websiteUrl)}
+                        <ExternalLink className="h-3 w-3 shrink-0 opacity-50" />
+                      </a>
+                    )}
+                    {skillFileUrl && (
+                      <a
+                        href={skillFileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline break-all"
+                      >
+                        <FileText className="h-3.5 w-3.5 shrink-0" />
+                        {displayUrl(skillFileUrl)}
+                        <ExternalLink className="h-3 w-3 shrink-0 opacity-50" />
+                      </a>
+                    )}
+                    {sourceUrl && (
+                      <a
+                        href={sourceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline break-all"
+                      >
+                        <Package className="h-3.5 w-3.5 shrink-0" />
+                        {displayUrl(sourceUrl)}
+                        <ExternalLink className="h-3 w-3 shrink-0 opacity-50" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* ─── Security scan ────────────────────────────────── */}
+              {securityScan && (
+                <div>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-2">
+                    Security Scan
+                  </h3>
+                  <SecurityScanBadge
+                    status={securityScan.status}
+                    riskLevel={securityScan.riskLevel}
+                    issuesCount={securityScan.issuesCount}
+                    issues={securityScan.issues}
+                    scannedAt={securityScan.scannedAt}
+                    scannerVersion={securityScan.scannerVersion}
+                    contentHash={securityScan.contentHash}
+                    scanSource={securityScan.scanSource}
+                    sourceUrl={securityScan.sourceUrl}
+                    findingsCountBySeverity={securityScan.findingsCountBySeverity}
+                  />
+                </div>
+              )}
+
+              {/* Comments */}
+              <SkillComments slug={slug} isAuthenticated={!!user} />
 
               {/* Reviews */}
               <div>
@@ -230,7 +476,9 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
                                 />
                               ))}
                               <span className="text-xs text-muted-foreground ml-2">
-                                {new Date(review.created_at).toLocaleDateString()}
+                                {new Date(
+                                  review.created_at
+                                ).toLocaleDateString()}
                               </span>
                             </div>
                           </div>
@@ -251,9 +499,9 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
               </div>
             </div>
 
-            {/* Sidebar */}
+            {/* ─── Sidebar ──────────────────────────────────────── */}
             <div className="space-y-6">
-              {/* Purchase card */}
+              {/* Purchase / download card */}
               <div className="p-6 border border-border rounded-lg bg-card sticky top-6">
                 <div className="text-center mb-4">
                   {l.price_sats === 0 ? (
@@ -267,25 +515,52 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
                 </div>
 
                 {isOwner ? (
-                  <Link href={`/dashboard/skills/${slug}/edit`}>
-                    <button className="w-full py-2.5 px-4 rounded-lg bg-muted text-foreground font-medium hover:bg-muted/80 transition-colors">
-                      Edit Listing
-                    </button>
-                  </Link>
+                  <div className="space-y-3">
+                    <Link href={`/dashboard/skills/${slug}/edit`}>
+                      <button className="w-full py-2.5 px-4 rounded-lg bg-muted text-foreground font-medium hover:bg-muted/80 transition-colors">
+                        Edit Listing
+                      </button>
+                    </Link>
+                    {hasFile && (
+                      <SkillDownloadButton slug={slug} hasFile={hasFile} />
+                    )}
+                  </div>
                 ) : purchased ? (
-                  <div className="text-center">
+                  <div className="space-y-3 text-center">
                     <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-500/10 text-green-600 rounded-lg font-medium mb-2">
                       <Package className="h-4 w-4" /> Purchased
                     </div>
+                    {hasFile && (
+                      <SkillDownloadButton slug={slug} hasFile={hasFile} />
+                    )}
                     <p className="text-xs text-muted-foreground">
                       Available in your{" "}
-                      <Link href="/skills/library" className="text-primary hover:underline">
+                      <Link
+                        href="/skills/library"
+                        className="text-primary hover:underline"
+                      >
                         library
                       </Link>
                     </p>
                   </div>
                 ) : (
-                  <SkillPurchaseButton slug={slug} priceSats={l.price_sats} />
+                  <div className="space-y-3">
+                    <SkillPurchaseButton
+                      slug={slug}
+                      priceSats={l.price_sats}
+                    />
+                    {/* Locked download indicator for non-entitled users */}
+                    {hasFile && (
+                      <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-2">
+                        <Lock className="h-4 w-4" />
+                        <span>
+                          {l.price_sats === 0
+                            ? "Claim free access to download"
+                            : "Purchase to download"}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
 

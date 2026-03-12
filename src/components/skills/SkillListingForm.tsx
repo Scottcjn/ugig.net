@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SKILL_CATEGORIES, SUPPORTED_AGENT_OPTIONS } from "@/lib/constants";
-import { Loader2, Trash2 } from "lucide-react";
+import { Loader2, Trash2, Link as LinkIcon, Sparkles, Shield, CheckCircle, AlertCircle } from "lucide-react";
+import { GenerateScanButton } from "./GenerateScanButton";
 
 interface SkillListingFormProps {
   slug?: string; // If editing
+  listingId?: string; // For scan operations
   initialData?: {
     title: string;
     tagline: string;
@@ -18,10 +20,14 @@ interface SkillListingFormProps {
     category: string;
     tags: string[];
     status: string;
+    source_url?: string;
+    skill_file_url?: string;
+    website_url?: string;
+    skill_file_path?: string;
   };
 }
 
-export function SkillListingForm({ slug, initialData }: SkillListingFormProps) {
+export function SkillListingForm({ slug, listingId, initialData }: SkillListingFormProps) {
   const router = useRouter();
   const isEdit = !!slug;
 
@@ -40,16 +46,83 @@ export function SkillListingForm({ slug, initialData }: SkillListingFormProps) {
   const [category, setCategory] = useState(initialData?.category || "");
   const [tagsInput, setTagsInput] = useState(initialGeneralTags.join(", "));
   const [supportedAgentsInput, setSupportedAgentsInput] = useState(initialSupportedAgents.join(", "));
-  const [status, setStatus] = useState(initialData?.status || "draft");
+  const [status, setStatus] = useState(initialData?.status || (isEdit ? "draft" : "active"));
+  const [sourceUrl, setSourceUrl] = useState(initialData?.source_url || "");
+  const [skillFileUrl, setSkillFileUrl] = useState(initialData?.skill_file_url || "");
+  const [websiteUrl, setWebsiteUrl] = useState(initialData?.website_url || "");
+  const [skillFilePath] = useState(initialData?.skill_file_path || "");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [autofilling, setAutofilling] = useState(false);
+  const [updatingFromUrl, setUpdatingFromUrl] = useState(false);
+  const [importStatus, setImportStatus] = useState<{ success: boolean; message: string } | null>(null);
+
+  async function handleAutofill() {
+    if (!websiteUrl) return;
+    setAutofilling(true);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/skills/metadata", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: websiteUrl }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Failed to fetch metadata");
+        return;
+      }
+
+      const meta = data.metadata;
+      if (meta.title && !title) setTitle(meta.title);
+      if (meta.description && !description) setDescription(meta.description);
+      if (meta.tags?.length && !tagsInput) setTagsInput(meta.tags.join(", "));
+    } catch {
+      setError("Failed to fetch metadata");
+    } finally {
+      setAutofilling(false);
+    }
+  }
+
+  async function handleUpdateFromUrl() {
+    if (!isEdit || !slug || !skillFileUrl) return;
+    setUpdatingFromUrl(true);
+    setError(null);
+    setImportStatus(null);
+
+    try {
+      const res = await fetch(`/api/skills/${slug}/scan`, { method: "POST" });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Failed to update from URL");
+        return;
+      }
+
+      const status = data.scan?.status || "unknown";
+      const hash = data.scan?.content_hash || data.scan?.file_hash;
+      setImportStatus({
+        success: status === "clean",
+        message: `Updated from URL and re-scanned (${status})${hash ? `. Hash: ${String(hash).slice(0, 12)}…` : ""}`,
+      });
+      router.refresh();
+    } catch {
+      setError("Failed to update from URL");
+    } finally {
+      setUpdatingFromUrl(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setImportStatus(null);
 
     const tags = tagsInput
       .split(",")
@@ -63,7 +136,7 @@ export function SkillListingForm({ slug, initialData }: SkillListingFormProps) {
 
     const combinedTags = Array.from(new Set([...tags, ...supportedAgents]));
 
-    const body = {
+    const body: Record<string, unknown> = {
       title,
       tagline,
       description,
@@ -71,6 +144,9 @@ export function SkillListingForm({ slug, initialData }: SkillListingFormProps) {
       category: category || undefined,
       tags: combinedTags,
       status,
+      source_url: sourceUrl || undefined,
+      skill_file_url: skillFileUrl || undefined,
+      website_url: websiteUrl || undefined,
     };
 
     try {
@@ -90,7 +166,26 @@ export function SkillListingForm({ slug, initialData }: SkillListingFormProps) {
         return;
       }
 
+      // Show import result feedback
+      if (data.import) {
+        if (data.import.success) {
+          setImportStatus({
+            success: true,
+            message: `Skill file imported and scanned (${data.import.scan_status}). Hash: ${data.import.content_hash?.slice(0, 12)}…`,
+          });
+        } else {
+          setImportStatus({
+            success: false,
+            message: `Import failed: ${data.import.error || "Unknown error"}. You can retry via "Generate Security Report".`,
+          });
+        }
+      }
+
       const newSlug = data.listing?.slug || slug;
+      // Small delay so user can see import feedback
+      if (data.import) {
+        await new Promise((r) => setTimeout(r, 1500));
+      }
       router.push(`/skills/${newSlug}`);
       router.refresh();
     } catch {
@@ -98,6 +193,19 @@ export function SkillListingForm({ slug, initialData }: SkillListingFormProps) {
     } finally {
       setLoading(false);
     }
+  }
+
+  function toggleSupportedAgent(agent: string) {
+    const current = supportedAgentsInput
+      .split(",")
+      .map((t) => t.trim().toLowerCase())
+      .filter(Boolean);
+
+    const next = current.includes(agent)
+      ? current.filter((item) => item !== agent)
+      : [...current, agent];
+
+    setSupportedAgentsInput(next.join(", "));
   }
 
   async function handleDelete() {
@@ -118,6 +226,99 @@ export function SkillListingForm({ slug, initialData }: SkillListingFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Skill File URL */}
+      <div className="space-y-2">
+        <Label htmlFor="skill_file_url">
+          <LinkIcon className="h-3.5 w-3.5 inline mr-1" />
+          Skill File URL
+        </Label>
+        <div className="flex gap-2">
+          <Input
+            id="skill_file_url"
+            type="url"
+            value={skillFileUrl}
+            onChange={(e) => setSkillFileUrl(e.target.value)}
+            placeholder="https://github.com/user/repo/blob/main/SKILL.md"
+            className="flex-1"
+          />
+          {isEdit && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleUpdateFromUrl}
+              disabled={updatingFromUrl || !skillFileUrl}
+              className="shrink-0"
+            >
+              {updatingFromUrl ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <LinkIcon className="h-4 w-4" />
+              )}
+              <span className="ml-1.5 hidden sm:inline">Update from URL</span>
+            </Button>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Direct link to the skill file (e.g. SKILL.md on GitHub, npm package).
+          The file will be automatically imported and security-scanned on save.
+          <strong className="text-foreground"> A passing security scan is required before the listing can be published.</strong>
+        </p>
+      </div>
+
+      {/* Website URL + Autofill */}
+      <div className="space-y-2">
+        <Label htmlFor="website_url">
+          <LinkIcon className="h-3.5 w-3.5 inline mr-1" />
+          Website URL <span className="text-muted-foreground font-normal">(optional)</span>
+        </Label>
+        <div className="flex gap-2">
+          <Input
+            id="website_url"
+            type="url"
+            value={websiteUrl}
+            onChange={(e) => setWebsiteUrl(e.target.value)}
+            placeholder="https://example.com/my-skill"
+            className="flex-1"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleAutofill}
+            disabled={autofilling || !websiteUrl}
+            className="shrink-0"
+          >
+            {autofilling ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4" />
+            )}
+            <span className="ml-1.5 hidden sm:inline">Autofill from website</span>
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Paste a website URL and click Autofill to populate title, description, and tags.
+        </p>
+      </div>
+
+      {/* Legacy Source URL (hidden if empty, kept for backward compat) */}
+      {sourceUrl && (
+        <div className="space-y-2">
+          <Label htmlFor="source_url">
+            <LinkIcon className="h-3.5 w-3.5 inline mr-1" />
+            Source URL <span className="text-muted-foreground font-normal">(legacy)</span>
+          </Label>
+          <Input
+            id="source_url"
+            type="url"
+            value={sourceUrl}
+            onChange={(e) => setSourceUrl(e.target.value)}
+            placeholder="https://github.com/user/skill-repo"
+          />
+        </div>
+      )}
+
       <div className="space-y-2">
         <Label htmlFor="title">Title *</Label>
         <Input
@@ -190,19 +391,6 @@ export function SkillListingForm({ slug, initialData }: SkillListingFormProps) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="supported-agents">Supported agents</Label>
-        <Input
-          id="supported-agents"
-          value={supportedAgentsInput}
-          onChange={(e) => setSupportedAgentsInput(e.target.value)}
-          placeholder="e.g. claude-code, openclaw, codex"
-        />
-        <p className="text-xs text-muted-foreground">
-          Suggested: {SUPPORTED_AGENT_OPTIONS.join(", ")}
-        </p>
-      </div>
-
-      <div className="space-y-2">
         <Label htmlFor="tags">Tags</Label>
         <Input
           id="tags"
@@ -213,30 +401,122 @@ export function SkillListingForm({ slug, initialData }: SkillListingFormProps) {
       </div>
 
       <div className="space-y-2">
-        <Label>Status</Label>
-        <div className="flex gap-4">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="status"
-              value="draft"
-              checked={status === "draft"}
-              onChange={(e) => setStatus(e.target.value)}
-            />
-            <span className="text-sm">Draft</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="status"
-              value="active"
-              checked={status === "active"}
-              onChange={(e) => setStatus(e.target.value)}
-            />
-            <span className="text-sm">Active (visible on marketplace)</span>
-          </label>
+        <Label htmlFor="supported-agents">Supported agents</Label>
+        <Input
+          id="supported-agents"
+          value={supportedAgentsInput}
+          onChange={(e) => setSupportedAgentsInput(e.target.value)}
+          placeholder="e.g. claude-code, openclaw, codex"
+        />
+        <div className="flex flex-wrap gap-2 pt-1">
+          {SUPPORTED_AGENT_OPTIONS.map((agent) => {
+            const isSelected = supportedAgentsInput
+              .split(",")
+              .map((t) => t.trim().toLowerCase())
+              .filter(Boolean)
+              .includes(agent);
+
+            return (
+              <button
+                key={agent}
+                type="button"
+                onClick={() => toggleSupportedAgent(agent)}
+                className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+                  isSelected
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                }`}
+              >
+                {agent}
+              </button>
+            );
+          })}
         </div>
       </div>
+
+      {/* Imported file status */}
+      {skillFilePath && (
+        <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+          <p className="text-xs text-green-500 flex items-center gap-1.5">
+            <CheckCircle className="h-3.5 w-3.5" />
+            Imported file: {skillFilePath.split("/").pop()}
+          </p>
+        </div>
+      )}
+
+      {/* Security Scan */}
+      {isEdit && slug && (
+        <div className="space-y-2">
+          <Label>
+            <Shield className="h-3.5 w-3.5 inline mr-1" />
+            Security Scan
+          </Label>
+          {(skillFilePath || skillFileUrl) && (
+            <p className="text-xs text-muted-foreground mb-1">
+              Scans run automatically when you save. Use the button below to re-scan manually.
+            </p>
+          )}
+          <GenerateScanButton
+            slug={slug}
+            hasScannable={!!skillFilePath || !!skillFileUrl}
+          />
+          {!skillFilePath && !skillFileUrl && (
+            <p className="text-xs text-muted-foreground">
+              Set a Skill File URL to enable security scanning and file import.
+            </p>
+          )}
+        </div>
+      )}
+
+      {isEdit && (
+        <div className="space-y-2">
+          <Label>Status</Label>
+          <div className="flex gap-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="status"
+                value="draft"
+                checked={status === "draft"}
+                onChange={(e) => setStatus(e.target.value)}
+              />
+              <span className="text-sm">Draft</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="status"
+                value="active"
+                checked={status === "active"}
+                onChange={(e) => setStatus(e.target.value)}
+              />
+              <span className="text-sm">Active (visible on marketplace)</span>
+            </label>
+          </div>
+          {skillFileUrl && status === "active" && (
+            <p className="text-xs text-amber-500 flex items-center gap-1">
+              <Shield className="h-3 w-3" />
+              Publishing requires a passing security scan. The scan runs automatically when you save.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Import status feedback */}
+      {importStatus && (
+        <div className={`p-3 rounded-lg border text-sm flex items-start gap-2 ${
+          importStatus.success
+            ? "bg-green-500/10 border-green-500/20 text-green-500"
+            : "bg-amber-500/10 border-amber-500/20 text-amber-500"
+        }`}>
+          {importStatus.success ? (
+            <CheckCircle className="h-4 w-4 mt-0.5 shrink-0" />
+          ) : (
+            <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+          )}
+          {importStatus.message}
+        </div>
+      )}
 
       {error && (
         <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-sm">

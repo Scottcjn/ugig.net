@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { isUrlSafe, extractMetadata, MetadataExtractionError } from "./metadata-extract";
+import { isUrlSafe, extractMetadata, isMetadataSufficient, extractMetadataWithFallback, MetadataExtractionError } from "./metadata-extract";
 
 // ── isUrlSafe tests ────────────────────────────────────────────────
 
@@ -227,5 +227,87 @@ describe("extractMetadata", () => {
 
     const result = await extractMetadata("https://example.com/page");
     expect(result.url).toBe("https://example.com/page");
+  });
+});
+
+// ── isMetadataSufficient tests ─────────────────────────────────────
+
+describe("isMetadataSufficient", () => {
+  it("returns true when title and description are present", () => {
+    expect(isMetadataSufficient({ title: "Test", description: "Desc", url: "https://example.com" })).toBe(true);
+  });
+
+  it("returns false when title is missing", () => {
+    expect(isMetadataSufficient({ description: "Desc", url: "https://example.com" })).toBe(false);
+  });
+
+  it("returns false when description is missing", () => {
+    expect(isMetadataSufficient({ title: "Test", url: "https://example.com" })).toBe(false);
+  });
+
+  it("returns false when both are missing", () => {
+    expect(isMetadataSufficient({ url: "https://example.com" })).toBe(false);
+  });
+});
+
+// ── extractMetadataWithFallback tests ──────────────────────────────
+
+describe("extractMetadataWithFallback", () => {
+  const originalFetch = globalThis.fetch;
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+    vi.restoreAllMocks();
+  });
+
+  function mockFetchForFallback(body: string, contentType = "text/html", status = 200) {
+    const encoder = new TextEncoder();
+    const encoded = encoder.encode(body);
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: status >= 200 && status < 300,
+      status,
+      statusText: status === 200 ? "OK" : "Not Found",
+      headers: new Headers({
+        "content-type": contentType,
+        "content-length": String(encoded.length),
+      }),
+      body: new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoded);
+          controller.close();
+        },
+      }),
+    });
+  }
+
+  it("returns fetch result when metadata is sufficient", async () => {
+    mockFetchForFallback(`
+      <html><head>
+        <meta property="og:title" content="Good Title">
+        <meta property="og:description" content="Good description here">
+      </head><body></body></html>
+    `);
+
+    const result = await extractMetadataWithFallback("https://example.com");
+    expect(result.title).toBe("Good Title");
+    expect(result.description).toBe("Good description here");
+  });
+
+  it("returns fetch result even with insufficient metadata when puppeteer unavailable", async () => {
+    mockFetchForFallback(`
+      <html><head>
+        <title>Only Title</title>
+      </head><body></body></html>
+    `);
+
+    // Puppeteer won't be available in test env, so fallback returns fetch result
+    const result = await extractMetadataWithFallback("https://example.com");
+    expect(result.title).toBe("Only Title");
+  });
+
+  it("rejects unsafe URLs without attempting fetch", async () => {
+    await expect(extractMetadataWithFallback("http://localhost/secret")).rejects.toThrow(
+      MetadataExtractionError
+    );
   });
 });
