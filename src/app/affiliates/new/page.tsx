@@ -15,6 +15,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SKILL_CATEGORIES, AFFILIATE_PRODUCT_TYPES } from "@/lib/constants";
+import { TagInput } from "@/components/ui/TagInput";
+import { Badge } from "@/components/ui/badge";
+import { X } from "lucide-react";
 
 export default function NewOfferPage() {
   const router = useRouter();
@@ -34,8 +37,9 @@ export default function NewOfferPage() {
     settlement_delay_days: "7",
     promo_text: "",
     category: "",
-    tags: "",
+    tags: [] as string[],
   });
+  const [tagInput, setTagInput] = useState("");
 
   const [btcUsd, setBtcUsd] = useState<number | null>(null);
 
@@ -97,7 +101,7 @@ export default function NewOfferPage() {
         settlement_delay_days: parseInt(form.settlement_delay_days) || 7,
         promo_text: form.promo_text || undefined,
         category: form.category || undefined,
-        tags: form.tags ? form.tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
+        tags: form.tags,
       }),
     });
 
@@ -300,13 +304,54 @@ export default function NewOfferPage() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="tags">Tags</Label>
-          <Input
-            id="tags"
-            value={form.tags}
-            onChange={(e) => updateForm("tags", e.target.value)}
-            placeholder="ai, coding, automation (comma-separated)"
-          />
+          <Label>Tags</Label>
+          <div className="flex gap-2">
+            <Input
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === ",") {
+                  e.preventDefault();
+                  const tag = tagInput.trim().replace(/^#/, "");
+                  if (tag && !form.tags.includes(tag) && form.tags.length < 10) {
+                    updateForm("tags", [...form.tags, tag] as any);
+                    setTagInput("");
+                  }
+                }
+              }}
+              placeholder="Type a tag and press Enter"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!tagInput.trim()}
+              onClick={() => {
+                const tag = tagInput.trim().replace(/^#/, "");
+                if (tag && !form.tags.includes(tag) && form.tags.length < 10) {
+                  updateForm("tags", [...form.tags, tag] as any);
+                  setTagInput("");
+                }
+              }}
+            >
+              Add
+            </Button>
+          </div>
+          {form.tags.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-2">
+              {form.tags.map((tag: string) => (
+                <Badge
+                  key={tag}
+                  variant="secondary"
+                  className="text-xs gap-1 cursor-pointer"
+                  onClick={() => updateForm("tags", form.tags.filter((t: string) => t !== tag) as any)}
+                >
+                  {tag}
+                  <X className="h-3 w-3" />
+                </Badge>
+              ))}
+            </div>
+          )}
         </div>
 
         {error && (

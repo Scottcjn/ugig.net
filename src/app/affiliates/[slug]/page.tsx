@@ -6,6 +6,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MarkdownContent } from "@/components/ui/MarkdownContent";
+import { ArrowLeft, Users, TrendingUp, Calendar, ExternalLink } from "lucide-react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 interface AffiliateOffer {
   id: string;
@@ -135,184 +137,236 @@ export default function OfferDetailPage() {
     : `${Math.round(offer.commission_rate * 100)}% per sale`;
 
   return (
-    <main className="flex-1 container mx-auto px-4 py-8 max-w-5xl">
-      <Link href="/affiliates" className="text-sm text-muted-foreground hover:underline mb-4 inline-block">
-        ← Back to marketplace
-      </Link>
+    <main className="flex-1 container mx-auto px-4 py-8">
+      <div className="max-w-5xl mx-auto">
+        {/* Back */}
+        <Link
+          href="/affiliates"
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6"
+        >
+          <ArrowLeft className="h-4 w-4" /> Back to marketplace
+        </Link>
 
-      <div className="grid md:grid-cols-3 gap-8">
-        {/* Main content */}
-        <div className="md:col-span-2">
-          <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-3xl font-bold">{offer.title}</h1>
-            <Badge variant="outline">{offer.product_type}</Badge>
-            {currentUserId && currentUserId === offer.seller_id && (
-              <Link href={`/affiliates/${slug}/edit`}>
-                <Button variant="outline" size="sm">Edit</Button>
-              </Link>
-            )}
-          </div>
-
-          {offer.profiles?.username && (
-            <p className="text-muted-foreground mb-4">
-              by{" "}
-              <Link href={`/u/${offer.profiles.username}`} className="text-primary hover:underline">
-                @{offer.profiles.username}
-              </Link>
-            </p>
-          )}
-
-          {offer.skill_listings && (
-            <div className="mb-4 p-3 bg-muted rounded-lg">
-              <span className="text-sm text-muted-foreground">Linked skill: </span>
-              <Link
-                href={`/skills/${offer.skill_listings.slug}`}
-                className="text-primary hover:underline"
-              >
-                {offer.skill_listings.title}
-              </Link>
-              {offer.skill_listings.price_sats > 0 && (
-                <span className="text-sm text-muted-foreground ml-2">
-                  ({formatSats(offer.skill_listings.price_sats)} sats)
-                </span>
-              )}
-            </div>
-          )}
-
-          <div className="prose prose-neutral dark:prose-invert max-w-none mb-6">
-            <MarkdownContent content={offer.description} />
-          </div>
-
-          {offer.promo_text && (
-            <div className="border rounded-lg p-4 mb-6">
-              <h3 className="font-semibold mb-2">Promotional Materials</h3>
-              <MarkdownContent content={offer.promo_text} />
-            </div>
-          )}
-
-          {offer.tags.length > 0 && (
-            <div className="flex gap-2 flex-wrap mb-6">
-              {offer.tags.map((tag) => (
-                <Badge key={tag} variant="secondary">{tag}</Badge>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-4">
-          {/* Commission card */}
-          <div className="border rounded-lg p-5">
-            <div className="text-center mb-4">
-              <div className="text-3xl font-bold text-green-600 dark:text-green-400">
-                {commissionDisplay}
-              </div>
-              {(() => {
-                if (offer.commission_type === "percentage" && offer.price_sats > 0) {
-                  const usd = (offer.price_sats * offer.commission_rate).toFixed(2);
-                  return (
-                    <div className="text-sm text-muted-foreground mt-1">
-                      ≈ ${usd} USD per sale
-                    </div>
-                  );
-                }
-                if (offer.commission_type === "flat" && offer.commission_flat_sats > 0 && btcUsd) {
-                  const usd = ((offer.commission_flat_sats / 1e8) * btcUsd).toFixed(2);
-                  return (
-                    <div className="text-sm text-muted-foreground mt-1">
-                      ≈ ${usd} USD per sale
-                    </div>
-                  );
-                }
-                return null;
-              })()}
-              {offer.price_sats > 0 && (
-                <div className="text-sm text-muted-foreground mt-1">
-                  Product price: ${offer.price_sats.toFixed(2)} USD
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2 text-sm mb-4">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Cookie window</span>
-                <span>{offer.cookie_days} days</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Settlement delay</span>
-                <span>{offer.settlement_delay_days} days</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Affiliates</span>
-                <span>{offer.total_affiliates}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Total sales</span>
-                <span>{offer.total_conversions}</span>
-              </div>
-              {offer.total_revenue_sats > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total volume</span>
-                  <span>{formatSats(offer.total_revenue_sats)} sats</span>
-                </div>
-              )}
-            </div>
-
-            {applied ? (
-              <div className="space-y-3">
-                <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-3">
-                  <p className="text-sm font-medium text-green-800 dark:text-green-200">
-                    ✅ You&apos;re an affiliate!
-                  </p>
-                </div>
-                {trackingUrl && (
-                  <div>
-                    <label className="text-xs text-muted-foreground">Your tracking link:</label>
-                    <div className="flex gap-2 mt-1">
-                      <Input
-                        readOnly
-                        value={trackingUrl}
-                        className="text-xs font-mono"
-                        onClick={(e) => (e.target as HTMLInputElement).select()}
-                      />
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => navigator.clipboard.writeText(trackingUrl)}
-                      >
-                        Copy
-                      </Button>
-                    </div>
-                  </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* ─── Main content ──────────────────────────────────── */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Title + category */}
+            <div>
+              <div className="flex items-start gap-3 mb-2">
+                <h1 className="text-3xl font-bold">{offer.title}</h1>
+                <Badge
+                  variant="outline"
+                  className="capitalize shrink-0 mt-1"
+                >
+                  {offer.product_type}
+                </Badge>
+                {currentUserId && currentUserId === offer.seller_id && (
+                  <Link href={`/affiliates/${slug}/edit`}>
+                    <Button variant="outline" size="sm" className="shrink-0 mt-0.5">Edit</Button>
+                  </Link>
                 )}
               </div>
-            ) : (
-              <Button
-                className="w-full"
-                onClick={handleApply}
-                disabled={applying}
-              >
-                {applying ? "Applying..." : "Become an Affiliate"}
-              </Button>
+
+              {/* Seller */}
+              {offer.profiles?.username && (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <span>by</span>
+                  <Link
+                    href={`/u/${offer.profiles.username}`}
+                    className="inline-flex items-center gap-1.5 text-primary hover:underline"
+                  >
+                    <Avatar className="h-5 w-5">
+                      {offer.profiles.avatar_url ? (
+                        <AvatarImage src={offer.profiles.avatar_url} alt={offer.profiles.username} />
+                      ) : null}
+                      <AvatarFallback className="text-[10px]">
+                        {offer.profiles.username[0]?.toUpperCase() || "?"}
+                      </AvatarFallback>
+                    </Avatar>
+                    @{offer.profiles.username}
+                  </Link>
+                </div>
+              )}
+            </div>
+
+            {/* Tags */}
+            {offer.tags.length > 0 && (
+              <div>
+                <h2 className="text-sm font-medium text-muted-foreground mb-2">Tags</h2>
+                <div className="flex flex-wrap gap-2">
+                  {offer.tags.map((tag) => (
+                    <Link
+                      key={tag}
+                      href={`/affiliates?tag=${encodeURIComponent(tag)}`}
+                    >
+                      <Badge
+                        variant="secondary"
+                        className="cursor-pointer hover:bg-secondary/80 transition-colors"
+                      >
+                        {tag}
+                      </Badge>
+                    </Link>
+                  ))}
+                </div>
+              </div>
             )}
 
-            {error && (
-              <p className="text-sm text-red-500 mt-2">{error}</p>
+            {/* Stats row */}
+            <div className="flex items-center gap-6 text-sm text-muted-foreground border-y border-border py-3 flex-wrap">
+              <span className="flex items-center gap-1.5">
+                <Users className="h-4 w-4" />
+                {offer.total_affiliates} affiliates
+              </span>
+              <span className="flex items-center gap-1.5">
+                <TrendingUp className="h-4 w-4" />
+                {offer.total_conversions} sales
+              </span>
+              {offer.total_revenue_sats > 0 && (
+                <span>{formatSats(offer.total_revenue_sats)} sats volume</span>
+              )}
+              <span className="flex items-center gap-1.5">
+                <Calendar className="h-4 w-4" />
+                {new Date(offer.created_at).toLocaleDateString()}
+              </span>
+            </div>
+
+            {/* Linked skill */}
+            {offer.skill_listings && (
+              <div className="p-3 bg-muted rounded-lg">
+                <span className="text-sm text-muted-foreground">Linked skill: </span>
+                <Link
+                  href={`/skills/${offer.skill_listings.slug}`}
+                  className="text-primary hover:underline"
+                >
+                  {offer.skill_listings.title}
+                </Link>
+                {offer.skill_listings.price_sats > 0 && (
+                  <span className="text-sm text-muted-foreground ml-2">
+                    ({formatSats(offer.skill_listings.price_sats)} sats)
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Description */}
+            <div>
+              <h2 className="text-xl font-semibold mb-3">Description</h2>
+              <div className="prose prose-neutral dark:prose-invert max-w-none">
+                <MarkdownContent content={offer.description} />
+              </div>
+            </div>
+
+            {/* Promotional Materials */}
+            {offer.promo_text && (
+              <div>
+                <h2 className="text-xl font-semibold mb-3">Promotional Materials</h2>
+                <div className="border rounded-lg p-4">
+                  <MarkdownContent content={offer.promo_text} />
+                </div>
+              </div>
             )}
           </div>
 
-          {offer.product_url && (
-            <a
-              href={offer.product_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block"
-            >
-              <Button variant="outline" className="w-full">
-                View Product ↗
-              </Button>
-            </a>
-          )}
+          {/* ─── Sidebar ──────────────────────────────────────── */}
+          <div className="space-y-6">
+            {/* Commission card */}
+            <div className="p-6 border border-border rounded-lg bg-card sticky top-6">
+              <div className="text-center mb-4">
+                <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                  {commissionDisplay}
+                </div>
+                {(() => {
+                  if (offer.commission_type === "percentage" && offer.price_sats > 0) {
+                    const usd = (offer.price_sats * offer.commission_rate).toFixed(2);
+                    return (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        ≈ ${usd} USD per sale
+                      </p>
+                    );
+                  }
+                  if (offer.commission_type === "flat" && offer.commission_flat_sats > 0 && btcUsd) {
+                    const usd = ((offer.commission_flat_sats / 1e8) * btcUsd).toFixed(2);
+                    return (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        ≈ ${usd} USD per sale
+                      </p>
+                    );
+                  }
+                  return null;
+                })()}
+                {offer.price_sats > 0 && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Product price: ${offer.price_sats.toFixed(2)} USD
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2 text-sm border-t border-border pt-4 mb-4">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Cookie window</span>
+                  <span>{offer.cookie_days} days</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Settlement delay</span>
+                  <span>{offer.settlement_delay_days} days</span>
+                </div>
+              </div>
+
+              {applied ? (
+                <div className="space-y-3">
+                  <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                    <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                      ✅ You&apos;re an affiliate!
+                    </p>
+                  </div>
+                  {trackingUrl && (
+                    <div>
+                      <label className="text-xs text-muted-foreground">Your tracking link:</label>
+                      <div className="flex gap-2 mt-1">
+                        <Input
+                          readOnly
+                          value={trackingUrl}
+                          className="text-xs font-mono"
+                          onClick={(e) => (e.target as HTMLInputElement).select()}
+                        />
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => navigator.clipboard.writeText(trackingUrl)}
+                        >
+                          Copy
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Button
+                  className="w-full"
+                  onClick={handleApply}
+                  disabled={applying}
+                >
+                  {applying ? "Applying..." : "Become an Affiliate"}
+                </Button>
+              )}
+
+              {error && (
+                <p className="text-sm text-red-500 mt-2">{error}</p>
+              )}
+            </div>
+
+            {offer.product_url && (
+              <a
+                href={offer.product_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+              >
+                View Product
+                <ExternalLink className="h-3 w-3 opacity-50" />
+              </a>
+            )}
+          </div>
         </div>
       </div>
     </main>

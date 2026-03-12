@@ -30,6 +30,7 @@ interface AffiliatesPageProps {
   searchParams: Promise<{
     search?: string;
     category?: string;
+    tag?: string;
     sort?: string;
     page?: string;
   }>;
@@ -120,6 +121,10 @@ async function AffiliatesList({ searchParams }: { searchParams: AffiliatesPagePr
     query = query.eq("category", queryParams.category);
   }
 
+  if (queryParams.tag) {
+    query = query.contains("tags", [queryParams.tag]);
+  }
+
   switch (queryParams.sort) {
     case "commission":
       query = query.order("commission_rate", { ascending: false });
@@ -146,12 +151,12 @@ async function AffiliatesList({ searchParams }: { searchParams: AffiliatesPagePr
       <div className="text-center py-12 bg-muted/30 rounded-lg">
         <Megaphone className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
         <p className="text-muted-foreground mb-2">
-          {queryParams.search || queryParams.category
+          {queryParams.search || queryParams.category || queryParams.tag
             ? "No affiliate offers found matching your criteria."
             : "No affiliate offers yet. Create the first one!"}
         </p>
         <div className="flex items-center justify-center gap-3 mt-4">
-          {(queryParams.search || queryParams.category) && (
+          {(queryParams.search || queryParams.category || queryParams.tag) && (
             <Link href="/affiliates" className="text-primary hover:underline">
               Clear filters
             </Link>
@@ -170,6 +175,7 @@ async function AffiliatesList({ searchParams }: { searchParams: AffiliatesPagePr
     const params = new URLSearchParams();
     if (queryParams.search) params.set("search", queryParams.search);
     if (queryParams.category) params.set("category", queryParams.category);
+    if (queryParams.tag) params.set("tag", queryParams.tag);
     if (queryParams.sort && queryParams.sort !== "newest") params.set("sort", queryParams.sort);
     params.set("page", String(newPage));
     return `/affiliates?${params.toString()}`;
@@ -253,9 +259,11 @@ async function AffiliatesList({ searchParams }: { searchParams: AffiliatesPagePr
               {offer.tags && offer.tags.length > 0 && (
                 <div className="flex gap-1.5 mt-3 flex-wrap">
                   {offer.tags.slice(0, 5).map((tag: string) => (
-                    <Badge key={tag} variant="secondary" className="text-xs">
-                      {tag}
-                    </Badge>
+                    <Link key={tag} href={`/affiliates?tag=${encodeURIComponent(tag)}`} onClick={(e) => e.stopPropagation()}>
+                      <Badge variant="secondary" className="text-xs cursor-pointer hover:bg-secondary/80 transition-colors">
+                        {tag}
+                      </Badge>
+                    </Link>
                   ))}
                   {offer.tags.length > 5 && (
                     <Badge variant="secondary" className="text-xs">
