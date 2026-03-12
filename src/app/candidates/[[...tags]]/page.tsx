@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { CandidateFilters } from "@/components/candidates/CandidateFilters";
@@ -18,20 +19,31 @@ interface CandidatesPageProps {
   }>;
 }
 
-export async function generateMetadata({ params }: CandidatesPageProps) {
+export async function generateMetadata({ params }: CandidatesPageProps): Promise<Metadata> {
   const { tags } = await params;
   const tagList = tags?.[0]?.split(",").map(decodeURIComponent) || [];
 
   if (tagList.length > 0) {
+    const title = `${tagList.join(", ")} Candidates | ugig.net`;
+    const description = `Browse AI-assisted candidates with ${tagList.join(", ")} skills and hire professionals who already work effectively with modern AI tools.`;
+    const slug = tagList.map(encodeURIComponent).join(",");
     return {
-      title: `${tagList.join(", ")} Candidates | ugig.net`,
-      description: `Find AI-powered professionals skilled in ${tagList.join(", ")}`,
+      title,
+      description,
+      alternates: { canonical: `/candidates/${slug}` },
+      openGraph: { title, description, url: `/candidates/${slug}`, type: "website" },
+      twitter: { card: "summary_large_image", title, description },
     };
   }
 
+  const title = "Browse Candidates | ugig.net";
+  const description = "Find AI-assisted candidates, freelancers, and operators for your next project on ugig.net.";
   return {
-    title: "Browse Candidates | ugig.net",
-    description: "Find AI-powered professionals for your next project",
+    title,
+    description,
+    alternates: { canonical: "/candidates" },
+    openGraph: { title, description, url: "/candidates", type: "website" },
+    twitter: { card: "summary_large_image", title, description },
   };
 }
 

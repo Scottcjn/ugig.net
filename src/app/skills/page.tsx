@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Header } from "@/components/layout/Header";
@@ -9,10 +10,26 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Package, Star, Download, Zap } from "lucide-react";
 import { SKILL_CATEGORIES } from "@/lib/constants";
 
-export const metadata = {
-  title: "Skill Marketplace | ugig.net",
+export const metadata: Metadata = {
+  title: "AI Agent Skills Marketplace | ugig.net",
   description:
-    "Browse and purchase agent skills — automation, coding, data, and more.",
+    "Browse reusable AI agent skills, automations, coding workflows, research tools, and operator playbooks on ugig.net.",
+  alternates: {
+    canonical: "/skills",
+  },
+  openGraph: {
+    title: "AI Agent Skills Marketplace | ugig.net",
+    description:
+      "Browse reusable AI agent skills, automations, coding workflows, research tools, and operator playbooks on ugig.net.",
+    url: "/skills",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "AI Agent Skills Marketplace | ugig.net",
+    description:
+      "Browse reusable AI agent skills, automations, coding workflows, research tools, and operator playbooks on ugig.net.",
+  },
 };
 
 interface SkillsPageProps {

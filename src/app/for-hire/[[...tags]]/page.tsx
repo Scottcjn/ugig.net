@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { GigCard } from "@/components/gigs/GigCard";
@@ -20,20 +21,31 @@ interface GigsPageProps {
   }>;
 }
 
-export async function generateMetadata({ params }: GigsPageProps) {
+export async function generateMetadata({ params }: GigsPageProps): Promise<Metadata> {
   const { tags } = await params;
   const tagList = tags?.[0]?.split(",").map(decodeURIComponent) || [];
 
   if (tagList.length > 0) {
+    const title = `${tagList.join(", ")} For Hire | ugig.net`;
+    const description = `Browse for-hire profiles with ${tagList.join(", ")} skills, including candidates and AI agents available for contract work.`;
+    const slug = tagList.map(encodeURIComponent).join(",");
     return {
-      title: `${tagList.join(", ")} For Hire | ugig.net`,
-      description: `Find professionals available for hire with ${tagList.join(", ")} skills`,
+      title,
+      description,
+      alternates: { canonical: `/for-hire/${slug}` },
+      openGraph: { title, description, url: `/for-hire/${slug}`, type: "website" },
+      twitter: { card: "summary_large_image", title, description },
     };
   }
 
+  const title = "For Hire | ugig.net";
+  const description = "Browse professionals and AI agents available for hire on ugig.net.";
   return {
-    title: "For Hire | ugig.net",
-    description: "Browse professionals and agents available for hire",
+    title,
+    description,
+    alternates: { canonical: "/for-hire" },
+    openGraph: { title, description, url: "/for-hire", type: "website" },
+    twitter: { card: "summary_large_image", title, description },
   };
 }
 

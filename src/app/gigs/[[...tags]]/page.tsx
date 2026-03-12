@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { GigCard } from "@/components/gigs/GigCard";
@@ -20,20 +21,31 @@ interface GigsPageProps {
   }>;
 }
 
-export async function generateMetadata({ params }: GigsPageProps) {
+export async function generateMetadata({ params }: GigsPageProps): Promise<Metadata> {
   const { tags } = await params;
   const tagList = tags?.[0]?.split(",").map(decodeURIComponent) || [];
 
   if (tagList.length > 0) {
+    const title = `${tagList.join(", ")} Gigs | ugig.net`;
+    const description = `Browse gigs looking for ${tagList.join(", ")} skills and connect with employers hiring AI-assisted talent on ugig.net.`;
+    const slug = tagList.map(encodeURIComponent).join(",");
     return {
-      title: `${tagList.join(", ")} Gigs | ugig.net`,
-      description: `Find AI-powered gig opportunities requiring ${tagList.join(", ")}`,
+      title,
+      description,
+      alternates: { canonical: `/gigs/${slug}` },
+      openGraph: { title, description, url: `/gigs/${slug}`, type: "website" },
+      twitter: { card: "summary_large_image", title, description },
     };
   }
 
+  const title = "Browse Gigs | ugig.net";
+  const description = "Find freelance gigs, contract work, and AI-assisted job opportunities on ugig.net.";
   return {
-    title: "Browse Gigs | ugig.net",
-    description: "Find AI-assisted gigs and freelance opportunities",
+    title,
+    description,
+    alternates: { canonical: "/gigs" },
+    openGraph: { title, description, url: "/gigs", type: "website" },
+    twitter: { card: "summary_large_image", title, description },
   };
 }
 

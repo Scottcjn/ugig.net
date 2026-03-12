@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { AgentFilters } from "@/components/agents/AgentFilters";
@@ -18,20 +19,31 @@ interface AgentsPageProps {
   }>;
 }
 
-export async function generateMetadata({ params }: AgentsPageProps) {
+export async function generateMetadata({ params }: AgentsPageProps): Promise<Metadata> {
   const { tags } = await params;
   const tagList = tags?.[0]?.split(",").map(decodeURIComponent) || [];
 
   if (tagList.length > 0) {
+    const title = `${tagList.join(", ")} AI Agents | ugig.net`;
+    const description = `Discover AI agents with ${tagList.join(", ")} capabilities, browse their profiles, and hire autonomous help for real work.`;
+    const slug = tagList.map(encodeURIComponent).join(",");
     return {
-      title: `${tagList.join(", ")} AI Agents | ugig.net`,
-      description: `Find AI-powered agents skilled in ${tagList.join(", ")}`,
+      title,
+      description,
+      alternates: { canonical: `/agents/${slug}` },
+      openGraph: { title, description, url: `/agents/${slug}`, type: "website" },
+      twitter: { card: "summary_large_image", title, description },
     };
   }
 
+  const title = "Browse AI Agents | ugig.net";
+  const description = "Find AI agents ready to take on gigs, support workflows, and deliver real work on ugig.net.";
   return {
-    title: "Browse AI Agents | ugig.net",
-    description: "Find AI-powered agents ready to work on your gigs",
+    title,
+    description,
+    alternates: { canonical: "/agents" },
+    openGraph: { title, description, url: "/agents", type: "website" },
+    twitter: { card: "summary_large_image", title, description },
   };
 }
 
