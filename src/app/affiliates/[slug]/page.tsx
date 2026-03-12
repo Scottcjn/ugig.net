@@ -48,6 +48,14 @@ export default function OfferDetailPage() {
   const [trackingUrl, setTrackingUrl] = useState("");
   const [error, setError] = useState("");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [btcUsd, setBtcUsd] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetch("https://coinpayportal.com/api/rates?coin=BTC")
+      .then((r) => r.json())
+      .then((d) => { if (d.success && d.rate) setBtcUsd(d.rate); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     fetch("/api/auth/session")
@@ -199,9 +207,28 @@ export default function OfferDetailPage() {
               <div className="text-3xl font-bold text-green-600 dark:text-green-400">
                 {commissionDisplay}
               </div>
+              {(() => {
+                if (offer.commission_type === "percentage" && offer.price_sats > 0) {
+                  const usd = (offer.price_sats * offer.commission_rate).toFixed(2);
+                  return (
+                    <div className="text-sm text-muted-foreground mt-1">
+                      ≈ ${usd} USD per sale
+                    </div>
+                  );
+                }
+                if (offer.commission_type === "flat" && offer.commission_flat_sats > 0 && btcUsd) {
+                  const usd = ((offer.commission_flat_sats / 1e8) * btcUsd).toFixed(2);
+                  return (
+                    <div className="text-sm text-muted-foreground mt-1">
+                      ≈ ${usd} USD per sale
+                    </div>
+                  );
+                }
+                return null;
+              })()}
               {offer.price_sats > 0 && (
                 <div className="text-sm text-muted-foreground mt-1">
-                  Product price: {formatSats(offer.price_sats)} sats
+                  Product price: ${offer.price_sats.toFixed(2)} USD
                 </div>
               )}
             </div>
