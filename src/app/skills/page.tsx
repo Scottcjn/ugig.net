@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Package, Star, Download, Zap } from "lucide-react";
-import { SKILL_CATEGORIES } from "@/lib/constants";
+import { SKILL_CATEGORIES, SUPPORTED_AGENT_OPTIONS } from "@/lib/constants";
 
 export const metadata: Metadata = {
   title: "AI Agent Skills Marketplace | ugig.net",
@@ -330,6 +330,36 @@ export default async function SkillsPage({ searchParams }: SkillsPageProps) {
               ))}
             </div>
 
+            {/* Supported agents filter */}
+            <div className="flex flex-wrap gap-1.5 w-full">
+              <span className="text-sm text-muted-foreground flex items-center mr-1">Agents:</span>
+              {SUPPORTED_AGENT_OPTIONS.map((agent) => (
+                <Link
+                  key={agent}
+                  href={`/skills?tag=${agent}${queryParams.search ? `&search=${queryParams.search}` : ""}${queryParams.category ? `&category=${queryParams.category}` : ""}${queryParams.sort ? `&sort=${queryParams.sort}` : ""}`}
+                >
+                  <Badge
+                    variant={queryParams.tag === agent ? "default" : "outline"}
+                    className={`cursor-pointer ${queryParams.tag === agent ? "bg-blue-600 hover:bg-blue-700" : "border-blue-400 text-blue-600 hover:bg-blue-50 dark:border-blue-500 dark:text-blue-400 dark:hover:bg-blue-950"}`}
+                  >
+                    {agent}
+                  </Badge>
+                </Link>
+              ))}
+              {queryParams.tag && SUPPORTED_AGENT_OPTIONS.includes(queryParams.tag as any) && (
+                <Link
+                  href={`/skills?${new URLSearchParams({
+                    ...(queryParams.search ? { search: queryParams.search } : {}),
+                    ...(queryParams.category ? { category: queryParams.category } : {}),
+                    ...(queryParams.sort ? { sort: queryParams.sort } : {}),
+                  })}`}
+                  className="text-xs text-muted-foreground hover:text-destructive flex items-center ml-1"
+                >
+                  ✕ clear
+                </Link>
+              )}
+            </div>
+
             {/* Sort */}
             <div className="ml-auto flex items-center gap-2 text-sm">
               <span className="text-muted-foreground">Sort:</span>
@@ -353,8 +383,8 @@ export default async function SkillsPage({ searchParams }: SkillsPageProps) {
             </div>
           </div>
 
-          {/* Active tag filter */}
-          {queryParams.tag && (
+          {/* Active tag filter (for non-agent tags) */}
+          {queryParams.tag && !SUPPORTED_AGENT_OPTIONS.includes(queryParams.tag as any) && (
             <div className="flex items-center gap-2 mb-6">
               <span className="text-sm text-muted-foreground">Filtered by tag:</span>
               <Badge variant="secondary" className="gap-1">
