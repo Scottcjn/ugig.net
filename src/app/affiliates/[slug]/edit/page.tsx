@@ -41,7 +41,14 @@ export default function EditOfferPage() {
   });
 
   function updateForm(field: string, value: string) {
-    setForm((prev) => ({ ...prev, [field]: value }));
+    setForm((prev) => {
+      const next = { ...prev, [field]: value };
+      if (field === "commission_type") {
+        if (value === "flat") next.commission_rate = "";
+        if (value === "percentage") next.commission_flat_sats = "";
+      }
+      return next;
+    });
   }
 
   useEffect(() => {

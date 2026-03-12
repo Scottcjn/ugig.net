@@ -38,7 +38,15 @@ export default function NewOfferPage() {
   });
 
   function updateForm(field: string, value: string) {
-    setForm((prev) => ({ ...prev, [field]: value }));
+    setForm((prev) => {
+      const next = { ...prev, [field]: value };
+      // Clear the irrelevant commission field when switching type
+      if (field === "commission_type") {
+        if (value === "flat") next.commission_rate = "";
+        if (value === "percentage") next.commission_flat_sats = "";
+      }
+      return next;
+    });
   }
 
   async function handleSubmit(e: React.FormEvent) {
