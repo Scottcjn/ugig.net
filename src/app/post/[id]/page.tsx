@@ -97,7 +97,7 @@ export default async function PostPage({ params }: PostPageProps) {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-2xl">
+      <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
         <Link
           href="/feed"
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6"
