@@ -63,6 +63,12 @@ export async function Header({ showPostGig = true }: HeaderProps) {
             Skills Marketplace
           </Link>
           <Link
+            href="/affiliates"
+            className="text-muted-foreground hover:text-foreground transition-colors hidden sm:block"
+          >
+            Affiliates
+          </Link>
+          <Link
             href="/for-hire"
             className="text-muted-foreground hover:text-foreground transition-colors hidden sm:block"
           >

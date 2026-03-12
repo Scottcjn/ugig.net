@@ -42,3 +42,29 @@ export const SUPPORTED_AGENT_OPTIONS = [
 ] as const;
 
 export type SupportedAgentOption = (typeof SUPPORTED_AGENT_OPTIONS)[number];
+
+/** Affiliate marketplace defaults */
+export const AFFILIATE_DEFAULTS = {
+  /** Default commission rate (20%) */
+  commissionRate: 0.20,
+  /** Default cookie/attribution window in days */
+  cookieDays: 30,
+  /** Default settlement delay in days (hold before payout) */
+  settlementDelayDays: 7,
+  /** Platform cut from affiliate commissions (5% of the commission) */
+  platformFeeRate: 0.05,
+} as const;
+
+/** Affiliate offer product types */
+export const AFFILIATE_PRODUCT_TYPES = [
+  "digital",
+  "saas",
+  "course",
+  "service",
+  "skill",
+  "template",
+  "api",
+  "other",
+] as const;
+
+export type AffiliateProductType = (typeof AFFILIATE_PRODUCT_TYPES)[number];
