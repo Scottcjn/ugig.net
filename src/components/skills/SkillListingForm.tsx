@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SKILL_CATEGORIES, SUPPORTED_AGENT_OPTIONS } from "@/lib/constants";
-import { Loader2, Trash2, Link as LinkIcon, Sparkles, Shield, CheckCircle, AlertCircle } from "lucide-react";
+import { Loader2, Trash2, Link as LinkIcon, Sparkles, Shield, CheckCircle, AlertCircle, Terminal, Copy, Check } from "lucide-react";
 import { GenerateScanButton } from "./GenerateScanButton";
 
 interface SkillListingFormProps {
@@ -58,6 +58,9 @@ export function SkillListingForm({ slug, listingId, initialData }: SkillListingF
   const [autofilling, setAutofilling] = useState(false);
   const [updatingFromUrl, setUpdatingFromUrl] = useState(false);
   const [importStatus, setImportStatus] = useState<{ success: boolean; message: string } | null>(null);
+  const [publishToClawHub, setPublishToClawHub] = useState(false);
+  const [clawhubCommand, setClawhubCommand] = useState<string | null>(null);
+  const [copiedCommand, setCopiedCommand] = useState(false);
 
   async function handleAutofill() {
     if (!websiteUrl) return;
@@ -182,6 +185,16 @@ export function SkillListingForm({ slug, listingId, initialData }: SkillListingF
       }
 
       const newSlug = data.listing?.slug || slug;
+
+      // Generate ClawHub publish command if requested
+      if (publishToClawHub && skillFileUrl) {
+        const clawTags = combinedTags.length > 0 ? ` --tags "${combinedTags.join(",")}"` : "";
+        const cmd = `clawhub publish . --slug ${newSlug} --name "${title.replace(/"/g, '\\"')}" --version 1.0.0${clawTags}`;
+        setClawhubCommand(cmd);
+        setLoading(false);
+        return; // Don't redirect — show the command first
+      }
+
       // Small delay so user can see import feedback
       if (data.import) {
         await new Promise((r) => setTimeout(r, 1500));
@@ -515,6 +528,70 @@ export function SkillListingForm({ slug, listingId, initialData }: SkillListingF
             <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
           )}
           {importStatus.message}
+        </div>
+      )}
+
+      {/* ClawHub publish option */}
+      {skillFileUrl && (
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={publishToClawHub}
+              onChange={(e) => setPublishToClawHub(e.target.checked)}
+              className="rounded border-border"
+            />
+            <Terminal className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-sm">Also publish to ClawHub</span>
+          </label>
+          <p className="text-xs text-muted-foreground ml-6">
+            After saving, we&apos;ll generate a <code className="bg-muted px-1 py-0.5 rounded text-xs">clawhub publish</code> command you can run to list this skill on <a href="https://clawhub.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">clawhub.com</a> (requires <code className="bg-muted px-1 py-0.5 rounded text-xs">clawhub login</code>).
+          </p>
+        </div>
+      )}
+
+      {/* ClawHub command display */}
+      {clawhubCommand && (
+        <div className="p-4 bg-muted/50 border border-border rounded-lg space-y-3">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <Terminal className="h-4 w-4" />
+            Skill saved! Run this to publish to ClawHub:
+          </div>
+          <div className="relative">
+            <pre className="bg-background border border-border rounded-md p-3 text-xs overflow-x-auto font-mono">
+              {clawhubCommand}
+            </pre>
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard.writeText(clawhubCommand);
+                setCopiedCommand(true);
+                setTimeout(() => setCopiedCommand(false), 2000);
+              }}
+              className="absolute top-2 right-2 p-1.5 bg-background border border-border rounded-md hover:bg-muted transition-colors"
+            >
+              {copiedCommand ? (
+                <Check className="h-3.5 w-3.5 text-green-500" />
+              ) : (
+                <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+              )}
+            </button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Run from your skill&apos;s directory. Need ClawHub CLI? <code className="bg-muted px-1 py-0.5 rounded">npm i -g clawhub</code>
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const newSlug = clawhubCommand.match(/--slug (\S+)/)?.[1] || slug;
+              router.push(`/skills/${newSlug}`);
+              router.refresh();
+            }}
+          >
+            Continue to listing →
+          </Button>
         </div>
       )}
 
