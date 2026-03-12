@@ -35,7 +35,7 @@ export function NavLinks() {
           <Link
             key={item.href}
             href={item.href}
-            className={`hidden sm:block px-3 py-1.5 rounded-lg transition-colors ${
+            className={`hidden sm:block px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap shrink-0 ${
               active
                 ? "bg-amber-500 text-black font-semibold hover:bg-amber-400"
                 : "text-muted-foreground hover:text-foreground"
