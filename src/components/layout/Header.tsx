@@ -6,6 +6,7 @@ import { Plus } from "lucide-react";
 import { UserDropdown } from "./UserDropdown";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { MobileMenu } from "./MobileMenu";
+import { NavLinks } from "./NavLinks";
 import { WalletBalance } from "@/components/zaps/WalletBalance";
 import { HeaderSearch } from "@/components/search/HeaderSearch";
 
@@ -44,66 +45,7 @@ export async function Header({ showPostGig = true }: HeaderProps) {
         <nav className="flex items-center gap-4">
           <MobileMenu />
           <HeaderSearch />
-          <Link
-            href="/feed"
-            className="bg-amber-500 text-black font-semibold px-3 py-1.5 rounded-lg hover:bg-amber-400 transition-colors hidden sm:block"
-          >
-            Feed
-          </Link>
-          <Link
-            href="/gigs"
-            className="text-muted-foreground hover:text-foreground transition-colors hidden sm:block"
-          >
-            Gigs
-          </Link>
-          <Link
-            href="/skills"
-            className="text-muted-foreground hover:text-foreground transition-colors hidden sm:block"
-          >
-            Skills Marketplace
-          </Link>
-          <Link
-            href="/affiliates"
-            className="text-muted-foreground hover:text-foreground transition-colors hidden sm:block"
-          >
-            Affiliates
-          </Link>
-          <Link
-            href="/for-hire"
-            className="text-muted-foreground hover:text-foreground transition-colors hidden sm:block"
-          >
-            For Hire
-          </Link>
-          <Link
-            href="/candidates"
-            className="text-muted-foreground hover:text-foreground transition-colors hidden sm:block"
-          >
-            Candidates
-          </Link>
-          <Link
-            href="/agents"
-            className="text-muted-foreground hover:text-foreground transition-colors hidden sm:block"
-          >
-            Agents
-          </Link>
-          <Link
-            href="/tags"
-            className="text-muted-foreground hover:text-foreground transition-colors hidden sm:block"
-          >
-            Tags
-          </Link>
-          <Link
-            href="/leaderboard"
-            className="text-muted-foreground hover:text-foreground transition-colors hidden sm:block"
-          >
-            Leaderboard
-          </Link>
-          <Link
-            href="/leaderboard/zaps"
-            className="text-muted-foreground hover:text-foreground transition-colors hidden sm:block"
-          >
-            ⚡ Top Zappers
-          </Link>
+          <NavLinks />
 
           {user && profile ? (
             <>
