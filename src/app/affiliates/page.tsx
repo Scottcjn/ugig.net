@@ -73,7 +73,7 @@ async function AffiliatesList({ searchParams }: { searchParams: AffiliatesPagePr
   const supabase = await createClient();
 
   let query = supabase
-    .from("affiliate_offers")
+    .from("affiliate_offers" as any)
     .select(
       `
       *,
@@ -117,7 +117,7 @@ async function AffiliatesList({ searchParams }: { searchParams: AffiliatesPagePr
   const offset = (page - 1) * limit;
   query = query.range(offset, offset + limit - 1);
 
-  const { data: offers, count } = await query;
+  const { data: offers, count } = await query as any;
 
   if (!offers || offers.length === 0) {
     return (
@@ -160,8 +160,8 @@ async function AffiliatesList({ searchParams }: { searchParams: AffiliatesPagePr
       </p>
 
       <div className="space-y-4">
-        {offers.map((offer) => {
-          const profile = offer.profiles as { id: string; username: string; full_name: string | null; avatar_url: string | null } | null;
+        {offers.map((offer: any) => {
+          const profile = offer.profiles;
           return (
             <Link
               key={offer.id}
