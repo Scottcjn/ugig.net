@@ -51,9 +51,9 @@ export default function OfferDetailPage() {
   const [btcUsd, setBtcUsd] = useState<number | null>(null);
 
   useEffect(() => {
-    fetch("https://coinpayportal.com/api/rates?coin=BTC")
+    fetch("/api/rates/btc")
       .then((r) => r.json())
-      .then((d) => { if (d.success && d.rate) setBtcUsd(d.rate); })
+      .then((d) => { if (d.rate) setBtcUsd(d.rate); })
       .catch(() => {});
   }, []);
 

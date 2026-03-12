@@ -52,6 +52,29 @@ function commissionDisplay(offer: {
   return `${Math.round(offer.commission_rate * 100)}%`;
 }
 
+function commissionUsdHint(offer: {
+  commission_type: string;
+  commission_rate: number;
+  commission_flat_sats: number;
+  price_sats: number;
+}, btcUsd: number | null): string | null {
+  if (offer.commission_type === "percentage" && offer.price_sats > 0) {
+    return `≈ $${(offer.price_sats * offer.commission_rate).toFixed(2)} USD`;
+  }
+  if (offer.commission_type === "flat" && offer.commission_flat_sats > 0 && btcUsd) {
+    return `≈ $${((offer.commission_flat_sats / 1e8) * btcUsd).toFixed(2)} USD`;
+  }
+  return null;
+}
+
+async function fetchBtcRate(): Promise<number | null> {
+  try {
+    const res = await fetch("https://coinpayportal.com/api/rates?coin=BTC", { next: { revalidate: 300 } });
+    const d = await res.json();
+    return d.success && d.rate ? d.rate : null;
+  } catch { return null; }
+}
+
 function formatRelativeTime(dateStr: string): string {
   const now = Date.now();
   const then = new Date(dateStr).getTime();
@@ -69,7 +92,7 @@ function formatRelativeTime(dateStr: string): string {
 
 async function AffiliatesList({ searchParams }: { searchParams: AffiliatesPageProps["searchParams"] }) {
   const queryParams = await searchParams;
-  const supabase = await createClient();
+  const [supabase, btcUsd] = await Promise.all([createClient(), fetchBtcRate()]);
 
   let query = supabase
     .from("affiliate_offers" as any)
@@ -214,6 +237,11 @@ async function AffiliatesList({ searchParams }: { searchParams: AffiliatesPagePr
                     {commissionDisplay(offer)}
                   </div>
                   <div className="text-xs text-muted-foreground">commission</div>
+                  {commissionUsdHint(offer, btcUsd) && (
+                    <div className="text-xs text-muted-foreground">
+                      {commissionUsdHint(offer, btcUsd)}
+                    </div>
+                  )}
                   {offer.total_revenue_sats > 0 && (
                     <div className="text-xs text-muted-foreground mt-1">
                       {formatSats(offer.total_revenue_sats)} sats vol.
