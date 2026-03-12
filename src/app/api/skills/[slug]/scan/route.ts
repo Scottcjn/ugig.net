@@ -153,9 +153,13 @@ export async function POST(
     const scanSource = resolvedSource === "url" ? "url_import" : "rescan";
     const sourceUrl = l.skill_file_url || null;
 
-    // ── If content came from URL and no stored file, persist to storage ──
-    if (!l.skill_file_path && l.skill_file_url && scanResult.status !== "malicious") {
-      const storagePath = `${l.seller_id}/${l.slug}/${fileName}`;
+    // ── If content came from URL, persist/overwrite canonical stored copy ──
+    if (resolvedSource === "url" && l.skill_file_url && scanResult.status !== "malicious") {
+      const existingFileName = l.skill_file_path
+        ? String(l.skill_file_path).split("/").pop()
+        : null;
+      const storagePath = l.skill_file_path || `${l.seller_id}/${l.slug}/${existingFileName || fileName}`;
+
       const { error: uploadErr } = await admin.storage
         .from(BUCKET)
         .upload(storagePath, buffer, {
@@ -164,7 +168,7 @@ export async function POST(
         });
 
       if (!uploadErr) {
-        // Update listing with imported file path
+        // Ensure listing points at canonical imported file path
         await admin
           .from("skill_listings" as any)
           .update({ skill_file_path: storagePath })

@@ -47,6 +47,7 @@ export function SkillListingForm({ slug, listingId, initialData }: SkillListingF
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [autofilling, setAutofilling] = useState(false);
+  const [updatingFromUrl, setUpdatingFromUrl] = useState(false);
   const [importStatus, setImportStatus] = useState<{ success: boolean; message: string } | null>(null);
 
   async function handleAutofill() {
@@ -76,6 +77,35 @@ export function SkillListingForm({ slug, listingId, initialData }: SkillListingF
       setError("Failed to fetch metadata");
     } finally {
       setAutofilling(false);
+    }
+  }
+
+  async function handleUpdateFromUrl() {
+    if (!isEdit || !slug || !skillFileUrl) return;
+    setUpdatingFromUrl(true);
+    setError(null);
+    setImportStatus(null);
+
+    try {
+      const res = await fetch(`/api/skills/${slug}/scan`, { method: "POST" });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Failed to update from URL");
+        return;
+      }
+
+      const status = data.scan?.status || "unknown";
+      const hash = data.scan?.content_hash || data.scan?.file_hash;
+      setImportStatus({
+        success: status === "clean",
+        message: `Updated from URL and re-scanned (${status})${hash ? `. Hash: ${String(hash).slice(0, 12)}…` : ""}`,
+      });
+      router.refresh();
+    } catch {
+      setError("Failed to update from URL");
+    } finally {
+      setUpdatingFromUrl(false);
     }
   }
 
@@ -173,13 +203,33 @@ export function SkillListingForm({ slug, listingId, initialData }: SkillListingF
           <LinkIcon className="h-3.5 w-3.5 inline mr-1" />
           Skill File URL
         </Label>
-        <Input
-          id="skill_file_url"
-          type="url"
-          value={skillFileUrl}
-          onChange={(e) => setSkillFileUrl(e.target.value)}
-          placeholder="https://github.com/user/repo/blob/main/SKILL.md"
-        />
+        <div className="flex gap-2">
+          <Input
+            id="skill_file_url"
+            type="url"
+            value={skillFileUrl}
+            onChange={(e) => setSkillFileUrl(e.target.value)}
+            placeholder="https://github.com/user/repo/blob/main/SKILL.md"
+            className="flex-1"
+          />
+          {isEdit && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleUpdateFromUrl}
+              disabled={updatingFromUrl || !skillFileUrl}
+              className="shrink-0"
+            >
+              {updatingFromUrl ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <LinkIcon className="h-4 w-4" />
+              )}
+              <span className="ml-1.5 hidden sm:inline">Update from URL</span>
+            </Button>
+          )}
+        </div>
         <p className="text-xs text-muted-foreground">
           Direct link to the skill file (e.g. SKILL.md on GitHub, npm package).
           The file will be automatically imported and security-scanned on save.
