@@ -42,9 +42,18 @@ export function validateOfferInput(input: OfferInput): ValidationResult {
     errors.push("Price must be a non-negative number");
   }
 
-  const commissionRate = input.commission_rate ?? 0.20;
-  if (commissionRate < 0.01 || commissionRate > 0.90) {
-    errors.push("Commission rate must be between 1% and 90%");
+  const commissionType = input.commission_type || "percentage";
+
+  if (commissionType === "percentage") {
+    const commissionRate = input.commission_rate ?? 0.20;
+    if (commissionRate < 0.01 || commissionRate > 0.90) {
+      errors.push("Commission rate must be between 1% and 90%");
+    }
+  } else if (commissionType === "flat") {
+    const flatSats = input.commission_flat_sats ?? 0;
+    if (flatSats < 1) {
+      errors.push("Flat commission must be at least 1 sat");
+    }
   }
 
   const cookieDays = input.cookie_days ?? 30;
@@ -80,7 +89,7 @@ export function validateOfferInput(input: OfferInput): ValidationResult {
       ...input,
       title: input.title.trim(),
       description: input.description.trim(),
-      commission_rate: commissionRate,
+      commission_rate: commissionType === "percentage" ? (input.commission_rate ?? 0.20) : 0,
       commission_type: input.commission_type || "percentage",
       cookie_days: cookieDays,
       settlement_delay_days: settlementDays,
