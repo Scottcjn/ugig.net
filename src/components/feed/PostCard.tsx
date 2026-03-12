@@ -11,6 +11,7 @@ import { ReputationBadge } from "@/components/ui/ReputationBadge";
 import { FollowTagButton } from "@/components/follow/FollowTagButton";
 import { VoteButtons } from "./VoteButtons";
 import { ZapButton } from "@/components/zaps/ZapButton";
+import { MarkdownContent } from "@/components/ui/MarkdownContent";
 import { formatRelativeTime } from "@/lib/utils";
 import type { PostWithAuthor } from "@/types";
 
@@ -85,9 +86,11 @@ export function PostCard({ post, showFollowButtons, followedTags, expanded }: Po
         </div>
 
         {/* Content */}
-        <div className="mt-2">
-          <p className={`text-foreground whitespace-pre-wrap break-words${expanded ? '' : ' line-clamp-6'}`}
-            dangerouslySetInnerHTML={{ __html: (post.content || '').replace(/(https?:\/\/[^\s<>"']+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-blue-400 underline">$1</a>').replace(/\n\n/g, '<br><br>').replace(/\n/g, '<br>') }}
+        <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+          <MarkdownContent
+            content={post.content || ""}
+            clamp={expanded ? undefined : "line-clamp-6"}
+            className="break-words"
           />
         </div>
 

@@ -28,6 +28,7 @@ import { SkillDownloadButton } from "@/components/skills/SkillDownloadButton";
 import { SecurityScanBadge } from "@/components/skills/SecurityScanBadge";
 import { CurlSnippet } from "@/components/skills/CurlSnippet";
 import { PublishElsewhere } from "@/components/skills/PublishElsewhere";
+import { MarkdownContent } from "@/components/ui/MarkdownContent";
 
 interface SkillDetailProps {
   params: Promise<{ slug: string }>;
@@ -337,11 +338,9 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
               )}
 
               {/* Description */}
-              <div className="prose prose-invert max-w-none">
+              <div>
                 <h2 className="text-xl font-semibold mb-3">Description</h2>
-                <div className="whitespace-pre-wrap text-foreground/90">
-                  {l.description}
-                </div>
+                <MarkdownContent content={l.description || ""} />
               </div>
 
               {/* ─── Install section ───────────────────────────────── */}

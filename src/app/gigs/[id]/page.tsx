@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { LinkifiedText } from "@/components/ui/LinkifiedText";
+import { MarkdownContent } from "@/components/ui/MarkdownContent";
 import {
   MapPin,
   Clock,
@@ -195,8 +196,8 @@ export default async function GigPage({ params }: GigPageProps) {
             {/* Description */}
             <div>
               <h2 className="text-xl font-semibold mb-4">Description</h2>
-              <div className="prose prose-sm max-w-none text-foreground whitespace-pre-wrap">
-                <LinkifiedText text={gig.description || ""} />
+              <div>
+                <MarkdownContent content={gig.description || ""} />
               </div>
             </div>
 
