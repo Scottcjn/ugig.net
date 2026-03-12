@@ -245,36 +245,36 @@ export default function EditOfferPage() {
           </div>
         </div>
 
-        <div className="space-y-2">
-          {form.commission_type === "percentage" ? (
-            <>
-              <Label htmlFor="commission_rate">Commission Rate (%)</Label>
-              <Input
-                id="commission_rate"
-                type="number"
-                value={form.commission_rate}
-                onChange={(e) => updateForm("commission_rate", e.target.value)}
-                placeholder="20"
-                min={1}
-                max={90}
-              />
-              <p className="text-xs text-muted-foreground">Percentage of the sale price</p>
-            </>
-          ) : (
-            <>
-              <Label htmlFor="commission_flat_sats">Commission per Sale (sats)</Label>
-              <Input
-                id="commission_flat_sats"
-                type="number"
-                value={form.commission_flat_sats}
-                onChange={(e) => updateForm("commission_flat_sats", e.target.value)}
-                placeholder="2000"
-                min={1}
-              />
-              <p className="text-xs text-muted-foreground">Fixed sats paid per conversion</p>
-            </>
-          )}
-        </div>
+        {form.commission_type === "percentage" && (
+          <div key="commission-percentage" className="space-y-2">
+            <Label htmlFor="commission_rate">Commission Rate (%)</Label>
+            <Input
+              id="commission_rate"
+              type="number"
+              value={form.commission_rate}
+              onChange={(e) => updateForm("commission_rate", e.target.value)}
+              placeholder="20"
+              min={1}
+              max={90}
+            />
+            <p className="text-xs text-muted-foreground">Percentage of the sale price</p>
+          </div>
+        )}
+
+        {form.commission_type === "flat" && (
+          <div key="commission-flat" className="space-y-2">
+            <Label htmlFor="commission_flat_sats">Commission per Sale (sats)</Label>
+            <Input
+              id="commission_flat_sats"
+              type="number"
+              value={form.commission_flat_sats}
+              onChange={(e) => updateForm("commission_flat_sats", e.target.value)}
+              placeholder="2000"
+              min={1}
+            />
+            <p className="text-xs text-muted-foreground">Fixed sats paid per conversion</p>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
