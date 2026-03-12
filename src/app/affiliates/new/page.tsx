@@ -29,6 +29,7 @@ export default function NewOfferPage() {
     price_sats: "",
     commission_rate: "20",
     commission_type: "percentage",
+    commission_flat_sats: "",
     cookie_days: "30",
     settlement_delay_days: "7",
     promo_text: "",
@@ -54,8 +55,9 @@ export default function NewOfferPage() {
         product_url: form.product_url || undefined,
         product_type: form.product_type,
         price_sats: parseInt(form.price_sats) || 0,
-        commission_rate: parseFloat(form.commission_rate) / 100,
+        commission_rate: form.commission_type === "percentage" ? parseFloat(form.commission_rate) / 100 : 0,
         commission_type: form.commission_type,
+        commission_flat_sats: form.commission_type === "flat" ? parseInt(form.commission_flat_sats) || 0 : 0,
         cookie_days: parseInt(form.cookie_days) || 30,
         settlement_delay_days: parseInt(form.settlement_delay_days) || 7,
         promo_text: form.promo_text || undefined,
@@ -177,17 +179,50 @@ export default function NewOfferPage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="commission_rate">Commission Rate (%)</Label>
-            <Input
-              id="commission_rate"
-              type="number"
-              value={form.commission_rate}
-              onChange={(e) => updateForm("commission_rate", e.target.value)}
-              placeholder="20"
-              min={1}
-              max={90}
-            />
+            <Label>Commission Type</Label>
+            <Select value={form.commission_type} onValueChange={(v) => updateForm("commission_type", v)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="percentage">Percentage</SelectItem>
+                <SelectItem value="flat">Fixed Amount</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+        </div>
+
+        <div className="space-y-2">
+          {form.commission_type === "percentage" ? (
+            <>
+              <Label htmlFor="commission_rate">Commission Rate (%)</Label>
+              <Input
+                id="commission_rate"
+                type="number"
+                value={form.commission_rate}
+                onChange={(e) => updateForm("commission_rate", e.target.value)}
+                placeholder="20"
+                min={1}
+                max={90}
+                required
+              />
+              <p className="text-xs text-muted-foreground">Percentage of the sale price</p>
+            </>
+          ) : (
+            <>
+              <Label htmlFor="commission_flat_sats">Commission per Sale (sats)</Label>
+              <Input
+                id="commission_flat_sats"
+                type="number"
+                value={form.commission_flat_sats}
+                onChange={(e) => updateForm("commission_flat_sats", e.target.value)}
+                placeholder="2000"
+                min={1}
+                required
+              />
+              <p className="text-xs text-muted-foreground">Fixed sats paid per conversion</p>
+            </>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-4">
