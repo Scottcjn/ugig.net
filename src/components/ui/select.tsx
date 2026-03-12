@@ -42,7 +42,7 @@ export function SelectTrigger({ children, className }: SelectTriggerProps) {
     <button
       type="button"
       onClick={() => setOpen(!open)}
-      className={`flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${className || ""}`}
+      className={`flex h-10 w-full items-center justify-between rounded-md border border-border bg-zinc-900 text-foreground px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${className || ""}`}
     >
       {children}
       <svg className="h-4 w-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -91,7 +91,7 @@ export function SelectContent({ children, className }: SelectContentProps) {
   return (
     <div
       ref={ref}
-      className={`absolute z-50 mt-1 min-w-[8rem] w-full overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95 ${className || ""}`}
+      className={`absolute z-50 mt-1 min-w-[8rem] w-full overflow-hidden rounded-md border border-border bg-zinc-900 p-1 text-foreground shadow-md ${className || ""}`}
     >
       {children}
     </div>
@@ -115,8 +115,8 @@ export function SelectItem({ value, children, className }: SelectItemProps) {
         ctx.onValueChange(value);
         ctx.setOpen(false);
       }}
-      className={`relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 px-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground ${
-        isSelected ? "bg-accent text-accent-foreground" : ""
+      className={`relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 px-2 text-sm outline-none hover:bg-zinc-800 ${
+        isSelected ? "bg-zinc-800" : ""
       } ${className || ""}`}
     >
       {children}
