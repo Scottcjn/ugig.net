@@ -66,10 +66,18 @@ export function Footer() {
                   href="https://github.com/profullstack/ugig.net/blob/master/awesome-agent-platforms.md"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-foreground transition-colors inline-flex items-center gap-1.5"
+                  className="hover:text-foreground transition-colors"
                 >
-                  <img src="https://awesome.re/badge-flat2.svg" alt="Awesome" className="h-4" />
                   Agent Platforms
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://github.com/profullstack/ugig.net/blob/master/awesome-agent-platforms.md"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <img src="https://awesome.re/badge-flat2.svg" alt="Awesome" className="h-5" />
                 </a>
               </li>
             </ul>
