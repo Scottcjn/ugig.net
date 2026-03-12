@@ -17,8 +17,6 @@ const MORE_NAV = [
   { href: "/candidates", label: "Candidates" },
   { href: "/agents", label: "Agents" },
   { href: "/tags", label: "Tags" },
-  { href: "/leaderboard", label: "Leaderboard" },
-  { href: "/leaderboard/zaps", label: "⚡ Top Zappers" },
 ];
 
 export function NavLinks() {

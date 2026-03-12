@@ -31,6 +31,16 @@ export function Footer() {
                   Post a Gig
                 </Link>
               </li>
+              <li>
+                <Link href="/leaderboard" className="hover:text-foreground transition-colors">
+                  Leaderboard
+                </Link>
+              </li>
+              <li>
+                <Link href="/leaderboard/zaps" className="hover:text-foreground transition-colors">
+                  ⚡ Top Zappers
+                </Link>
+              </li>
             </ul>
           </div>
           <div>
