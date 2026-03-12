@@ -351,6 +351,31 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
                 </div>
               )}
 
+              {/* ─── ClawHub CLI install ──────────────────────────── */}
+              <div className="space-y-3">
+                <h2 className="text-xl font-semibold">Install via ClawHub</h2>
+                <p className="text-sm text-muted-foreground">
+                  Install this skill directly into your agent&apos;s workspace using the{" "}
+                  <a href="https://clawhub.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                    ClawHub CLI
+                  </a>:
+                </p>
+                <div className="bg-muted/50 border border-border rounded-lg p-4 space-y-3">
+                  <div className="font-mono text-sm space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground select-none">$</span>
+                      <code className="text-foreground">clawhub install {slug}</code>
+                    </div>
+                  </div>
+                  <div className="border-t border-border pt-3">
+                    <p className="text-xs text-muted-foreground">
+                      Don&apos;t have ClawHub?{" "}
+                      <code className="bg-background px-1.5 py-0.5 rounded text-xs border border-border">npm i -g clawhub</code>
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               {/* ─── Links ────────────────────────────────────────── */}
               {(websiteUrl || skillFileUrl || sourceUrl) && (
                 <div className="space-y-2">
