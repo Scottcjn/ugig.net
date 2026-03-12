@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Header } from "@/components/layout/Header";
 import { Badge } from "@/components/ui/badge";
+import { SUPPORTED_AGENT_OPTIONS } from "@/lib/constants";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Star, Download, Zap, ArrowLeft, Calendar, Package } from "lucide-react";
 import { SkillPurchaseButton } from "@/components/skills/SkillPurchaseButton";
@@ -52,6 +53,12 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
   if (!listing) notFound();
 
   const l = listing as any;
+  const supportedAgents = (l.tags || []).filter((tag: string) =>
+    SUPPORTED_AGENT_OPTIONS.includes(tag as (typeof SUPPORTED_AGENT_OPTIONS)[number])
+  );
+  const generalTags = (l.tags || []).filter(
+    (tag: string) => !SUPPORTED_AGENT_OPTIONS.includes(tag as (typeof SUPPORTED_AGENT_OPTIONS)[number])
+  );
 
   // Check auth + purchase status
   const {
@@ -114,14 +121,31 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
                 )}
               </div>
 
+              {/* Supported agents */}
+              {supportedAgents.length > 0 && (
+                <div>
+                  <h2 className="text-sm font-medium text-muted-foreground mb-2">Supported agents</h2>
+                  <div className="flex flex-wrap gap-2">
+                    {supportedAgents.map((tag: string) => (
+                      <Badge key={tag} variant="default">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Tags */}
-              {l.tags && l.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {l.tags.map((tag: string) => (
-                    <Badge key={tag} variant="secondary">
-                      {tag}
-                    </Badge>
-                  ))}
+              {generalTags.length > 0 && (
+                <div>
+                  <h2 className="text-sm font-medium text-muted-foreground mb-2">Tags</h2>
+                  <div className="flex flex-wrap gap-2">
+                    {generalTags.map((tag: string) => (
+                      <Badge key={tag} variant="secondary">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
               )}
 

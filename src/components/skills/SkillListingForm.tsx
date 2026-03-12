@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { SKILL_CATEGORIES } from "@/lib/constants";
+import { SKILL_CATEGORIES, SUPPORTED_AGENT_OPTIONS } from "@/lib/constants";
 import { Loader2, Trash2 } from "lucide-react";
 
 interface SkillListingFormProps {
@@ -29,8 +29,17 @@ export function SkillListingForm({ slug, initialData }: SkillListingFormProps) {
   const [tagline, setTagline] = useState(initialData?.tagline || "");
   const [description, setDescription] = useState(initialData?.description || "");
   const [priceSats, setPriceSats] = useState(initialData?.price_sats?.toString() || "0");
+  const initialTags = initialData?.tags || [];
+  const initialSupportedAgents = initialTags.filter((tag) =>
+    SUPPORTED_AGENT_OPTIONS.includes(tag as (typeof SUPPORTED_AGENT_OPTIONS)[number])
+  );
+  const initialGeneralTags = initialTags.filter(
+    (tag) => !SUPPORTED_AGENT_OPTIONS.includes(tag as (typeof SUPPORTED_AGENT_OPTIONS)[number])
+  );
+
   const [category, setCategory] = useState(initialData?.category || "");
-  const [tagsInput, setTagsInput] = useState(initialData?.tags?.join(", ") || "");
+  const [tagsInput, setTagsInput] = useState(initialGeneralTags.join(", "));
+  const [supportedAgentsInput, setSupportedAgentsInput] = useState(initialSupportedAgents.join(", "));
   const [status, setStatus] = useState(initialData?.status || "draft");
 
   const [loading, setLoading] = useState(false);
@@ -47,13 +56,20 @@ export function SkillListingForm({ slug, initialData }: SkillListingFormProps) {
       .map((t) => t.trim())
       .filter(Boolean);
 
+    const supportedAgents = supportedAgentsInput
+      .split(",")
+      .map((t) => t.trim().toLowerCase())
+      .filter(Boolean);
+
+    const combinedTags = Array.from(new Set([...tags, ...supportedAgents]));
+
     const body = {
       title,
       tagline,
       description,
       price_sats: parseInt(priceSats) || 0,
       category: category || undefined,
-      tags,
+      tags: combinedTags,
       status,
     };
 
@@ -171,6 +187,19 @@ export function SkillListingForm({ slug, initialData }: SkillListingFormProps) {
             ))}
           </select>
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="supported-agents">Supported agents</Label>
+        <Input
+          id="supported-agents"
+          value={supportedAgentsInput}
+          onChange={(e) => setSupportedAgentsInput(e.target.value)}
+          placeholder="e.g. claude-code, openclaw, codex"
+        />
+        <p className="text-xs text-muted-foreground">
+          Suggested: {SUPPORTED_AGENT_OPTIONS.join(", ")}
+        </p>
       </div>
 
       <div className="space-y-2">

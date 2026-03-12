@@ -27,3 +27,18 @@ export const SKILL_CATEGORIES = [
 ] as const;
 
 export type SkillCategory = (typeof SKILL_CATEGORIES)[number];
+
+/** Suggested popular agents for skill compatibility tags */
+export const SUPPORTED_AGENT_OPTIONS = [
+  "claude-code",
+  "openclaw",
+  "codex",
+  "cursor",
+  "windsurf",
+  "goose",
+  "aider",
+  "roo-code",
+  "cline",
+] as const;
+
+export type SupportedAgentOption = (typeof SUPPORTED_AGENT_OPTIONS)[number];
