@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ExternalLink, Copy, Check, ChevronDown, ChevronUp } from "lucide-react";
+import { ExternalLink, Copy, Check, ChevronDown, ChevronUp, Terminal } from "lucide-react";
 
 interface Marketplace {
   name: string;
@@ -9,22 +9,27 @@ interface Marketplace {
   submitUrl: string | null;
   method: string;
   description: string;
+  /** CLI command template. Use {slug} and {sourceUrl} as placeholders. */
+  cliInstall?: string;
+  cliPublish?: string;
 }
 
 const MARKETPLACES: Marketplace[] = [
   {
     name: "ClawHub",
     url: "https://clawhub.com",
-    submitUrl: null, // CLI-based
+    submitUrl: null,
     method: "CLI",
     description: "OpenClaw ecosystem. Publish via CLI.",
+    cliInstall: "clawhub install {slug}",
+    cliPublish: "clawhub publish . --slug {slug} --version 1.0.0",
   },
   {
     name: "skills.sh",
     url: "https://skills.sh",
     submitUrl: null,
     method: "Auto-indexed",
-    description: "Agent Skills Directory. Auto-indexes GitHub repos.",
+    description: "Agent Skills Directory. Auto-indexes GitHub repos with SKILL.md.",
   },
   {
     name: "LobeHub Skills",
@@ -32,13 +37,15 @@ const MARKETPLACES: Marketplace[] = [
     submitUrl: "https://lobehub.com/skills",
     method: "Submit",
     description: "Large SKILL.md marketplace. Open for every agent.",
+    cliInstall: "npx @lobehub/cli skill install {slug}",
   },
   {
     name: "Goose Skills",
     url: "https://github.com/block/agent-skills",
-    submitUrl: "https://github.com/block/agent-skills",
+    submitUrl: "https://github.com/block/agent-skills/fork",
     method: "PR",
     description: "Community contributions via public repo PR.",
+    cliInstall: "goose skill add {sourceUrl}",
   },
   {
     name: "Kilo Marketplace",
@@ -46,6 +53,7 @@ const MARKETPLACES: Marketplace[] = [
     submitUrl: "https://kilo.ai/docs/customize/skills",
     method: "PR",
     description: "Fork + pull request with valid SKILL.md.",
+    cliInstall: "kilo skill install {slug}",
   },
   {
     name: "Skillstore",
@@ -67,6 +75,7 @@ const MARKETPLACES: Marketplace[] = [
     submitUrl: "https://www.shopclawmart.com",
     method: "API",
     description: "Commercial marketplace with terminal/API publishing.",
+    cliPublish: "clawmart publish . --name {slug}",
   },
   {
     name: "Manus Agent Skills",
@@ -113,6 +122,39 @@ function MethodBadge({ method }: { method: string }) {
   );
 }
 
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }}
+      className="p-1 rounded border border-border hover:bg-muted transition-colors shrink-0"
+      title="Copy command"
+    >
+      {copied ? (
+        <Check className="h-3 w-3 text-green-500" />
+      ) : (
+        <Copy className="h-3 w-3 text-muted-foreground" />
+      )}
+    </button>
+  );
+}
+
+function renderCmd(template: string, slug: string, sourceUrl: string | null): string {
+  let cmd = template.replace(/\{slug\}/g, slug);
+  if (sourceUrl) {
+    cmd = cmd.replace(/\{sourceUrl\}/g, sourceUrl);
+  } else {
+    cmd = cmd.replace(/\{sourceUrl\}/g, slug);
+  }
+  return cmd;
+}
+
 interface PublishElsewhereProps {
   slug: string;
   skillFileUrl?: string | null;
@@ -121,9 +163,8 @@ interface PublishElsewhereProps {
 
 export function PublishElsewhere({ slug, skillFileUrl, sourceUrl }: PublishElsewhereProps) {
   const [expanded, setExpanded] = useState(false);
-  const [copiedCmd, setCopiedCmd] = useState(false);
 
-  const clawhubCmd = `clawhub install ${slug}`;
+  const repoUrl = sourceUrl || skillFileUrl || null;
   const displayedMarketplaces = expanded ? MARKETPLACES : MARKETPLACES.slice(0, 4);
 
   return (
@@ -133,54 +174,63 @@ export function PublishElsewhere({ slug, skillFileUrl, sourceUrl }: PublishElsew
         Maximize your skill&apos;s reach by listing it on multiple marketplaces. No credentials required for most.
       </p>
 
-      {/* ClawHub install command */}
-      <div className="bg-muted/50 border border-border rounded-lg p-3">
-        <div className="flex items-center justify-between gap-2">
-          <div className="font-mono text-sm flex items-center gap-2 min-w-0">
-            <span className="text-muted-foreground select-none">$</span>
-            <code className="text-foreground truncate">{clawhubCmd}</code>
-          </div>
-          <button
-            onClick={() => {
-              navigator.clipboard.writeText(clawhubCmd);
-              setCopiedCmd(true);
-              setTimeout(() => setCopiedCmd(false), 2000);
-            }}
-            className="p-1.5 rounded-md border border-border hover:bg-muted transition-colors shrink-0"
-          >
-            {copiedCmd ? (
-              <Check className="h-3.5 w-3.5 text-green-500" />
-            ) : (
-              <Copy className="h-3.5 w-3.5 text-muted-foreground" />
-            )}
-          </button>
-        </div>
-      </div>
+      {/* Marketplace list */}
+      <div className="space-y-2">
+        {displayedMarketplaces.map((mp) => {
+          const installCmd = mp.cliInstall ? renderCmd(mp.cliInstall, slug, repoUrl) : null;
+          const publishCmd = mp.cliPublish ? renderCmd(mp.cliPublish, slug, repoUrl) : null;
+          const hasCommands = installCmd || publishCmd;
 
-      {/* Marketplace grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        {displayedMarketplaces.map((mp) => (
-          <a
-            key={mp.name}
-            href={mp.submitUrl || mp.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-start gap-3 p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors group"
-          >
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-0.5">
-                <span className="font-medium text-sm group-hover:text-primary transition-colors">
-                  {mp.name}
-                </span>
-                <MethodBadge method={mp.method} />
-              </div>
-              <p className="text-xs text-muted-foreground line-clamp-1">
-                {mp.description}
-              </p>
+          return (
+            <div
+              key={mp.name}
+              className="border border-border rounded-lg overflow-hidden"
+            >
+              <a
+                href={mp.submitUrl || mp.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-start gap-3 p-3 hover:bg-muted/50 transition-colors group"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="font-medium text-sm group-hover:text-primary transition-colors">
+                      {mp.name}
+                    </span>
+                    <MethodBadge method={mp.method} />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {mp.description}
+                  </p>
+                </div>
+                <ExternalLink className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-1 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </a>
+
+              {hasCommands && (
+                <div className="border-t border-border bg-muted/30 px-3 py-2 space-y-1.5">
+                  {installCmd && (
+                    <div className="flex items-center gap-2">
+                      <Terminal className="h-3 w-3 text-muted-foreground shrink-0" />
+                      <code className="text-xs font-mono text-foreground/80 truncate flex-1">
+                        {installCmd}
+                      </code>
+                      <CopyButton text={installCmd} />
+                    </div>
+                  )}
+                  {publishCmd && (
+                    <div className="flex items-center gap-2">
+                      <Terminal className="h-3 w-3 text-blue-400 shrink-0" />
+                      <code className="text-xs font-mono text-foreground/80 truncate flex-1">
+                        {publishCmd}
+                      </code>
+                      <CopyButton text={publishCmd} />
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-            <ExternalLink className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-1 opacity-0 group-hover:opacity-100 transition-opacity" />
-          </a>
-        ))}
+          );
+        })}
       </div>
 
       {/* Show more/less */}
