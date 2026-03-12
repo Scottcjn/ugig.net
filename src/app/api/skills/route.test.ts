@@ -270,74 +270,13 @@ describe("POST /api/skills", () => {
     expect(json.import.scan_status).toBe("clean");
   });
 
-  it("blocks publish when scan fails on create with skill_file_url", async () => {
+  it("blocks publish when scan finds suspicious content", async () => {
     const createdListing = {
       id: "listing-1",
       slug: "test-skill",
       title: "Test Skill",
       seller_id: "user-1",
-      status: "draft",
-    };
-
-    mockGetAuthContext.mockResolvedValue({
-      user: { id: "user-1", authMethod: "session" },
-      supabase: supabaseClient as any,
-    });
-
-    serviceClient.from.mockImplementation((table: string) => {
-      if (table === "skill_listings") {
-        return {
-          select: () => ({
-            eq: () => ({
-              single: () => Promise.resolve({ data: null, error: null }),
-            }),
-          }),
-          insert: () => ({
-            select: () => ({
-              single: () =>
-                Promise.resolve({ data: { ...createdListing }, error: null }),
-            }),
-          }),
-        };
-      }
-      return {};
-    });
-
-    mockImportSkillFromUrl.mockResolvedValue({
-      success: true,
-      storagePath: "user-1/test-skill/SKILL.md",
-      contentHash: "abc123",
-      fileSizeBytes: 100,
-      fileName: "SKILL.md",
-      scanResult: { status: "suspicious", fileHash: "abc", fileSizeBytes: 100, findings: [{ rule: "no-eval", severity: "high", detail: "eval detected" }], scannerVersion: "v1" },
-      scanSource: "url_import",
-      sourceUrl: "https://example.com/SKILL.md",
-      findingsCountBySeverity: { high: 1 },
-    });
-
-    const response = await POST(
-      makePostRequest({
-        title: "Test Skill",
-        description: "A test skill for doing automated things well",
-        price_sats: 1000,
-        skill_file_url: "https://example.com/SKILL.md",
-        status: "active", // User wants to publish immediately
-      })
-    );
-
-    expect(response.status).toBe(422);
-    const json = await response.json();
-    expect(json.error).toContain("Security scan");
-    expect(json.listing.status).toBe("draft"); // Forced to draft
-  });
-
-  it("allows publish when scan is clean on create", async () => {
-    const createdListing = {
-      id: "listing-1",
-      slug: "test-skill",
-      title: "Test Skill",
-      seller_id: "user-1",
-      status: "draft",
+      status: "active", // Starts as active now
     };
 
     mockGetAuthContext.mockResolvedValue({
@@ -373,6 +312,67 @@ describe("POST /api/skills", () => {
       contentHash: "abc123",
       fileSizeBytes: 100,
       fileName: "SKILL.md",
+      scanResult: { status: "suspicious", fileHash: "abc", fileSizeBytes: 100, findings: [{ rule: "no-eval", severity: "high", detail: "eval detected" }], scannerVersion: "v1" },
+      scanSource: "url_import",
+      sourceUrl: "https://example.com/SKILL.md",
+      findingsCountBySeverity: { high: 1 },
+    });
+
+    const response = await POST(
+      makePostRequest({
+        title: "Test Skill",
+        description: "A test skill for doing automated things well",
+        price_sats: 1000,
+        skill_file_url: "https://example.com/SKILL.md",
+        status: "active",
+      })
+    );
+
+    expect(response.status).toBe(422);
+    const json = await response.json();
+    expect(json.error).toContain("Security scan");
+    expect(json.listing.status).toBe("draft"); // Downgraded to draft
+  });
+
+  it("allows publish when scan is clean on create", async () => {
+    const createdListing = {
+      id: "listing-1",
+      slug: "test-skill",
+      title: "Test Skill",
+      seller_id: "user-1",
+      status: "active", // Starts as active now (default)
+    };
+
+    mockGetAuthContext.mockResolvedValue({
+      user: { id: "user-1", authMethod: "session" },
+      supabase: supabaseClient as any,
+    });
+
+    serviceClient.from.mockImplementation((table: string) => {
+      if (table === "skill_listings") {
+        return {
+          select: () => ({
+            eq: () => ({
+              single: () => Promise.resolve({ data: null, error: null }),
+            }),
+          }),
+          insert: () => ({
+            select: () => ({
+              single: () =>
+                Promise.resolve({ data: { ...createdListing }, error: null }),
+            }),
+          }),
+        };
+      }
+      return {};
+    });
+
+    mockImportSkillFromUrl.mockResolvedValue({
+      success: true,
+      storagePath: "user-1/test-skill/SKILL.md",
+      contentHash: "abc123",
+      fileSizeBytes: 100,
+      fileName: "SKILL.md",
       scanResult: { status: "clean", fileHash: "abc", fileSizeBytes: 100, findings: [], scannerVersion: "v1" },
       scanSource: "url_import",
       sourceUrl: "https://example.com/SKILL.md",
@@ -385,12 +385,12 @@ describe("POST /api/skills", () => {
         description: "A test skill for doing automated things well",
         price_sats: 1000,
         skill_file_url: "https://example.com/SKILL.md",
-        status: "active", // User wants to publish
+        status: "active",
       })
     );
 
     expect(response.status).toBe(201);
     const json = await response.json();
-    expect(json.listing.status).toBe("active"); // Allowed because scan was clean
+    expect(json.listing.status).toBe("active"); // Stays active — scan was clean
   });
 });

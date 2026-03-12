@@ -46,7 +46,7 @@ export function SkillListingForm({ slug, listingId, initialData }: SkillListingF
   const [category, setCategory] = useState(initialData?.category || "");
   const [tagsInput, setTagsInput] = useState(initialGeneralTags.join(", "));
   const [supportedAgentsInput, setSupportedAgentsInput] = useState(initialSupportedAgents.join(", "));
-  const [status, setStatus] = useState(initialData?.status || (isEdit ? "draft" : "active"));
+  const [status, setStatus] = useState(initialData?.status || "active");
   const [sourceUrl, setSourceUrl] = useState(initialData?.source_url || "");
   const [skillFileUrl, setSkillFileUrl] = useState(initialData?.skill_file_url || "");
   const [websiteUrl, setWebsiteUrl] = useState(initialData?.website_url || "");

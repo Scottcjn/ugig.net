@@ -119,9 +119,8 @@ export async function POST(request: NextRequest) {
       slug = `${slug}-${Date.now().toString(36)}`;
     }
 
-    // When skill_file_url is provided, always start as draft — the scan
-    // result determines whether we can promote to active.
-    const initialStatus = skill_file_url ? "draft" : requestedStatus;
+    // Default to active — scan may downgrade to draft if issues found
+    const initialStatus = requestedStatus || "active";
 
     const { data: listing, error } = await admin
       .from("skill_listings" as any)
@@ -163,31 +162,30 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // If user requested active status and skill_file_url is set, enforce scan gate
-    let finalStatus = initialStatus;
-    if (requestedStatus === "active" && skill_file_url) {
-      if (importResult && importResult.success && isScanAcceptable(importResult.scanResult)) {
-        // Scan passed — promote to active
-        finalStatus = "active";
+    // If skill_file_url is set, check scan result — only downgrade to draft
+    // if scan explicitly found issues. Otherwise keep active.
+    if (skill_file_url && importResult) {
+      if (importResult.success && isScanAcceptable(importResult.scanResult)) {
+        // Scan passed — stay active (no action needed)
+      } else if (importResult.scanResult?.status === "suspicious" || importResult.scanResult?.status === "malicious") {
+        // Scan found real issues — downgrade to draft
         await admin
           .from("skill_listings" as any)
-          .update({ status: "active" })
+          .update({ status: "draft" })
           .eq("id", (listing as any).id);
-        (listing as any).status = "active";
-      } else {
-        // Scan failed/not clean — keep as draft, return error context
-        const scanStatus = importResult?.scanResult?.status || "not_scanned";
+        (listing as any).status = "draft";
         return NextResponse.json({
-          error: `Security scan required before publishing. Scan status: ${scanStatus}. Listing saved as draft.`,
+          error: `Security scan found issues (${importResult.scanResult.status}). Listing saved as draft for review.`,
           listing: { ...(listing as any), status: "draft" },
-          import: importResult ? {
+          import: {
             success: importResult.success,
             content_hash: importResult.contentHash,
             scan_status: importResult.scanResult.status,
             error: importResult.error || null,
-          } : null,
+          },
         }, { status: 422 });
       }
+      // For scan errors/timeouts/not_scanned — keep active, don't block the user
     }
 
     return NextResponse.json({
