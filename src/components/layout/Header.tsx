@@ -42,7 +42,7 @@ export async function Header({ showPostGig = true }: HeaderProps) {
             priority
           />
         </Link>
-        <nav className="flex items-center gap-4 flex-nowrap overflow-x-auto">
+        <nav className="flex items-center gap-2">
           <MobileMenu />
           <HeaderSearch />
           <NavLinks />
