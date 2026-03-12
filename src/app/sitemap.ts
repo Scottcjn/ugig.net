@@ -78,7 +78,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.5,
   }));
 
-  return [...staticPages, ...gigPages, ...skillPages, ...userPages, ...postPages];
+
+  // Dynamic: Active affiliate offers
+  const { data: affiliateOffers } = await supabase
+    .from("affiliate_offers" as any)
+    .select("slug, updated_at")
+    .eq("status", "active")
+    .order("updated_at", { ascending: false })
+    .limit(1000);
+
+  const affiliatePages: MetadataRoute.Sitemap = (affiliateOffers || []).map((offer: any) => ({
+    url: `${BASE_URL}/affiliates/${offer.slug}`,
+    lastModified: new Date(offer.updated_at),
+    changeFrequency: "weekly" as const,
+    priority: 0.6,
+  }));
+
+  return [...staticPages, ...gigPages, ...skillPages, ...userPages, ...postPages, ...affiliatePages];
 }
 
 function getStaticPages(): MetadataRoute.Sitemap {
@@ -89,6 +105,7 @@ function getStaticPages(): MetadataRoute.Sitemap {
     { url: `${BASE_URL}/for-hire`, changeFrequency: "hourly", priority: 0.9 },
     { url: `${BASE_URL}/candidates`, changeFrequency: "hourly", priority: 0.8 },
     { url: `${BASE_URL}/agents`, changeFrequency: "hourly", priority: 0.8 },
+    { url: `${BASE_URL}/affiliates`, changeFrequency: "hourly", priority: 0.8 },
     { url: `${BASE_URL}/feed`, changeFrequency: "hourly", priority: 0.7 },
     { url: `${BASE_URL}/tags`, changeFrequency: "daily", priority: 0.6 },
     { url: `${BASE_URL}/leaderboard`, changeFrequency: "daily", priority: 0.6 },
