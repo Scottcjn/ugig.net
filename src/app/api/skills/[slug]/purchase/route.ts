@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthContext } from "@/lib/auth/get-user";
 import { createServiceClient } from "@/lib/supabase/service";
 import { executeSkillPurchase } from "@/lib/skills/purchase";
+import { recordConversion } from "@/lib/affiliates/commission";
+import { findAttribution } from "@/lib/affiliates/tracking";
 
 /**
  * POST /api/skills/[slug]/purchase - Buy a skill listing
@@ -92,6 +94,59 @@ export async function POST(
         fee_sats: result.fee_sats,
       },
     });
+
+    // Check for affiliate attribution (non-blocking)
+    try {
+      const affRef = request.cookies.get("aff_ref")?.value;
+      if (affRef && result.purchase_id) {
+        // Find the affiliate offer linked to this skill listing
+        const { data: affOffer } = await (admin as any)
+          .from("affiliate_offers")
+          .select("id")
+          .eq("listing_id", (listing as any).id)
+          .eq("status", "active")
+          .single();
+
+        if (affOffer) {
+          // Find which affiliate referred this buyer
+          const attribution = await findAttribution(admin, {
+            offerId: affOffer.id,
+            trackingCode: affRef,
+          });
+
+          if (attribution?.affiliated && attribution.affiliate_id) {
+            const convResult = await recordConversion(admin, {
+              offerId: affOffer.id,
+              affiliateId: attribution.affiliate_id,
+              buyerId: auth.user.id,
+              clickId: attribution.click_id,
+              purchaseId: result.purchase_id,
+              saleAmountSats: (listing as any).price_sats,
+            });
+
+            if (convResult.ok) {
+              // Notify affiliate about the sale
+              await (admin as any)
+                .from("notifications")
+                .insert({
+                  user_id: attribution.affiliate_id,
+                  type: "affiliate_sale",
+                  title: "Affiliate sale! 🎉",
+                  body: `Someone purchased "${(listing as any).title}" through your link — ${convResult.commission_sats?.toLocaleString()} sats commission pending`,
+                  data: {
+                    conversion_id: convResult.conversion_id,
+                    commission_sats: convResult.commission_sats,
+                    settles_at: convResult.settles_at,
+                  },
+                });
+            }
+          }
+        }
+      }
+    } catch (affErr) {
+      // Affiliate attribution is non-blocking — don't fail the purchase
+      console.error("[affiliate] Attribution failed (non-fatal):", affErr);
+    }
 
     return NextResponse.json({
       ok: true,

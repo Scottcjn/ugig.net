@@ -124,6 +124,7 @@ export async function findAttribution(
   admin: SupabaseClient,
   params: {
     offerId: string;
+    trackingCode?: string;
     visitorId?: string;
     buyerId?: string;
   }
@@ -133,11 +134,39 @@ export async function findAttribution(
   click_id?: string;
   tracking_code?: string;
 } | null> {
-  const { offerId, visitorId, buyerId } = params;
+  const { offerId, trackingCode, visitorId, buyerId } = params;
+
+  // Fast path: if we have a tracking code, look up the affiliate directly
+  if (trackingCode) {
+    const { data: app } = await (admin as AnySupabase)
+      .from("affiliate_applications")
+      .select("affiliate_id, tracking_code, status")
+      .eq("tracking_code", trackingCode)
+      .eq("offer_id", offerId)
+      .eq("status", "approved")
+      .single();
+
+    if (app) {
+      // Find the most recent click for this tracking code
+      const { data: clicks } = await (admin as AnySupabase)
+        .from("affiliate_clicks")
+        .select("id")
+        .eq("tracking_code", trackingCode)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      return {
+        affiliated: true,
+        affiliate_id: app.affiliate_id,
+        click_id: clicks?.[0]?.id,
+        tracking_code: app.tracking_code,
+      };
+    }
+  }
 
   if (!visitorId && !buyerId) return null;
 
-  // Get the offer's cookie window
+  // Fallback: search by visitor_id within cookie window
   const { data: offer } = await (admin as AnySupabase)
     .from("affiliate_offers")
     .select("cookie_days")
@@ -147,8 +176,6 @@ export async function findAttribution(
   const cookieDays = offer?.cookie_days || 30;
   const windowStart = new Date(Date.now() - cookieDays * 24 * 60 * 60 * 1000).toISOString();
 
-  // Find the most recent click for this visitor within the cookie window
-  // Last-click attribution
   let query = (admin as AnySupabase)
     .from("affiliate_clicks")
     .select("id, affiliate_id, tracking_code")
