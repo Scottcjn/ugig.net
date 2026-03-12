@@ -15,8 +15,8 @@ const MAX_FETCH_SIZE = 50 * 1024 * 1024; // 50 MB
  *
  * Triggers a SecureClaw scan on the skill's content. Resolves content from
  * (in priority order):
- *   1. Uploaded file in storage (skill_file_path)
- *   2. Remote skill_file_url (fetched server-side)
+ *   1. Remote skill_file_url (fetched server-side, freshest source)
+ *   2. Stored file in storage (skill_file_path) as fallback
  *
  * Only the listing owner (seller) can trigger a scan.
  *
@@ -58,22 +58,10 @@ export async function POST(
     // ── Resolve content ───────────────────────────────────────────
     let buffer: Buffer | null = null;
     let fileName = "skill-file";
+    let resolvedSource: "url" | "stored" | null = null;
 
-    // Priority 1: stored file in Supabase Storage
-    if (l.skill_file_path) {
-      const { data: fileData, error: dlError } = await admin.storage
-        .from(BUCKET)
-        .download(l.skill_file_path);
-
-      if (!dlError && fileData) {
-        const ab = await fileData.arrayBuffer();
-        buffer = Buffer.from(ab);
-        fileName = l.skill_file_path.split("/").pop() || fileName;
-      }
-    }
-
-    // Priority 2: remote skill_file_url
-    if (!buffer && l.skill_file_url) {
+    // Priority 1: remote skill_file_url (freshest source)
+    if (l.skill_file_url) {
       try {
         const res = await fetch(l.skill_file_url, {
           signal: AbortSignal.timeout(15_000),
@@ -98,6 +86,7 @@ export async function POST(
           }
 
           buffer = Buffer.from(ab);
+          resolvedSource = "url";
           // Derive filename from URL path
           try {
             const urlPath = new URL(l.skill_file_url).pathname;
@@ -107,7 +96,21 @@ export async function POST(
           }
         }
       } catch {
-        // fetch failed — fall through
+        // fetch failed — fallback to stored file below
+      }
+    }
+
+    // Priority 2: stored file in Supabase Storage (fallback)
+    if (!buffer && l.skill_file_path) {
+      const { data: fileData, error: dlError } = await admin.storage
+        .from(BUCKET)
+        .download(l.skill_file_path);
+
+      if (!dlError && fileData) {
+        const ab = await fileData.arrayBuffer();
+        buffer = Buffer.from(ab);
+        fileName = l.skill_file_path.split("/").pop() || fileName;
+        resolvedSource = "stored";
       }
     }
 
@@ -146,8 +149,8 @@ export async function POST(
       findingsCountBySeverity[f.severity] = (findingsCountBySeverity[f.severity] || 0) + 1;
     }
 
-    // Determine scan source
-    const scanSource = l.skill_file_path ? "rescan" : "url_import";
+    // Determine scan source based on resolved content
+    const scanSource = resolvedSource === "url" ? "url_import" : "rescan";
     const sourceUrl = l.skill_file_url || null;
 
     // ── If content came from URL and no stored file, persist to storage ──
