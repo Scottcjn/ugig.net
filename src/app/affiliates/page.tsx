@@ -259,11 +259,9 @@ async function AffiliatesList({ searchParams }: { searchParams: AffiliatesPagePr
               {offer.tags && offer.tags.length > 0 && (
                 <div className="flex gap-1.5 mt-3 flex-wrap">
                   {offer.tags.slice(0, 5).map((tag: string) => (
-                    <Link key={tag} href={`/affiliates?tag=${encodeURIComponent(tag)}`} onClick={(e) => e.stopPropagation()}>
-                      <Badge variant="secondary" className="text-xs cursor-pointer hover:bg-secondary/80 transition-colors">
-                        {tag}
-                      </Badge>
-                    </Link>
+                    <Badge key={tag} variant="secondary" className="text-xs">
+                      {tag}
+                    </Badge>
                   ))}
                   {offer.tags.length > 5 && (
                     <Badge variant="secondary" className="text-xs">
