@@ -47,6 +47,14 @@ export default function OfferDetailPage() {
   const [applied, setApplied] = useState(false);
   const [trackingUrl, setTrackingUrl] = useState("");
   const [error, setError] = useState("");
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/session")
+      .then((r) => r.json())
+      .then((d) => { if (d.user?.id) setCurrentUserId(d.user.id); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -130,6 +138,11 @@ export default function OfferDetailPage() {
           <div className="flex items-center gap-3 mb-2">
             <h1 className="text-3xl font-bold">{offer.title}</h1>
             <Badge variant="outline">{offer.product_type}</Badge>
+            {currentUserId && currentUserId === offer.seller_id && (
+              <Link href={`/affiliates/${slug}/edit`}>
+                <Button variant="outline" size="sm">Edit</Button>
+              </Link>
+            )}
           </div>
 
           {offer.profiles?.username && (
