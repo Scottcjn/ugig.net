@@ -1,38 +1,39 @@
-"use client";
-
-import { useEffect, useState } from "react";
+import { Suspense } from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
+import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { SKILL_CATEGORIES, AFFILIATE_PRODUCT_TYPES } from "@/lib/constants";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Megaphone, Users, TrendingUp } from "lucide-react";
+import { SKILL_CATEGORIES } from "@/lib/constants";
 
-interface AffiliateOffer {
-  id: string;
-  slug: string;
-  title: string;
-  description: string;
-  product_type: string;
-  price_sats: number;
-  commission_rate: number;
-  commission_type: string;
-  commission_flat_sats: number;
-  cookie_days: number;
-  total_affiliates: number;
-  total_conversions: number;
-  total_revenue_sats: number;
-  category: string | null;
-  tags: string[];
-  created_at: string;
-  profiles?: { username: string; avatar_url: string | null };
-  skill_listings?: { title: string; slug: string } | null;
+export const metadata: Metadata = {
+  title: "Affiliate Marketplace | ugig.net",
+  description: "Promote products and earn commissions in sats. Browse affiliate offers on ugig.net.",
+  alternates: { canonical: "/affiliates" },
+  openGraph: {
+    title: "Affiliate Marketplace | ugig.net",
+    description: "Promote products and earn commissions in sats. Browse affiliate offers on ugig.net.",
+    url: "/affiliates",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Affiliate Marketplace | ugig.net",
+    description: "Promote products and earn commissions in sats. Browse affiliate offers on ugig.net.",
+  },
+};
+
+interface AffiliatesPageProps {
+  searchParams: Promise<{
+    search?: string;
+    category?: string;
+    sort?: string;
+    page?: string;
+  }>;
 }
 
 function formatSats(sats: number): string {
@@ -41,173 +42,352 @@ function formatSats(sats: number): string {
   return sats.toLocaleString();
 }
 
-function commissionDisplay(offer: AffiliateOffer): string {
+function commissionDisplay(offer: {
+  commission_type: string;
+  commission_rate: number;
+  commission_flat_sats: number;
+}): string {
   if (offer.commission_type === "flat") {
     return `${formatSats(offer.commission_flat_sats)} sats/sale`;
   }
   return `${Math.round(offer.commission_rate * 100)}%`;
 }
 
-export default function AffiliatesPage() {
-  const [offers, setOffers] = useState<AffiliateOffer[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("");
-  const [sort, setSort] = useState("newest");
-  const [total, setTotal] = useState(0);
+function formatRelativeTime(dateStr: string): string {
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  const diffMs = now - then;
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return "just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  const diffDay = Math.floor(diffHr / 24);
+  if (diffDay < 30) return `${diffDay}d ago`;
+  const diffMonth = Math.floor(diffDay / 30);
+  return `${diffMonth}mo ago`;
+}
 
-  const [fetchTrigger, setFetchTrigger] = useState(0);
+async function AffiliatesList({ searchParams }: { searchParams: AffiliatesPageProps["searchParams"] }) {
+  const queryParams = await searchParams;
+  const supabase = await createClient();
 
-  useEffect(() => {
-    let cancelled = false;
-    const params = new URLSearchParams();
-    if (category) params.set("category", category);
-    if (sort) params.set("sort", sort);
-    if (search) params.set("q", search);
+  let query = supabase
+    .from("affiliate_offers")
+    .select(
+      `
+      *,
+      profiles:seller_id (
+        id,
+        username,
+        full_name,
+        avatar_url
+      )
+    `,
+      { count: "exact" }
+    )
+    .eq("status", "active");
 
-    fetch(`/api/affiliates/offers?${params}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (!cancelled) {
-          setOffers(data.offers || []);
-          setTotal(data.total || 0);
-          setLoading(false);
-        }
-      });
-    return () => { cancelled = true; };
-  }, [category, sort, fetchTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  function handleSearch(e: React.FormEvent) {
-    e.preventDefault();
-    setFetchTrigger((n) => n + 1);
+  if (queryParams.search) {
+    query = query.or(
+      `title.ilike.%${queryParams.search}%,description.ilike.%${queryParams.search}%`
+    );
   }
 
+  if (queryParams.category) {
+    query = query.eq("category", queryParams.category);
+  }
+
+  switch (queryParams.sort) {
+    case "commission":
+      query = query.order("commission_rate", { ascending: false });
+      break;
+    case "popular":
+      query = query.order("total_affiliates", { ascending: false });
+      break;
+    case "revenue":
+      query = query.order("total_revenue_sats", { ascending: false });
+      break;
+    default:
+      query = query.order("created_at", { ascending: false });
+  }
+
+  const page = parseInt(queryParams.page || "1");
+  const limit = 20;
+  const offset = (page - 1) * limit;
+  query = query.range(offset, offset + limit - 1);
+
+  const { data: offers, count } = await query;
+
+  if (!offers || offers.length === 0) {
+    return (
+      <div className="text-center py-12 bg-muted/30 rounded-lg">
+        <Megaphone className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+        <p className="text-muted-foreground mb-2">
+          {queryParams.search || queryParams.category
+            ? "No affiliate offers found matching your criteria."
+            : "No affiliate offers yet. Create the first one!"}
+        </p>
+        <div className="flex items-center justify-center gap-3 mt-4">
+          {(queryParams.search || queryParams.category) && (
+            <Link href="/affiliates" className="text-primary hover:underline">
+              Clear filters
+            </Link>
+          )}
+          <Link href="/affiliates/new">
+            <Button size="sm">Create Offer</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const totalPages = Math.ceil((count || 0) / limit);
+
+  const buildPaginationUrl = (newPage: number) => {
+    const params = new URLSearchParams();
+    if (queryParams.search) params.set("search", queryParams.search);
+    if (queryParams.category) params.set("category", queryParams.category);
+    if (queryParams.sort && queryParams.sort !== "newest") params.set("sort", queryParams.sort);
+    params.set("page", String(newPage));
+    return `/affiliates?${params.toString()}`;
+  };
+
   return (
-    <main className="flex-1 container mx-auto px-4 py-8 max-w-5xl">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Affiliate Marketplace</h1>
-          <p className="text-muted-foreground mt-1">
-            Promote products and earn commissions in sats
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Link href="/dashboard/affiliates">
-            <Button variant="outline">My Dashboard</Button>
-          </Link>
-          <Link href="/affiliates/new">
-            <Button>Create Offer</Button>
-          </Link>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <p className="text-sm text-muted-foreground">
+        Showing {offers.length} of {count} offers
+      </p>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3 mb-6">
-        <form onSubmit={handleSearch} className="flex gap-2 flex-1 min-w-[200px]">
-          <Input
-            placeholder="Search offers..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <Button type="submit" variant="outline">Search</Button>
-        </form>
-
-        <Select value={category} onValueChange={setCategory}>
-          <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder="Category" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="">All Categories</SelectItem>
-            {SKILL_CATEGORIES.map((cat) => (
-              <SelectItem key={cat} value={cat}>
-                {cat.charAt(0).toUpperCase() + cat.slice(1)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select value={sort} onValueChange={setSort}>
-          <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder="Sort" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="newest">Newest</SelectItem>
-            <SelectItem value="commission">Highest Commission</SelectItem>
-            <SelectItem value="popular">Most Affiliates</SelectItem>
-            <SelectItem value="revenue">Top Revenue</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Results */}
-      {loading ? (
-        <div className="text-center py-12 text-muted-foreground">Loading offers...</div>
-      ) : offers.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground mb-4">No affiliate offers yet</p>
-          <Link href="/affiliates/new">
-            <Button>Create the first offer</Button>
-          </Link>
-        </div>
-      ) : (
-        <>
-          <p className="text-sm text-muted-foreground mb-4">{total} offer{total !== 1 ? "s" : ""}</p>
-          <div className="grid gap-4">
-            {offers.map((offer) => (
-              <Link
-                key={offer.id}
-                href={`/affiliates/${offer.slug}`}
-                className="block border rounded-lg p-5 hover:border-primary transition-colors"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-lg font-semibold truncate">{offer.title}</h3>
-                      <Badge variant="outline" className="shrink-0">
-                        {offer.product_type}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-                      {offer.description}
-                    </p>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      {offer.profiles?.username && (
-                        <span>by @{offer.profiles.username}</span>
-                      )}
-                      {offer.price_sats > 0 && (
-                        <span>{formatSats(offer.price_sats)} sats</span>
-                      )}
-                      <span>{offer.cookie_days}d cookie</span>
-                      <span>{offer.total_affiliates} affiliates</span>
-                      <span>{offer.total_conversions} sales</span>
-                    </div>
+      <div className="space-y-4">
+        {offers.map((offer) => {
+          const profile = offer.profiles as { id: string; username: string; full_name: string | null; avatar_url: string | null } | null;
+          return (
+            <Link
+              key={offer.id}
+              href={`/affiliates/${offer.slug}`}
+              className="block p-6 border border-border rounded-lg hover:border-primary/50 hover:shadow-sm transition-all"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="text-lg font-semibold truncate">{offer.title}</h3>
+                    <Badge variant="outline" className="shrink-0 text-xs">
+                      {offer.product_type}
+                    </Badge>
                   </div>
-                  <div className="text-right shrink-0">
-                    <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                      {commissionDisplay(offer)}
-                    </div>
-                    <div className="text-xs text-muted-foreground">commission</div>
-                    {offer.total_revenue_sats > 0 && (
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {formatSats(offer.total_revenue_sats)} sats volume
-                      </div>
+                  <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                    {offer.description}
+                  </p>
+
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+                    {profile?.username && (
+                      <span className="flex items-center gap-1.5">
+                        <Avatar className="h-5 w-5">
+                          {profile.avatar_url ? (
+                            <AvatarImage src={profile.avatar_url} alt={profile.username} />
+                          ) : null}
+                          <AvatarFallback className="text-[10px]">
+                            {(profile.full_name || profile.username)?.[0]?.toUpperCase() || "?"}
+                          </AvatarFallback>
+                        </Avatar>
+                        @{profile.username}
+                      </span>
                     )}
+                    {offer.price_sats > 0 && (
+                      <span className="flex items-center gap-1">
+                        <TrendingUp className="h-3.5 w-3.5" />
+                        {formatSats(offer.price_sats)} sats
+                      </span>
+                    )}
+                    <span>{offer.cookie_days}d cookie</span>
+                    <span className="flex items-center gap-1">
+                      <Users className="h-3.5 w-3.5" />
+                      {offer.total_affiliates} affiliates
+                    </span>
+                    <span>{offer.total_conversions} sales</span>
+                    <span>{formatRelativeTime(offer.created_at)}</span>
                   </div>
                 </div>
-                {offer.tags.length > 0 && (
-                  <div className="flex gap-1 mt-3">
-                    {offer.tags.slice(0, 5).map((tag) => (
-                      <Badge key={tag} variant="secondary" className="text-xs">
-                        {tag}
-                      </Badge>
-                    ))}
+
+                <div className="text-right shrink-0">
+                  <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                    {commissionDisplay(offer)}
                   </div>
-                )}
-              </Link>
-            ))}
-          </div>
-        </>
+                  <div className="text-xs text-muted-foreground">commission</div>
+                  {offer.total_revenue_sats > 0 && (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {formatSats(offer.total_revenue_sats)} sats vol.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {offer.tags && offer.tags.length > 0 && (
+                <div className="flex gap-1.5 mt-3 flex-wrap">
+                  {offer.tags.slice(0, 5).map((tag: string) => (
+                    <Badge key={tag} variant="secondary" className="text-xs">
+                      {tag}
+                    </Badge>
+                  ))}
+                  {offer.tags.length > 5 && (
+                    <Badge variant="secondary" className="text-xs">
+                      +{offer.tags.length - 5}
+                    </Badge>
+                  )}
+                </div>
+              )}
+            </Link>
+          );
+        })}
+      </div>
+
+      {totalPages > 1 && (
+        <div className="flex justify-center gap-2">
+          {page > 1 && (
+            <Link href={buildPaginationUrl(page - 1)}>
+              <Button variant="outline">Previous</Button>
+            </Link>
+          )}
+          <span className="flex items-center px-4 text-sm text-muted-foreground">
+            Page {page} of {totalPages}
+          </span>
+          {page < totalPages && (
+            <Link href={buildPaginationUrl(page + 1)}>
+              <Button variant="outline">Next</Button>
+            </Link>
+          )}
+        </div>
       )}
-    </main>
+    </div>
+  );
+}
+
+function AffiliatesListSkeleton() {
+  return (
+    <div className="space-y-4">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <div key={i} className="p-6 border border-border rounded-lg">
+          <Skeleton className="h-6 w-3/4 mb-2" />
+          <Skeleton className="h-4 w-full mb-4" />
+          <div className="flex gap-2 mb-4">
+            <Skeleton className="h-6 w-20" />
+            <Skeleton className="h-6 w-20" />
+            <Skeleton className="h-6 w-20" />
+          </div>
+          <div className="flex gap-4">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-24" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function AffiliateFilters({
+  search,
+  category,
+  sort,
+}: {
+  search?: string;
+  category?: string;
+  sort?: string;
+}) {
+  const currentSort = sort || "newest";
+
+  const sortOptions = [
+    { value: "newest", label: "Newest" },
+    { value: "commission", label: "Highest Commission" },
+    { value: "popular", label: "Most Affiliates" },
+    { value: "revenue", label: "Top Revenue" },
+  ];
+
+  return (
+    <div className="flex flex-wrap gap-3">
+      <form action="/affiliates" method="GET" className="flex gap-2 flex-1 min-w-[200px]">
+        <input
+          type="text"
+          name="search"
+          placeholder="Search offers..."
+          defaultValue={search}
+          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        />
+        {category && <input type="hidden" name="category" value={category} />}
+        {sort && <input type="hidden" name="sort" value={sort} />}
+        <Button type="submit" variant="outline">Search</Button>
+      </form>
+
+      <div className="flex gap-2 flex-wrap">
+        <Link href={`/affiliates?${new URLSearchParams({ ...(search ? { search } : {}), ...(sort ? { sort } : {}) }).toString()}`}>
+          <Button variant={!category ? "default" : "outline"} size="sm">All</Button>
+        </Link>
+        {SKILL_CATEGORIES.slice(0, 6).map((cat) => (
+          <Link
+            key={cat}
+            href={`/affiliates?${new URLSearchParams({ category: cat, ...(search ? { search } : {}), ...(sort ? { sort } : {}) }).toString()}`}
+          >
+            <Button variant={category === cat ? "default" : "outline"} size="sm">
+              {cat.charAt(0).toUpperCase() + cat.slice(1)}
+            </Button>
+          </Link>
+        ))}
+      </div>
+
+      <div className="flex gap-1">
+        {sortOptions.map((opt) => (
+          <Link
+            key={opt.value}
+            href={`/affiliates?${new URLSearchParams({ sort: opt.value, ...(search ? { search } : {}), ...(category ? { category } : {}) }).toString()}`}
+          >
+            <Button variant={currentSort === opt.value ? "default" : "ghost"} size="sm" className="text-xs">
+              {opt.label}
+            </Button>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default async function AffiliatesPage({ searchParams }: AffiliatesPageProps) {
+  const queryParams = await searchParams;
+
+  return (
+    <div className="flex flex-col min-h-screen">
+      <Header />
+
+      <main className="flex-1 container mx-auto px-4 py-8">
+        <div className="max-w-5xl mx-auto">
+          <div className="flex items-center justify-between mb-2">
+            <h1 className="text-3xl font-bold">Affiliate Marketplace</h1>
+            <div className="flex gap-2">
+              <Link href="/dashboard/affiliates">
+                <Button variant="outline" size="sm">My Dashboard</Button>
+              </Link>
+              <Link href="/affiliates/new">
+                <Button size="sm">Create Offer</Button>
+              </Link>
+            </div>
+          </div>
+          <p className="text-muted-foreground mb-8">
+            Promote products and earn commissions in sats
+          </p>
+
+          <AffiliateFilters
+            search={queryParams.search}
+            category={queryParams.category}
+            sort={queryParams.sort}
+          />
+
+          <div className="mt-8">
+            <Suspense fallback={<AffiliatesListSkeleton />}>
+              <AffiliatesList searchParams={searchParams} />
+            </Suspense>
+          </div>
+        </div>
+      </main>
+    </div>
   );
 }
