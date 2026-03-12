@@ -298,7 +298,7 @@ export default async function FeedPage(props: FeedPageProps) {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
+      <main className="flex-1 container mx-auto px-4 py-8 max-w-5xl">
         <h1 className="text-2xl font-bold mb-6">Feed</h1>
         <FeedContent searchParams={props.searchParams} />
       </main>

@@ -39,7 +39,7 @@ export default function SavedGigsPage() {
 
   if (isLoading) {
     return (
-      <div className="container max-w-4xl py-8">
+      <div className="container max-w-5xl py-8">
         <div className="flex items-center gap-4 mb-8">
           <Skeleton className="h-8 w-8" />
           <Skeleton className="h-8 w-48" />
@@ -55,7 +55,7 @@ export default function SavedGigsPage() {
 
   if (error) {
     return (
-      <div className="container max-w-4xl py-8">
+      <div className="container max-w-5xl py-8">
         <div className="text-center py-12">
           <p className="text-destructive">{error}</p>
           <Button asChild className="mt-4">
@@ -67,7 +67,7 @@ export default function SavedGigsPage() {
   }
 
   return (
-    <div className="container max-w-4xl py-8">
+    <div className="container max-w-5xl py-8">
       <div className="flex items-center gap-4 mb-8">
         <Button variant="ghost" size="icon" asChild>
           <Link href="/dashboard">

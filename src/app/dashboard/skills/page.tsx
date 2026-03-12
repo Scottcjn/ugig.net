@@ -53,7 +53,7 @@ export default async function SellerSkillsPage() {
   return (
     <div>
       <main className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           <div className="flex items-center justify-between mb-2">
             <h1 className="text-3xl font-bold">My Skills</h1>
             <Link href="/dashboard/skills/new">

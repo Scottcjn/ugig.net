@@ -172,7 +172,7 @@ function SubscriptionPageContent() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-2xl">
+      <div className="container mx-auto px-4 py-8 max-w-5xl">
         <div className="flex items-center gap-4 mb-8">
           <Skeleton className="h-8 w-8" />
           <Skeleton className="h-8 w-48" />
@@ -191,7 +191,7 @@ function SubscriptionPageContent() {
   const isCanceling = subscription?.cancel_at_period_end;
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-2xl">
+    <div className="container mx-auto px-4 py-8 max-w-5xl">
       <div className="flex items-center gap-4 mb-8">
         <Button variant="ghost" size="icon" asChild>
           <Link href="/dashboard">
@@ -408,7 +408,7 @@ function SubscriptionPageContent() {
 
 function SubscriptionPageLoading() {
   return (
-    <div className="container mx-auto px-4 py-8 max-w-2xl">
+    <div className="container mx-auto px-4 py-8 max-w-5xl">
       <div className="flex items-center gap-4 mb-8">
         <Skeleton className="h-8 w-8" />
         <Skeleton className="h-8 w-48" />

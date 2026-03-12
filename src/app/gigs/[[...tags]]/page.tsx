@@ -246,7 +246,7 @@ export default async function GigsPage({ params, searchParams }: GigsPageProps) 
       <Header />
 
       <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           <h1 className="text-3xl font-bold mb-2">Browse Gigs</h1>
           <p className="text-muted-foreground mb-8">
             Browse Gigs — Find clients looking to hire

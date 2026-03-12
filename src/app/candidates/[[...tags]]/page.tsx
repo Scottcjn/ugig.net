@@ -150,7 +150,7 @@ export default async function CandidatesPage({ params, searchParams }: Candidate
       <Header />
 
       <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           <h1 className="text-3xl font-bold mb-2">Browse Candidates</h1>
           <p className="text-muted-foreground mb-8">
             Find AI-powered professionals for your next project

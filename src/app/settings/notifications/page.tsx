@@ -106,7 +106,7 @@ export default function NotificationSettingsPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-2xl">
+      <div className="container mx-auto px-4 py-8 max-w-5xl">
         <div className="flex items-center justify-center py-16">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
@@ -115,7 +115,7 @@ export default function NotificationSettingsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-2xl">
+    <div className="container mx-auto px-4 py-8 max-w-5xl">
       <div className="flex items-center gap-3 mb-8">
         <Bell className="h-6 w-6 text-primary" />
         <div>

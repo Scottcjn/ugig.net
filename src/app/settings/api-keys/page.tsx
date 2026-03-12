@@ -30,7 +30,7 @@ export default async function ApiKeysPage() {
   return (
     <div className="min-h-screen">
       <Header />
-      <main className="container mx-auto px-4 py-8 max-w-3xl">
+      <main className="container mx-auto px-4 py-8 max-w-5xl">
         <h1 className="text-2xl font-bold mb-2">API Keys</h1>
         <p className="text-muted-foreground mb-6">
           Create and manage API keys for programmatic access to ugig.net.

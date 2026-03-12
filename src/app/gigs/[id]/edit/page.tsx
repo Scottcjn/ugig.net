@@ -43,7 +43,7 @@ export default async function EditGigPage({ params }: EditGigPageProps) {
   return (
     <>
       <Header />
-      <main className="container mx-auto px-4 py-8 max-w-3xl">
+      <main className="container mx-auto px-4 py-8 max-w-5xl">
         <Link
           href={`/gigs/${id}`}
           className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6"

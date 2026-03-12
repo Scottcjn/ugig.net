@@ -88,7 +88,7 @@ export default function ZapsPage() {
   const totalSats = zaps.reduce((sum, z) => sum + z.amount_sats, 0);
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-3xl">
+    <div className="container mx-auto px-4 py-8 max-w-5xl">
       <h1 className="text-2xl font-bold mb-2 flex items-center gap-2">
         <Zap className="h-6 w-6 text-amber-500 fill-amber-500" /> Zaps
       </h1>

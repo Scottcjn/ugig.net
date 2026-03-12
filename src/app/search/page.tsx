@@ -13,7 +13,7 @@ export default function SearchPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
+      <main className="flex-1 container mx-auto px-4 py-8 max-w-5xl">
         <h1 className="text-3xl font-bold mb-6">Search</h1>
         <noscript>
           <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg text-sm text-yellow-700 dark:text-yellow-300">

@@ -72,7 +72,7 @@ export default async function FollowersPage({ params }: Props) {
     <div className="min-h-screen">
       <Header />
 
-      <main className="container mx-auto px-4 py-8 max-w-2xl">
+      <main className="container mx-auto px-4 py-8 max-w-5xl">
         <div className="mb-6">
           <Link
             href={`/u/${encodeURIComponent(username)}`}

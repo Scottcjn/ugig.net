@@ -121,7 +121,7 @@ export default function ReferralsPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-2xl space-y-8">
+    <div className="container mx-auto px-4 py-8 max-w-5xl space-y-8">
       <div>
         <h1 className="text-2xl font-bold">Invite Friends</h1>
         <p className="text-muted-foreground mt-1">

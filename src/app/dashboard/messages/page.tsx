@@ -23,7 +23,7 @@ export default async function MessagesPage() {
     <div>
 
       <main className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           <div className="flex items-center gap-3 mb-8">
             <div className="p-3 bg-primary/10 rounded-xl">
               <MessageSquare className="h-6 w-6 text-primary" />

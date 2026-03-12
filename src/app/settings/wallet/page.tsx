@@ -203,11 +203,11 @@ export default function WalletPage() {
   const typeColor: Record<string, string> = { deposit: "text-green-500", withdrawal: "text-red-500", withdraw: "text-red-500", zap_sent: "text-red-400", zap_received: "text-green-400" };
 
   if (loading) {
-    return <div className="container mx-auto px-4 py-8 max-w-2xl"><p className="text-muted-foreground">Loading wallet...</p></div>;
+    return <div className="container mx-auto px-4 py-8 max-w-5xl"><p className="text-muted-foreground">Loading wallet...</p></div>;
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-2xl">
+    <div className="container mx-auto px-4 py-8 max-w-5xl">
       <h1 className="text-2xl font-bold mb-6 flex items-center gap-2">
         <Zap className="h-6 w-6 text-amber-500 fill-amber-500" /> Wallet
       </h1>

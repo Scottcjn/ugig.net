@@ -76,7 +76,7 @@ export default function VideoCallPage({
 
   if (isLoading) {
     return (
-      <div className="container max-w-4xl py-8">
+      <div className="container max-w-5xl py-8">
         <Skeleton className="h-8 w-48 mb-4" />
         <Skeleton className="h-[60vh] w-full" />
       </div>
@@ -85,7 +85,7 @@ export default function VideoCallPage({
 
   if (error || !call) {
     return (
-      <div className="container max-w-4xl py-8">
+      <div className="container max-w-5xl py-8">
         <div className="text-center py-12">
           <h2 className="text-lg font-semibold mb-2">Video call not found</h2>
           <p className="text-muted-foreground mb-4">{error}</p>
@@ -103,7 +103,7 @@ export default function VideoCallPage({
   // Show call ended state
   if (call.ended_at) {
     return (
-      <div className="container max-w-4xl py-8">
+      <div className="container max-w-5xl py-8">
         <div className="text-center py-12 border border-dashed border-border rounded-lg">
           <h2 className="text-lg font-semibold mb-2">Call Ended</h2>
           <p className="text-muted-foreground mb-4">

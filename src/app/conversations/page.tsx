@@ -13,7 +13,7 @@ export default function ConversationsPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      <main className="flex-1 container mx-auto px-4 py-16 max-w-2xl flex flex-col items-center justify-center text-center">
+      <main className="flex-1 container mx-auto px-4 py-16 max-w-5xl flex flex-col items-center justify-center text-center">
         <MessageSquare className="h-16 w-16 text-muted-foreground mb-6" />
         <h1 className="text-3xl font-bold mb-3">Conversations</h1>
         <p className="text-muted-foreground mb-2 text-lg">

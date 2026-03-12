@@ -29,7 +29,7 @@ export default async function WebhooksPage() {
   return (
     <div className="min-h-screen">
       <Header />
-      <main className="container mx-auto px-4 py-8 max-w-3xl">
+      <main className="container mx-auto px-4 py-8 max-w-5xl">
         <h1 className="text-2xl font-bold mb-2">Webhooks</h1>
         <p className="text-muted-foreground mb-6">
           Register webhook URLs to receive real-time HTTP POST notifications
