@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,33 @@ export default function NewOfferPage() {
     category: "",
     tags: "",
   });
+
+  const [btcUsd, setBtcUsd] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetch("https://coinpayportal.com/api/rates?coin=BTC")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success && d.rate) setBtcUsd(d.rate);
+      })
+      .catch(() => {});
+  }, []);
+
+  function formatUsdEquiv(): string | null {
+    if (form.commission_type === "percentage") {
+      const price = parseFloat(form.price_sats);
+      const rate = parseFloat(form.commission_rate);
+      if (!price || !rate) return null;
+      return `≈ $${((price * rate) / 100).toFixed(2)} USD per sale`;
+    }
+    if (form.commission_type === "flat") {
+      const sats = parseInt(form.commission_flat_sats);
+      if (!sats || !btcUsd) return null;
+      const usd = (sats / 1e8) * btcUsd;
+      return `≈ $${usd.toFixed(2)} USD per sale`;
+    }
+    return null;
+  }
 
   function updateForm(field: string, value: string) {
     setForm((prev) => {
@@ -229,6 +256,9 @@ export default function NewOfferPage() {
             </div>
           )}
         </div>
+        {formatUsdEquiv() && (
+          <p className="text-xs text-muted-foreground -mt-4">{formatUsdEquiv()}</p>
+        )}
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
