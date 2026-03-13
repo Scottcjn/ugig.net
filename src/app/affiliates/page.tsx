@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Megaphone, Users, TrendingUp, ExternalLink } from "lucide-react";
+import { Megaphone, Users, TrendingUp, ExternalLink, Zap } from "lucide-react";
 import { SKILL_CATEGORIES } from "@/lib/constants";
 
 export const metadata: Metadata = {
@@ -252,7 +252,8 @@ async function AffiliatesList({ searchParams }: { searchParams: AffiliatesPagePr
                 </div>
 
                 <div className="sm:text-right shrink-0 flex sm:block items-center gap-2">
-                  <div className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">
+                  <div className="text-xl sm:text-2xl font-bold text-amber-500 flex items-center gap-1">
+                    <Zap className="h-5 w-5 fill-amber-500" />
                     {commissionDisplay(offer)}
                   </div>
                   <div className="text-xs text-muted-foreground hidden sm:block">commission</div>
