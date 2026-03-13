@@ -75,6 +75,14 @@ function displayUrl(href: string): string {
   return href.replace(/^https?:\/\//, "").replace(/\/$/, "");
 }
 
+async function fetchBtcRate(): Promise<number | null> {
+  try {
+    const res = await fetch("https://coinpayportal.com/api/rates?coin=BTC", { next: { revalidate: 300 } });
+    const d = await res.json();
+    return d.success && d.rate ? d.rate : null;
+  } catch { return null; }
+}
+
 export default async function SkillDetailPage({ params }: SkillDetailProps) {
   const { slug } = await params;
   const supabase = await createClient();
@@ -97,10 +105,11 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
     (tag: string) => !SUPPORTED_AGENT_OPTIONS.includes(tag as (typeof SUPPORTED_AGENT_OPTIONS)[number])
   );
 
-  // Check auth + purchase status + user vote
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Check auth + purchase status + user vote + BTC rate
+  const [{data: { user }}, btcUsd] = await Promise.all([
+    supabase.auth.getUser(),
+    fetchBtcRate(),
+  ]);
 
   let purchased = false;
   let isOwner = false;
@@ -520,6 +529,11 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
                       <Zap className="h-6 w-6 fill-amber-500" />
                       {l.price_sats.toLocaleString()} sats
                     </p>
+                    {btcUsd && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        ≈ ${((l.price_sats / 1e8) * btcUsd).toFixed(2)} USD
+                      </p>
+                    )}
                   )}
                 </div>
 
