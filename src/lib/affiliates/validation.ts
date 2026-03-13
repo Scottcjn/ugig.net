@@ -24,8 +24,29 @@ export interface ValidationResult {
   sanitized?: OfferInput;
 }
 
+export function stripHtmlTags(str: string): string {
+  return str.replace(/<[^>]*>/g, "");
+}
+
+export function isValidUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 export function validateOfferInput(input: OfferInput): ValidationResult {
   const errors: string[] = [];
+
+  // Strip HTML tags from title and description (#26)
+  if (input.title) {
+    input.title = stripHtmlTags(input.title);
+  }
+  if (input.description) {
+    input.description = stripHtmlTags(input.description);
+  }
 
   if (!input.title || input.title.trim().length < 3) {
     errors.push("Title must be at least 3 characters");
@@ -38,8 +59,20 @@ export function validateOfferInput(input: OfferInput): ValidationResult {
     errors.push("Description must be at least 10 characters");
   }
 
+  // Validate product_url scheme (#18 - XSS prevention)
+  if (input.product_url && input.product_url.trim()) {
+    if (!isValidUrl(input.product_url)) {
+      errors.push("product_url must use http:// or https:// scheme");
+    }
+  }
+
+  // Default price_sats to 0 if not provided (#28)
+  if (input.price_sats === undefined || input.price_sats === null) {
+    input.price_sats = 0;
+  }
+
   if (typeof input.price_sats !== "number" || input.price_sats < 0) {
-    errors.push("Price must be a non-negative number");
+    errors.push("price_sats must be a non-negative number");
   }
 
   const commissionType = input.commission_type || "percentage";
@@ -51,8 +84,17 @@ export function validateOfferInput(input: OfferInput): ValidationResult {
     }
   } else if (commissionType === "flat") {
     const flatSats = input.commission_flat_sats ?? 0;
-    if (flatSats < 1) {
+    if (flatSats < 0) {
+      errors.push("commission_flat_sats must be non-negative");
+    } else if (flatSats < 1) {
       errors.push("Flat commission must be at least 1 sat");
+    }
+  }
+
+  // Also reject negative commission_flat_sats even when type is percentage (#23)
+  if (input.commission_flat_sats !== undefined && input.commission_flat_sats < 0) {
+    if (!errors.some(e => e.includes("commission_flat_sats"))) {
+      errors.push("commission_flat_sats must be non-negative");
     }
   }
 

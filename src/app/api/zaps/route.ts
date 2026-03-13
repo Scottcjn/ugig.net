@@ -1,6 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 
+/**
+ * POST /api/zaps - Proxy to /api/wallet/zap (#17)
+ */
+export async function POST(request: NextRequest) {
+  const url = new URL("/api/wallet/zap", request.url);
+  const body = await request.text();
+  const headers = new Headers(request.headers);
+  
+  const res = await fetch(url.toString(), {
+    method: "POST",
+    headers,
+    body,
+  });
+
+  const data = await res.json();
+  return NextResponse.json(data, { status: res.status });
+}
+
 export async function GET(request: NextRequest) {
   try {
     const url = new URL(request.url);
