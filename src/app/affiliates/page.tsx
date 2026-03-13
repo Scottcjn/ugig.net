@@ -334,13 +334,19 @@ function AffiliatesListSkeleton() {
 function AffiliateFilters({
   search,
   category,
+  tag,
   sort,
 }: {
   search?: string;
   category?: string;
+  tag?: string;
   sort?: string;
 }) {
   const currentSort = sort || "newest";
+  const base = {
+    ...(search ? { search } : {}),
+    ...(tag ? { tag } : {}),
+  };
 
   const sortOptions = [
     { value: "newest", label: "Newest" },
@@ -351,6 +357,14 @@ function AffiliateFilters({
 
   return (
     <div className="flex flex-wrap gap-3">
+      {tag && (
+        <div className="w-full flex items-center gap-2 text-sm text-muted-foreground">
+          Filtered by tag: <Badge variant="secondary">{tag}</Badge>
+          <Link href={`/affiliates?${new URLSearchParams({ ...(search ? { search } : {}), ...(category ? { category } : {}), ...(sort ? { sort } : {}) }).toString()}`} className="text-primary hover:underline text-xs">
+            Clear
+          </Link>
+        </div>
+      )}
       <form action="/affiliates" method="GET" className="flex gap-2 flex-1 min-w-[200px]">
         <input
           type="text"
@@ -360,18 +374,19 @@ function AffiliateFilters({
           className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         />
         {category && <input type="hidden" name="category" value={category} />}
+        {tag && <input type="hidden" name="tag" value={tag} />}
         {sort && <input type="hidden" name="sort" value={sort} />}
         <Button type="submit" variant="outline">Search</Button>
       </form>
 
       <div className="flex gap-2 flex-wrap">
-        <Link href={`/affiliates?${new URLSearchParams({ ...(search ? { search } : {}), ...(sort ? { sort } : {}) }).toString()}`}>
+        <Link href={`/affiliates?${new URLSearchParams({ ...base, ...(sort ? { sort } : {}) }).toString()}`}>
           <Button variant={!category ? "default" : "outline"} size="sm">All</Button>
         </Link>
         {SKILL_CATEGORIES.slice(0, 6).map((cat) => (
           <Link
             key={cat}
-            href={`/affiliates?${new URLSearchParams({ category: cat, ...(search ? { search } : {}), ...(sort ? { sort } : {}) }).toString()}`}
+            href={`/affiliates?${new URLSearchParams({ ...base, category: cat, ...(sort ? { sort } : {}) }).toString()}`}
           >
             <Button variant={category === cat ? "default" : "outline"} size="sm">
               {cat.charAt(0).toUpperCase() + cat.slice(1)}
@@ -384,7 +399,7 @@ function AffiliateFilters({
         {sortOptions.map((opt) => (
           <Link
             key={opt.value}
-            href={`/affiliates?${new URLSearchParams({ sort: opt.value, ...(search ? { search } : {}), ...(category ? { category } : {}) }).toString()}`}
+            href={`/affiliates?${new URLSearchParams({ ...base, sort: opt.value, ...(category ? { category } : {}) }).toString()}`}
           >
             <Button variant={currentSort === opt.value ? "default" : "ghost"} size="sm" className="text-xs">
               {opt.label}
@@ -421,6 +436,7 @@ export default async function AffiliatesPage({ searchParams }: AffiliatesPagePro
           <AffiliateFilters
             search={queryParams.search}
             category={queryParams.category}
+            tag={queryParams.tag}
             sort={queryParams.sort}
           />
 
