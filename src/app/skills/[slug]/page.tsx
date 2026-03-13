@@ -343,20 +343,22 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
                 <MarkdownContent content={l.description || ""} />
               </div>
 
-              {/* ─── Install section ───────────────────────────────── */}
-              {curlUrl && (
+              {/* ─── Install section (hidden for paid skills unless entitled) ── */}
+              {curlUrl && canDownload && (
                 <div>
                   <h2 className="text-xl font-semibold mb-3">Install</h2>
                   <CurlSnippet url={curlUrl} />
                 </div>
               )}
 
-              {/* ─── Publish Everywhere ────────────────────────────── */}
-              <PublishElsewhere
-                slug={slug}
-                skillFileUrl={skillFileUrl}
-                sourceUrl={sourceUrl}
-              />
+              {/* ─── Publish Everywhere (owner only) ──────────────── */}
+              {isOwner && (
+                <PublishElsewhere
+                  slug={slug}
+                  skillFileUrl={skillFileUrl}
+                  sourceUrl={sourceUrl}
+                />
+              )}
 
               {/* ─── Links ────────────────────────────────────────── */}
               {(websiteUrl || skillFileUrl || sourceUrl) && (
@@ -377,7 +379,7 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
                         <ExternalLink className="h-3 w-3 shrink-0 opacity-50" />
                       </a>
                     )}
-                    {skillFileUrl && (
+                    {skillFileUrl && canDownload && (
                       <a
                         href={skillFileUrl}
                         target="_blank"
