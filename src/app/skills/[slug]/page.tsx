@@ -525,15 +525,17 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
                   {l.price_sats === 0 ? (
                     <p className="text-2xl font-bold text-green-500">Free</p>
                   ) : (
-                    <p className="text-2xl font-bold text-amber-500 flex items-center justify-center gap-1">
-                      <Zap className="h-6 w-6 fill-amber-500" />
-                      {l.price_sats.toLocaleString()} sats
-                    </p>
-                    {btcUsd && (
-                      <p className="text-sm text-muted-foreground mt-1">
-                        ≈ {"$"}{((l.price_sats / 1e8) * btcUsd).toFixed(2)} USD
+                    <>
+                      <p className="text-2xl font-bold text-amber-500 flex items-center justify-center gap-1">
+                        <Zap className="h-6 w-6 fill-amber-500" />
+                        {l.price_sats.toLocaleString()} sats
                       </p>
-                    )}
+                      {btcUsd && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          ≈ ${((l.price_sats / 1e8) * btcUsd).toFixed(2)} USD
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
 
