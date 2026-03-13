@@ -589,59 +589,85 @@ export default function SellerOfferDetailPage() {
                       {conv.note || "—"}
                     </td>
                     <td className="p-3 text-center">
-                      {conv.status !== "paid" && (
-                        <div className="flex items-center justify-center gap-1">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-7 px-2 text-xs"
-                            onClick={async () => {
-                              const newNote = prompt("Edit note:", conv.note || "");
-                              if (newNote === null) return;
-                              const newAmount = prompt("Edit sale amount (sats):", String(conv.sale_amount_sats));
-                              if (newAmount === null) return;
-                              const res = await fetch(`/api/affiliates/offers/${id}/conversions`, {
-                                method: "PUT",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({
-                                  conversion_id: conv.id,
-                                  note: newNote,
-                                  sale_amount_sats: parseInt(newAmount) || conv.sale_amount_sats,
-                                }),
-                              });
-                              if (res.ok) {
-                                await fetchData();
-                              } else {
+                      <div className="flex items-center justify-center gap-1">
+                        {conv.status === "pending" && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="default"
+                              className="h-7 px-2 text-xs bg-green-600 hover:bg-green-700"
+                              onClick={async () => {
+                                if (!confirm(`Pay ${conv.commission_sats.toLocaleString()} sats commission to @${conv.username || "affiliate"}?`)) return;
+                                const res = await fetch(`/api/affiliates/offers/${id}/conversions/pay`, {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ conversion_id: conv.id }),
+                                });
                                 const data = await res.json();
-                                alert(data.error || "Failed to update");
-                              }
-                            }}
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-7 px-2 text-xs text-red-500 hover:text-red-700"
-                            onClick={async () => {
-                              if (!confirm("Delete this conversion?")) return;
-                              const res = await fetch(`/api/affiliates/offers/${id}/conversions`, {
-                                method: "DELETE",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ conversion_id: conv.id }),
-                              });
-                              if (res.ok) {
-                                await fetchData();
-                              } else {
-                                const data = await res.json();
-                                alert(data.error || "Failed to delete");
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      )}
+                                if (res.ok) {
+                                  await fetchData();
+                                } else {
+                                  alert(data.error || "Payment failed");
+                                }
+                              }}
+                            >
+                              <Zap className="h-3 w-3 mr-1" /> Pay
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 px-2 text-xs"
+                              onClick={async () => {
+                                const newNote = prompt("Edit note:", conv.note || "");
+                                if (newNote === null) return;
+                                const newAmount = prompt("Edit sale amount (sats):", String(conv.sale_amount_sats));
+                                if (newAmount === null) return;
+                                const res = await fetch(`/api/affiliates/offers/${id}/conversions`, {
+                                  method: "PUT",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({
+                                    conversion_id: conv.id,
+                                    note: newNote,
+                                    sale_amount_sats: parseInt(newAmount) || conv.sale_amount_sats,
+                                  }),
+                                });
+                                if (res.ok) {
+                                  await fetchData();
+                                } else {
+                                  const data = await res.json();
+                                  alert(data.error || "Failed to update");
+                                }
+                              }}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 px-2 text-xs text-red-500 hover:text-red-700"
+                              onClick={async () => {
+                                if (!confirm("Delete this conversion?")) return;
+                                const res = await fetch(`/api/affiliates/offers/${id}/conversions`, {
+                                  method: "DELETE",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ conversion_id: conv.id }),
+                                });
+                                if (res.ok) {
+                                  await fetchData();
+                                } else {
+                                  const data = await res.json();
+                                  alert(data.error || "Failed to delete");
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </>
+                        )}
+                        {conv.status === "paid" && (
+                          <span className="text-xs text-green-500">✓ Paid</span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
