@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useDialog } from "@/components/providers/DialogProvider";
 import { Skeleton } from "@/components/ui/skeleton";
 import { subscriptions as subscriptionsApi } from "@/lib/api";
 import { PLANS } from "@/lib/stripe";
@@ -28,6 +29,7 @@ type SubscriptionData = {
 
 function SubscriptionPageContent() {
   const searchParams = useSearchParams();
+  const { confirm } = useDialog();
   const [subscription, setSubscription] = useState<SubscriptionData | null>(
     null
   );
@@ -119,7 +121,7 @@ function SubscriptionPageContent() {
 
   const handleCancel = async () => {
     if (
-      !confirm(
+      !await confirm(
         "Are you sure you want to cancel your subscription? You will keep Pro features until the end of your billing period."
       )
     ) {

@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { formatRelativeTime } from "@/lib/utils";
 import { linkifyText } from "@/lib/linkify";
 import type { GigCommentThread, GigCommentWithAuthor } from "@/types";
+import { useDialog } from "@/components/providers/DialogProvider";
 
 interface GigCommentsProps {
   gigId: string;
@@ -17,6 +18,7 @@ interface GigCommentsProps {
 }
 
 export function GigComments({ gigId, currentUserId, gigOwnerId }: GigCommentsProps) {
+  const { confirm } = useDialog();
   const [threads, setThreads] = useState<GigCommentThread[]>([]);
   const [loading, setLoading] = useState(true);
   const [newComment, setNewComment] = useState("");
@@ -132,7 +134,7 @@ export function GigComments({ gigId, currentUserId, gigOwnerId }: GigCommentsPro
   };
 
   const handleDeleteComment = async (commentId: string) => {
-    if (!confirm("Are you sure you want to delete this comment?")) return;
+    if (!await confirm("Are you sure you want to delete this comment?")) return;
 
     setError(null);
 
