@@ -376,7 +376,7 @@ export default function AffiliateDashboardPage() {
               {sellerData.offers.map((offer: any) => (
                 <Link
                   key={offer.id}
-                  href={`/affiliates/${offer.slug}`}
+                  href={`/dashboard/affiliates/${offer.id}`}
                   className="block bg-card border border-border rounded-lg p-4 hover:shadow-md hover:border-primary/30 transition-all duration-200"
                 >
                   <div className="flex items-center justify-between">

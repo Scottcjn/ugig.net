@@ -1,0 +1,382 @@
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  ArrowLeft,
+  Copy,
+  Check,
+  MousePointerClick,
+  TrendingUp,
+  Zap,
+  Users,
+  Pencil,
+} from "lucide-react";
+
+interface OfferInfo {
+  id: string;
+  title: string;
+  slug: string;
+  status: string;
+  commission_rate: number;
+  commission_type: string;
+  commission_flat_sats: number;
+  total_clicks: number;
+  total_conversions: number;
+  total_revenue_sats: number;
+  total_commissions_sats: number;
+}
+
+interface AffiliateEntry {
+  application_id: string;
+  affiliate_id: string;
+  username: string | null;
+  avatar_url: string | null;
+  status: string;
+  tracking_code: string;
+  tracking_url: string | null;
+  clicks_30d: number;
+  conversions: number;
+  earned_sats: number;
+  pending_sats: number;
+  applied_at: string;
+  approved_at: string | null;
+}
+
+function formatSats(sats: number): string {
+  if (sats >= 1_000_000) return `${(sats / 1_000_000).toFixed(1)}M`;
+  if (sats >= 1_000) return `${(sats / 1_000).toFixed(1)}K`;
+  return sats.toLocaleString();
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      onClick={() => {
+        navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }}
+    >
+      {copied ? (
+        <Check className="h-3.5 w-3.5" />
+      ) : (
+        <Copy className="h-3.5 w-3.5" />
+      )}
+    </Button>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  suffix,
+  icon: Icon,
+}: {
+  label: string;
+  value: string | number;
+  suffix?: string;
+  icon: React.ElementType;
+}) {
+  return (
+    <div className="p-5 bg-card rounded-lg border border-border shadow-sm">
+      <div className="flex items-center gap-3">
+        <div className="p-2.5 bg-primary/10 rounded-xl">
+          <Icon className="h-5 w-5 text-primary" />
+        </div>
+        <div>
+          <p className="text-2xl font-bold">
+            {value}
+            {suffix && (
+              <span className="text-sm font-normal text-muted-foreground ml-1">
+                {suffix}
+              </span>
+            )}
+          </p>
+          <p className="text-sm text-muted-foreground">{label}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function SellerOfferDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const router = useRouter();
+  const [offer, setOffer] = useState<OfferInfo | null>(null);
+  const [affiliates, setAffiliates] = useState<AffiliateEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  const fetchData = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/affiliates/offers/${id}/affiliates`);
+      if (res.status === 401) {
+        router.replace("/login?redirect=/dashboard/affiliates");
+        return;
+      }
+      if (res.status === 403 || res.status === 404) {
+        setError("Offer not found or you don't have access.");
+        setLoading(false);
+        return;
+      }
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to load offer");
+        setLoading(false);
+        return;
+      }
+      setOffer(data.offer);
+      setAffiliates(data.affiliates);
+      setLoading(false);
+    } catch {
+      setError("Failed to load offer details");
+      setLoading(false);
+    }
+  }, [id, router]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  async function handleAction(
+    applicationId: string,
+    action: "approve" | "reject"
+  ) {
+    setActionLoading(applicationId);
+    try {
+      const res = await fetch(`/api/affiliates/offers/${id}/applications`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ application_id: applicationId, action }),
+      });
+      if (res.ok) {
+        await fetchData();
+      }
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  if (loading) {
+    return (
+      <main className="container mx-auto px-4 py-8">
+        <p className="text-muted-foreground">Loading offer details...</p>
+      </main>
+    );
+  }
+
+  if (error || !offer) {
+    return (
+      <main className="container mx-auto px-4 py-8">
+        <div className="text-center py-12">
+          <p className="text-muted-foreground mb-4">{error || "Not found"}</p>
+          <Link href="/dashboard/affiliates">
+            <Button variant="outline">Back to Dashboard</Button>
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
+  const commissionDisplay =
+    offer.commission_type === "flat"
+      ? `${formatSats(offer.commission_flat_sats || 0)} sats/sale`
+      : `${Math.round((offer.commission_rate || 0) * 100)}%`;
+
+  return (
+    <main className="container mx-auto px-4 py-8">
+      {/* Header */}
+      <div className="mb-8">
+        <Link
+          href="/dashboard/affiliates"
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Dashboard
+        </Link>
+
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-2xl font-bold">{offer.title}</h1>
+              <Badge
+                variant={offer.status === "active" ? "default" : "secondary"}
+              >
+                {offer.status}
+              </Badge>
+            </div>
+            <p className="text-muted-foreground">
+              Commission: {commissionDisplay}
+            </p>
+          </div>
+          <Link href={`/affiliates/${offer.slug}/edit`}>
+            <Button variant="outline" size="sm">
+              <Pencil className="h-4 w-4 mr-2" />
+              Edit Offer
+            </Button>
+          </Link>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <StatCard
+          label="Total Clicks"
+          value={offer.total_clicks}
+          icon={MousePointerClick}
+        />
+        <StatCard
+          label="Conversions"
+          value={offer.total_conversions}
+          icon={TrendingUp}
+        />
+        <StatCard
+          label="Revenue"
+          value={formatSats(offer.total_revenue_sats)}
+          suffix="sats"
+          icon={Zap}
+        />
+        <StatCard
+          label="Commissions Paid"
+          value={formatSats(offer.total_commissions_sats)}
+          suffix="sats"
+          icon={Users}
+        />
+      </div>
+
+      {/* Affiliates table */}
+      <h2 className="text-xl font-semibold mb-4">
+        Affiliates ({affiliates.length})
+      </h2>
+
+      {affiliates.length === 0 ? (
+        <div className="text-center py-12 bg-card border border-border rounded-lg">
+          <Users className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+          <p className="text-muted-foreground">
+            No affiliates have joined this program yet
+          </p>
+        </div>
+      ) : (
+        <div className="bg-card border border-border rounded-lg overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50">
+                <tr>
+                  <th className="text-left p-3 font-medium">Affiliate</th>
+                  <th className="text-center p-3 font-medium">Status</th>
+                  <th className="text-left p-3 font-medium">Tracking URL</th>
+                  <th className="text-right p-3 font-medium">Clicks (30d)</th>
+                  <th className="text-right p-3 font-medium">Conversions</th>
+                  <th className="text-right p-3 font-medium">Earned</th>
+                  <th className="text-right p-3 font-medium">Joined</th>
+                  <th className="text-center p-3 font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {affiliates.map((aff) => (
+                  <tr key={aff.application_id} className="border-t border-border">
+                    <td className="p-3">
+                      <div className="flex items-center gap-2">
+                        {aff.avatar_url ? (
+                          <img
+                            src={aff.avatar_url}
+                            alt=""
+                            className="h-7 w-7 rounded-full"
+                          />
+                        ) : (
+                          <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
+                            {(aff.username || "?")[0].toUpperCase()}
+                          </div>
+                        )}
+                        {aff.username ? (
+                          <Link
+                            href={`/@${aff.username}`}
+                            className="font-medium hover:underline"
+                          >
+                            @{aff.username}
+                          </Link>
+                        ) : (
+                          <span className="text-muted-foreground">Unknown</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-3 text-center">
+                      <Badge
+                        variant={
+                          aff.status === "approved"
+                            ? "default"
+                            : aff.status === "rejected"
+                              ? "destructive"
+                              : "secondary"
+                        }
+                      >
+                        {aff.status}
+                      </Badge>
+                    </td>
+                    <td className="p-3">
+                      {aff.tracking_url ? (
+                        <div className="flex items-center gap-2">
+                          <code className="text-xs bg-muted px-2 py-1 rounded font-mono max-w-[180px] truncate">
+                            {aff.tracking_code}
+                          </code>
+                          <CopyButton text={aff.tracking_url} />
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">—</span>
+                      )}
+                    </td>
+                    <td className="text-right p-3">{aff.clicks_30d}</td>
+                    <td className="text-right p-3">{aff.conversions}</td>
+                    <td className="text-right p-3">
+                      <span className="inline-flex items-center gap-1">
+                        <Zap className="h-3 w-3 text-amber-500" />
+                        {formatSats(aff.earned_sats)}
+                      </span>
+                    </td>
+                    <td className="text-right p-3 text-muted-foreground">
+                      {new Date(aff.applied_at).toLocaleDateString()}
+                    </td>
+                    <td className="p-3 text-center">
+                      {aff.status === "pending" && (
+                        <div className="flex items-center justify-center gap-1">
+                          <Button
+                            size="sm"
+                            variant="default"
+                            disabled={actionLoading === aff.application_id}
+                            onClick={() =>
+                              handleAction(aff.application_id, "approve")
+                            }
+                          >
+                            Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={actionLoading === aff.application_id}
+                            onClick={() =>
+                              handleAction(aff.application_id, "reject")
+                            }
+                          >
+                            Reject
+                          </Button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </main>
+  );
+}
