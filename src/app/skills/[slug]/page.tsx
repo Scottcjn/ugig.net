@@ -347,7 +347,7 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
               {curlUrl && canDownload && (
                 <div>
                   <h2 className="text-xl font-semibold mb-3">Install</h2>
-                  <CurlSnippet url={curlUrl} />
+                  <CurlSnippet url={curlUrl} slug={slug} />
                 </div>
               )}
 
