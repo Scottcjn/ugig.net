@@ -266,7 +266,7 @@ export default function AffiliateDashboardPage() {
                         {app.tracking_code}
                       </code>
                       <CopyButton
-                        text={`${window.location.origin}/api/affiliates/click?ref=${app.tracking_code}`}
+                        text={`${window.location.origin}/api/affiliates/click?ugig_ref=${app.tracking_code}`}
                       />
                     </div>
                   )}
@@ -390,13 +390,32 @@ export default function AffiliateDashboardPage() {
                         >
                           {offer.status}
                         </Badge>
+                        <Badge variant="outline" className="flex items-center gap-1">
+                          <Users className="h-3 w-3" />
+                          {offer.total_affiliates || 0}
+                        </Badge>
+                        {(offer.total_conversions || 0) > 0 && (
+                          <Badge variant="outline" className="flex items-center gap-1 text-green-500 border-green-500/30">
+                            <TrendingUp className="h-3 w-3" />
+                            {offer.total_conversions} sales
+                          </Badge>
+                        )}
+                        {(offer.total_clicks || 0) > 0 && (
+                          <Badge variant="outline" className="flex items-center gap-1 text-muted-foreground">
+                            <MousePointerClick className="h-3 w-3" />
+                            {offer.total_clicks} clicks
+                            {offer.total_conversions > 0 && (
+                              <span className="text-primary ml-0.5">
+                                ({((offer.total_conversions / offer.total_clicks) * 100).toFixed(1)}%)
+                              </span>
+                            )}
+                          </Badge>
+                        )}
                       </div>
                       <div className="text-sm text-muted-foreground mt-1">
                         {offer.commission_type === "flat"
                           ? `${formatSats(offer.commission_flat_sats || 0)} sats/sale`
                           : `${Math.round(offer.commission_rate * 100)}% commission`}
-                        · {offer.total_affiliates} affiliates ·{" "}
-                        {offer.total_conversions} sales
                       </div>
                     </div>
                     <div className="text-right">

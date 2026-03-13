@@ -159,7 +159,7 @@ export async function GET(
           tracking_code: app.tracking_code,
           tracking_url:
             app.status === "approved" && app.tracking_code
-              ? `https://ugig.net/api/affiliates/click?ref=${app.tracking_code}`
+              ? `https://ugig.net/api/affiliates/click?ugig_ref=${app.tracking_code}`
               : null,
           clicks_30d: clicksByAffiliate[app.affiliate_id] || 0,
           conversions: convStats.count,

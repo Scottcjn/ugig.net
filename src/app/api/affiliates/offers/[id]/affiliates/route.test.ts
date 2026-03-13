@@ -173,7 +173,7 @@ describe("GET /api/affiliates/offers/[id]/affiliates", () => {
     expect(alice.username).toBe("alice");
     expect(alice.status).toBe("approved");
     expect(alice.tracking_url).toBe(
-      "https://ugig.net/api/affiliates/click?ref=alice-abc123"
+      "https://ugig.net/api/affiliates/click?ugig_ref=alice-abc123"
     );
     expect(alice.clicks_30d).toBe(3);
     expect(alice.conversions).toBe(2);

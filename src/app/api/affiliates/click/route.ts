@@ -3,13 +3,13 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { recordClick } from "@/lib/affiliates/tracking";
 
 /**
- * GET /api/affiliates/click?ref=CODE - Record an affiliate click and redirect
+ * GET /api/affiliates/click?ugig_ref=CODE - Record an affiliate click and redirect
  * This is the tracking endpoint — affiliate links hit this, then redirect to the offer.
  */
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const ref = searchParams.get("ref");
+    const ref = searchParams.get("ugig_ref");
 
     if (!ref) {
       return NextResponse.redirect(new URL("/affiliates", request.url));
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
 
     // Add ref param to destination for client-side cookie tracking
     const dest = new URL(redirectUrl);
-    dest.searchParams.set("ref", ref);
+    dest.searchParams.set("ugig_ref", ref);
 
     // Set affiliate tracking cookie (30 days default, offer can override)
     const response = NextResponse.redirect(dest);
