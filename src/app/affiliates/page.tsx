@@ -195,11 +195,11 @@ async function AffiliatesList({ searchParams }: { searchParams: AffiliatesPagePr
               key={offer.id}
               className="block p-6 border border-border rounded-lg hover:border-primary/50 hover:shadow-sm transition-all"
             >
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <Link href={`/affiliates/${offer.slug}`} className="hover:underline">
-                      <h3 className="text-lg font-semibold truncate">{offer.title}</h3>
+                      <h3 className="text-lg font-semibold">{offer.title}</h3>
                     </Link>
                     <Badge variant="outline" className="shrink-0 text-xs">
                       {offer.product_type}
@@ -251,11 +251,11 @@ async function AffiliatesList({ searchParams }: { searchParams: AffiliatesPagePr
                   </div>
                 </div>
 
-                <div className="text-right shrink-0">
-                  <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                <div className="sm:text-right shrink-0 flex sm:block items-center gap-2">
+                  <div className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">
                     {commissionDisplay(offer)}
                   </div>
-                  <div className="text-xs text-muted-foreground">commission</div>
+                  <div className="text-xs text-muted-foreground hidden sm:block">commission</div>
                   {commissionUsdHint(offer, btcUsd) && (
                     <div className="text-xs text-muted-foreground">
                       {commissionUsdHint(offer, btcUsd)}
