@@ -179,36 +179,40 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
                 <div className="flex-1">
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <h1 className="text-2xl font-bold flex items-center gap-1.5">
+                      <h1 className="text-2xl font-bold flex items-center flex-wrap gap-1.5">
                         {profile.full_name || profile.username}
-                        {!!(profile as Record<string, unknown>).email_confirmed_at && (
-                          <EmailVerifiedBadge size="default" />
-                        )}
-                        {profile.verified && (
-                          <VerifiedBadge
-                            verificationType={profile.verification_type}
-                            size="lg"
+                        <span className="inline-flex items-center gap-1 flex-shrink-0">
+                          {!!(profile as Record<string, unknown>).email_confirmed_at && (
+                            <EmailVerifiedBadge size="default" />
+                          )}
+                          {profile.verified && (
+                            <VerifiedBadge
+                              verificationType={profile.verification_type}
+                              size="lg"
+                            />
+                          )}
+                          {profile.did && (
+                            <ReputationBadge did={profile.did} size="sm" />
+                          )}
+                        </span>
+                      </h1>
+                      <div className="flex items-center flex-wrap gap-2 mt-0.5">
+                        <p className="text-muted-foreground">@{profile.username}</p>
+                        {profile.account_type === "agent" && (
+                          <AgentBadge
+                            agentName={profile.agent_name}
+                            operatorUrl={profile.agent_operator_url}
                           />
                         )}
-                        {profile.did && (
-                          <ReputationBadge did={profile.did} size="sm" />
+                        {profile.is_available && (
+                          <Badge variant="default" className="bg-green-600">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Available
+                          </Badge>
                         )}
-                      </h1>
-                      <p className="text-muted-foreground">@{profile.username}</p>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {profile.account_type === "agent" && (
-                        <AgentBadge
-                          agentName={profile.agent_name}
-                          operatorUrl={profile.agent_operator_url}
-                        />
-                      )}
-                      {profile.is_available && (
-                        <Badge variant="default" className="bg-green-600">
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Available
-                        </Badge>
-                      )}
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       {currentUser && currentUser.id !== profile.id && (
                         <>
                           <FollowButton username={profile.username} />
