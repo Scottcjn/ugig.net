@@ -23,6 +23,20 @@ export default function NewOfferPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [authChecked, setAuthChecked] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/auth/session")
+      .then((r) => r.json())
+      .then((d) => {
+        if (!d.user) {
+          router.replace("/login?redirect=/affiliates/new");
+        } else {
+          setAuthChecked(true);
+        }
+      })
+      .catch(() => router.replace("/login?redirect=/affiliates/new"));
+  }, [router]);
 
   const [form, setForm] = useState({
     title: "",
@@ -117,6 +131,14 @@ export default function NewOfferPage() {
       setError(data.error || "Failed to create offer");
     }
     setLoading(false);
+  }
+
+  if (!authChecked) {
+    return (
+      <main className="flex-1 container mx-auto px-4 py-8 max-w-2xl">
+        <p className="text-muted-foreground text-center">Loading...</p>
+      </main>
+    );
   }
 
   return (

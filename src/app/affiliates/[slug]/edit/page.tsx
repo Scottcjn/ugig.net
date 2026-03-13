@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
 
 export default function EditOfferPage() {
+  const [authChecked, setAuthChecked] = useState(false);
   const { slug } = useParams<{ slug: string }>();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -44,6 +45,19 @@ export default function EditOfferPage() {
   const [tagInput, setTagInput] = useState("");
 
   const [btcUsd, setBtcUsd] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/session")
+      .then((r) => r.json())
+      .then((d) => {
+        if (!d.user) {
+          router.replace("/login");
+        } else {
+          setAuthChecked(true);
+        }
+      })
+      .catch(() => router.replace("/login"));
+  }, [router]);
 
   useEffect(() => {
     fetch("/api/rates/btc")
@@ -155,7 +169,7 @@ export default function EditOfferPage() {
     setLoading(false);
   }
 
-  if (fetching) {
+  if (!authChecked || fetching) {
     return (
       <main className="flex-1 container mx-auto px-4 py-8 max-w-2xl">
         <p className="text-muted-foreground">Loading...</p>
