@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,8 @@ import {
   Zap,
   Users,
   Pencil,
+  Plus,
+  X,
 } from "lucide-react";
 
 interface OfferInfo {
@@ -44,6 +46,18 @@ interface AffiliateEntry {
   pending_sats: number;
   applied_at: string;
   approved_at: string | null;
+}
+
+interface ConversionEntry {
+  id: string;
+  affiliate_id: string;
+  username: string | null;
+  sale_amount_sats: number;
+  commission_sats: number;
+  status: string;
+  source: string;
+  note: string | null;
+  created_at: string;
 }
 
 function formatSats(sats: number): string {
@@ -114,6 +128,11 @@ export default function SellerOfferDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [conversions, setConversions] = useState<ConversionEntry[]>([]);
+  const [conversionForm, setConversionForm] = useState<string | null>(null); // affiliate_id or null
+  const [convAmount, setConvAmount] = useState("");
+  const [convNote, setConvNote] = useState("");
+  const [convSubmitting, setConvSubmitting] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -135,6 +154,18 @@ export default function SellerOfferDetailPage() {
       }
       setOffer(data.offer);
       setAffiliates(data.affiliates);
+
+      // Also fetch conversions
+      try {
+        const convRes = await fetch(`/api/affiliates/offers/${id}/conversions`);
+        if (convRes.ok) {
+          const convData = await convRes.json();
+          setConversions(convData.conversions || []);
+        }
+      } catch {
+        // Non-critical, ignore
+      }
+
       setLoading(false);
     } catch {
       setError("Failed to load offer details");
@@ -162,6 +193,32 @@ export default function SellerOfferDetailPage() {
       }
     } finally {
       setActionLoading(null);
+    }
+  }
+
+  async function handleRecordConversion(affiliateId: string) {
+    const amount = parseInt(convAmount, 10);
+    if (!amount || amount <= 0) return;
+
+    setConvSubmitting(true);
+    try {
+      const res = await fetch(`/api/affiliates/offers/${id}/conversions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          affiliate_id: affiliateId,
+          sale_amount_sats: amount,
+          note: convNote.trim() || undefined,
+        }),
+      });
+      if (res.ok) {
+        setConversionForm(null);
+        setConvAmount("");
+        setConvNote("");
+        await fetchData();
+      }
+    } finally {
+      setConvSubmitting(false);
     }
   }
 
@@ -282,7 +339,8 @@ export default function SellerOfferDetailPage() {
               </thead>
               <tbody>
                 {affiliates.map((aff) => (
-                  <tr key={aff.application_id} className="border-t border-border">
+                  <React.Fragment key={aff.application_id}>
+                  <tr className="border-t border-border">
                     <td className="p-3">
                       <div className="flex items-center gap-2">
                         {aff.avatar_url ? (
@@ -345,30 +403,177 @@ export default function SellerOfferDetailPage() {
                       {new Date(aff.applied_at).toLocaleDateString()}
                     </td>
                     <td className="p-3 text-center">
-                      {aff.status === "pending" && (
-                        <div className="flex items-center justify-center gap-1">
-                          <Button
-                            size="sm"
-                            variant="default"
-                            disabled={actionLoading === aff.application_id}
-                            onClick={() =>
-                              handleAction(aff.application_id, "approve")
-                            }
-                          >
-                            Approve
-                          </Button>
+                      <div className="flex items-center justify-center gap-1">
+                        {aff.status === "pending" && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="default"
+                              disabled={actionLoading === aff.application_id}
+                              onClick={() =>
+                                handleAction(aff.application_id, "approve")
+                              }
+                            >
+                              Approve
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={actionLoading === aff.application_id}
+                              onClick={() =>
+                                handleAction(aff.application_id, "reject")
+                              }
+                            >
+                              Reject
+                            </Button>
+                          </>
+                        )}
+                        {aff.status === "approved" && (
                           <Button
                             size="sm"
                             variant="outline"
-                            disabled={actionLoading === aff.application_id}
+                            title="Record conversion"
+                            onClick={() => {
+                              setConversionForm(
+                                conversionForm === aff.affiliate_id
+                                  ? null
+                                  : aff.affiliate_id
+                              );
+                              setConvAmount("");
+                              setConvNote("");
+                            }}
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                  {/* Inline conversion form */}
+                  {conversionForm === aff.affiliate_id && (
+                    <tr className="border-t border-border bg-muted/30">
+                      <td colSpan={8} className="p-3">
+                        <div className="flex items-center gap-3 max-w-xl">
+                          <span className="text-sm text-muted-foreground whitespace-nowrap">
+                            Record sale for @{aff.username || "unknown"}:
+                          </span>
+                          <input
+                            type="number"
+                            placeholder="Amount (sats)"
+                            min="1"
+                            value={convAmount}
+                            onChange={(e) => setConvAmount(e.target.value)}
+                            className="w-32 px-2 py-1.5 text-sm border border-border rounded bg-background"
+                          />
+                          <input
+                            type="text"
+                            placeholder="Note (optional)"
+                            value={convNote}
+                            onChange={(e) => setConvNote(e.target.value)}
+                            className="flex-1 px-2 py-1.5 text-sm border border-border rounded bg-background"
+                          />
+                          <Button
+                            size="sm"
+                            disabled={convSubmitting || !convAmount}
                             onClick={() =>
-                              handleAction(aff.application_id, "reject")
+                              handleRecordConversion(aff.affiliate_id)
                             }
                           >
-                            Reject
+                            {convSubmitting ? "..." : "Save"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setConversionForm(null)}
+                          >
+                            <X className="h-3.5 w-3.5" />
                           </Button>
                         </div>
+                      </td>
+                    </tr>
+                  )}
+                  </React.Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+      {/* Recent Conversions */}
+      <h2 className="text-xl font-semibold mt-10 mb-4">
+        Recent Conversions ({conversions.length})
+      </h2>
+
+      {conversions.length === 0 ? (
+        <div className="text-center py-8 bg-card border border-border rounded-lg">
+          <p className="text-muted-foreground">No conversions recorded yet</p>
+        </div>
+      ) : (
+        <div className="bg-card border border-border rounded-lg overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50">
+                <tr>
+                  <th className="text-left p-3 font-medium">Date</th>
+                  <th className="text-left p-3 font-medium">Affiliate</th>
+                  <th className="text-right p-3 font-medium">Sale Amount</th>
+                  <th className="text-right p-3 font-medium">Commission</th>
+                  <th className="text-center p-3 font-medium">Source</th>
+                  <th className="text-center p-3 font-medium">Status</th>
+                  <th className="text-left p-3 font-medium">Note</th>
+                </tr>
+              </thead>
+              <tbody>
+                {conversions.map((conv) => (
+                  <tr key={conv.id} className="border-t border-border">
+                    <td className="p-3 text-muted-foreground">
+                      {new Date(conv.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="p-3">
+                      {conv.username ? (
+                        <Link
+                          href={`/@${conv.username}`}
+                          className="font-medium hover:underline"
+                        >
+                          @{conv.username}
+                        </Link>
+                      ) : (
+                        <span className="text-muted-foreground">Unknown</span>
                       )}
+                    </td>
+                    <td className="text-right p-3">
+                      <span className="inline-flex items-center gap-1">
+                        <Zap className="h-3 w-3 text-amber-500" />
+                        {formatSats(conv.sale_amount_sats)}
+                      </span>
+                    </td>
+                    <td className="text-right p-3">
+                      {formatSats(conv.commission_sats)} sats
+                    </td>
+                    <td className="text-center p-3">
+                      <Badge
+                        variant={
+                          conv.source === "manual" ? "secondary" : "default"
+                        }
+                      >
+                        {conv.source}
+                      </Badge>
+                    </td>
+                    <td className="text-center p-3">
+                      <Badge
+                        variant={
+                          conv.status === "paid"
+                            ? "default"
+                            : conv.status === "clawed_back"
+                              ? "destructive"
+                              : "secondary"
+                        }
+                      >
+                        {conv.status}
+                      </Badge>
+                    </td>
+                    <td className="p-3 text-muted-foreground text-xs max-w-[200px] truncate">
+                      {conv.note || "—"}
                     </td>
                   </tr>
                 ))}
