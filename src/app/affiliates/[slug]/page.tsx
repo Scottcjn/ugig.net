@@ -362,7 +362,9 @@ export default function OfferDetailPage() {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
               >
-                View Product
+                {(() => {
+                  try { return new URL(offer.product_url).hostname.replace(/^www\./, ""); } catch { return "View Product"; }
+                })()}
                 <ExternalLink className="h-3 w-3 opacity-50" />
               </a>
             )}

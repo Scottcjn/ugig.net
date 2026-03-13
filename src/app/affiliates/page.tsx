@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Megaphone, Users, TrendingUp } from "lucide-react";
+import { Megaphone, Users, TrendingUp, ExternalLink } from "lucide-react";
 import { SKILL_CATEGORIES } from "@/lib/constants";
 
 export const metadata: Metadata = {
@@ -204,9 +204,20 @@ async function AffiliatesList({ searchParams }: { searchParams: AffiliatesPagePr
                       {offer.product_type}
                     </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                  <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
                     {offer.description}
                   </p>
+                  {offer.product_url && (() => {
+                    try {
+                      const domain = new URL(offer.product_url).hostname.replace(/^www\./, "");
+                      return (
+                        <p className="text-xs text-muted-foreground mb-3 flex items-center gap-1">
+                          <ExternalLink className="h-3 w-3" />
+                          {domain}
+                        </p>
+                      );
+                    } catch { return null; }
+                  })()}
 
                   <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
                     {profile?.username && (
