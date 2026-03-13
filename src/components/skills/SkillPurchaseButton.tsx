@@ -24,21 +24,32 @@ export function SkillPurchaseButton({ slug, priceSats }: SkillPurchaseButtonProp
       const res = await fetch(`/api/skills/${slug}/purchase`, {
         method: "POST",
       });
-      const data = await res.json();
 
       if (!res.ok) {
         if (res.status === 401) {
           router.push(`/login?redirect=/skills/${slug}`);
           return;
         }
+        try {
+          const data = await res.json();
+          setError(data.error || "Purchase failed");
+        } catch {
+          setError(`Purchase failed (${res.status})`);
+        }
+        return;
+      }
+
+      const data = await res.json();
+      if (!data.ok) {
         setError(data.error || "Purchase failed");
         return;
       }
 
       setSuccess(true);
       router.refresh();
-    } catch {
-      setError("Something went wrong");
+    } catch (err) {
+      console.error("[purchase] Client error:", err);
+      setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setLoading(false);
     }
