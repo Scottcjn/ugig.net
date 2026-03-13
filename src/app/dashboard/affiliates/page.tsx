@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { SatsFiatHint } from "@/components/ui/SatsAmount";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -82,6 +83,11 @@ function StatCard({
             {suffix && (
               <span className="text-sm font-normal text-muted-foreground ml-1">
                 {suffix}
+              </span>
+            )}
+            {suffix === "sats" && typeof value === "string" && (
+              <span className="text-sm font-normal ml-1">
+                <SatsFiatHint sats={parseInt(value.replace(/,/g, "")) || 0} />
               </span>
             )}
           </p>

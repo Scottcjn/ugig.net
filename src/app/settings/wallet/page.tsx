@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Zap, ArrowDownToLine, ArrowUpFromLine, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SatsAmount, SatsFiatHint } from "@/components/ui/SatsAmount";
 
 interface Transaction {
   id: string;
@@ -97,7 +98,7 @@ function WithdrawSection({ balance, onWithdraw }: { balance: number; onWithdraw:
                 {withdrawing ? "Sending..." : "Withdraw"}
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">Min: 10 sats · Max: {Math.min(balance, 100000).toLocaleString()} sats · Available: {balance.toLocaleString()} sats</p>
+            <p className="text-xs text-muted-foreground">Min: 10 sats · Max: {Math.min(balance, 100000).toLocaleString()} sats · Available: <SatsAmount sats={balance} /></p>
           </div>
         </>
       )}
@@ -216,7 +217,7 @@ export default function WalletPage() {
       <div className="border border-border rounded-lg p-6 mb-6 bg-card">
         <div className="text-sm text-muted-foreground mb-1">Balance</div>
         <div className="text-3xl font-bold text-amber-500 flex items-center gap-2">
-          <Zap className="h-7 w-7 fill-amber-500" /> {balance.toLocaleString()} sats
+          <Zap className="h-7 w-7 fill-amber-500" /> <SatsAmount sats={balance} />
         </div>
         <button
           className="mt-2 text-xs text-muted-foreground underline hover:text-foreground"
@@ -247,7 +248,7 @@ export default function WalletPage() {
             <div className="flex flex-wrap gap-2 mb-3">
               {DEPOSIT_AMOUNTS.map((amt) => (
                 <Button key={amt} variant="outline" size="sm" disabled={depositing} onClick={() => handleDeposit(amt)}>
-                  {amt.toLocaleString()} sats
+                  <SatsAmount sats={amt} />
                 </Button>
               ))}
             </div>
@@ -270,7 +271,7 @@ export default function WalletPage() {
 
         {invoice && !paid && (
           <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">Pay this Lightning invoice for <strong>{invoice.amount_sats.toLocaleString()} sats</strong>:</p>
+            <p className="text-sm text-muted-foreground">Pay this Lightning invoice for <strong><SatsAmount sats={invoice.amount_sats} /></strong>:</p>
             <div className="flex justify-center bg-white rounded-lg p-4">
               <img
                 alt="Lightning invoice QR code"
@@ -343,9 +344,9 @@ export default function WalletPage() {
                 </div>
                 <div className="text-right">
                   <span className={`text-sm font-medium ${tx.amount_sats >= 0 ? "text-green-500" : "text-red-400"}`}>
-                    {tx.amount_sats < 0 ? "" : "+"}{tx.amount_sats.toLocaleString()} sats
+                    <SatsAmount sats={tx.amount_sats} sign />
                   </span>
-                  <div className="text-xs text-muted-foreground">bal: {tx.balance_after.toLocaleString()}</div>
+                  <div className="text-xs text-muted-foreground">bal: <SatsAmount sats={tx.balance_after} /></div>
                 </div>
               </div>
             ))}

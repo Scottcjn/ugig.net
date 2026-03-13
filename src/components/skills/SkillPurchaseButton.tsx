@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { SatsAmount } from "@/components/ui/SatsAmount";
 import { Zap, Loader2, Check } from "lucide-react";
 
 interface SkillPurchaseButtonProps {
@@ -80,7 +81,7 @@ export function SkillPurchaseButton({ slug, priceSats }: SkillPurchaseButtonProp
         ) : (
           <>
             <Zap className="h-4 w-4 mr-2" />
-            Buy for {priceSats.toLocaleString()} sats
+            Buy for <SatsAmount sats={priceSats} />
           </>
         )}
       </Button>

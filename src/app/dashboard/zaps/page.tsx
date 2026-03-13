@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Zap, ArrowDownLeft, ArrowUpRight } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { SatsAmount } from "@/components/ui/SatsAmount";
 
 interface ZapUser {
   id: string;
@@ -134,7 +135,7 @@ export default function ZapsPage() {
               {direction === "received" ? "Total received" : "Total sent"}
             </span>
             <p className="text-xl font-bold text-amber-500 flex items-center gap-1">
-              <Zap className="h-5 w-5 fill-amber-500" /> {totalSats.toLocaleString()} sats
+              <Zap className="h-5 w-5 fill-amber-500" /> <SatsAmount sats={totalSats} />
             </p>
           </div>
           <div className="text-sm text-muted-foreground">
@@ -180,7 +181,7 @@ export default function ZapsPage() {
                   </div>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <span>{direction === "received" ? "zapped you" : "you zapped"}</span>
-                    <span className="text-amber-500 font-medium">{zap.amount_sats} sats</span>
+                    <span className="text-amber-500 font-medium"><SatsAmount sats={zap.amount_sats} /></span>
                     <span>on</span>
                     <Link
                       href={targetHref(zap.target_type, zap.target_id)}
@@ -195,9 +196,8 @@ export default function ZapsPage() {
                 </div>
                 <div className="text-right flex-shrink-0">
                   <span className={`text-lg font-bold ${direction === "received" ? "text-green-500" : "text-red-400"}`}>
-                    {direction === "received" ? "+" : "-"}{zap.amount_sats}
+                    <SatsAmount sats={direction === "received" ? zap.amount_sats : -zap.amount_sats} sign showIcon iconClassName="h-4 w-4 text-amber-500 fill-amber-500 inline ml-1" />
                   </span>
-                  <Zap className="h-4 w-4 text-amber-500 fill-amber-500 inline ml-1" />
                 </div>
               </div>
             </div>

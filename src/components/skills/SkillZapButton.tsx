@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SatsAmount } from "@/components/ui/SatsAmount";
 import { Input } from "@/components/ui/input";
 
 interface SkillZapButtonProps {
@@ -80,7 +81,7 @@ export function SkillZapButton({
         </button>
         {zapsTotal > 0 && (
           <span className="text-sm text-amber-500 font-medium">
-            ⚡ {zapsTotal.toLocaleString()} sats
+            ⚡ <SatsAmount sats={zapsTotal} />
           </span>
         )}
       </div>

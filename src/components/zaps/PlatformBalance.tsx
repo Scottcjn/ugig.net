@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Zap, TrendingUp } from "lucide-react";
+import { SatsAmount } from "@/components/ui/SatsAmount";
 
 export function PlatformBalance() {
   const [balance, setBalance] = useState<number | null>(null);
@@ -22,15 +23,15 @@ export function PlatformBalance() {
   return (
     <div className="flex items-center gap-3 text-xs text-muted-foreground">
       {balance !== null && (
-        <div className="flex items-center gap-1" title="Total wallet deposits">
+        <div className="flex items-center gap-1" title="Total user wallet balances">
           <Zap className="h-3 w-3 text-amber-500 fill-amber-500" />
-          <span>{balance.toLocaleString()} sats</span>
+          <SatsAmount sats={balance} />
         </div>
       )}
       {commission !== null && commission > 0 && (
         <div className="flex items-center gap-1" title="Platform commissions earned">
           <TrendingUp className="h-3 w-3 text-green-500" />
-          <span>{commission.toLocaleString()} sats</span>
+          <SatsAmount sats={commission} />
         </div>
       )}
     </div>

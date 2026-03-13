@@ -3,6 +3,7 @@ import Script from "next/script";
 import { Suspense } from "react";
 import { ReferralTracker } from "@/components/referral/ReferralTracker";
 import { Footer } from "@/components/layout/Footer";
+import { BtcRateProvider } from "@/components/providers/BtcRateProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -72,11 +73,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen antialiased">
+        <BtcRateProvider>
         <Suspense fallback={null}>
           <ReferralTracker />
         </Suspense>
         {children}
         <Footer />
+        </BtcRateProvider>
 
         {/* Datafast Analytics */}
         <Script
