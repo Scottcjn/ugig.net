@@ -42,7 +42,7 @@ export async function Header({ showPostGig = true }: HeaderProps) {
             priority
           />
         </Link>
-        <nav className="flex items-center gap-2">
+        <nav className="flex items-center gap-2 min-w-0 shrink-0">
           <MobileMenu />
           <HeaderSearch />
           <NavLinks />
@@ -50,14 +50,16 @@ export async function Header({ showPostGig = true }: HeaderProps) {
           {user && profile ? (
             <>
               {showPostGig && (
-                <Link href="/gigs/new">
+                <Link href="/gigs/new" className="hidden sm:block">
                   <Button size="sm">
                     <Plus className="h-4 w-4 mr-2" />
                     Post a Gig
                   </Button>
                 </Link>
               )}
-              <WalletBalance />
+              <div className="hidden sm:block">
+                <WalletBalance />
+              </div>
               <NotificationBell />
               <UserDropdown
                 username={profile.username}
