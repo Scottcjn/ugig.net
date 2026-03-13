@@ -187,106 +187,94 @@ async function AffiliatesList({ searchParams }: { searchParams: AffiliatesPagePr
         Showing {offers.length} of {count} offers
       </p>
 
-      <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {offers.map((offer: any) => {
           const profile = offer.profiles;
           return (
-            <div
+            <Link
               key={offer.id}
-              className="block p-6 border border-border rounded-lg hover:border-primary/50 hover:shadow-sm transition-all"
+              href={`/affiliates/${offer.slug}`}
+              className="group p-5 border border-border rounded-lg bg-card hover:shadow-md hover:border-primary/30 transition-all duration-200"
             >
-              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <Link href={`/affiliates/${offer.slug}`} className="hover:underline">
-                      <h3 className="text-lg font-semibold">{offer.title}</h3>
-                    </Link>
-                    <Badge variant="outline" className="shrink-0 text-xs">
-                      {offer.product_type}
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                    {offer.description}
-                  </p>
-                  {offer.product_url && (() => {
-                    try {
-                      const parts = new URL(offer.product_url).hostname.split(".");
-                      const domain = parts.length > 2 ? parts.slice(-2).join(".") : parts.join(".");
-                      return (
-                        <p className="text-xs text-muted-foreground mb-3 flex items-center gap-1">
-                          <ExternalLink className="h-3 w-3" />
-                          {domain}
-                        </p>
-                      );
-                    } catch { return null; }
-                  })()}
-
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
-                    {profile?.username && (
-                      <span className="flex items-center gap-1.5">
-                        <Avatar className="h-5 w-5">
-                          {profile.avatar_url ? (
-                            <AvatarImage src={profile.avatar_url} alt={profile.username} />
-                          ) : null}
-                          <AvatarFallback className="text-[10px]">
-                            {(profile.full_name || profile.username)?.[0]?.toUpperCase() || "?"}
-                          </AvatarFallback>
-                        </Avatar>
-                        @{profile.username}
-                      </span>
-                    )}
-                    {offer.price_sats > 0 && (
-                      <span className="flex items-center gap-1">
-                        <TrendingUp className="h-3.5 w-3.5" />
-                        {formatSats(offer.price_sats)} sats
-                      </span>
-                    )}
-                    <span>{offer.cookie_days}d cookie</span>
-                    <span className="flex items-center gap-1">
-                      <Users className="h-3.5 w-3.5" />
-                      {offer.total_affiliates} affiliates
-                    </span>
-                    <span>{offer.total_conversions} sales</span>
-                    <span>{formatRelativeTime(offer.created_at)}</span>
-                  </div>
-                </div>
-
-                <div className="sm:text-right shrink-0 flex sm:block items-center gap-2">
-                  <div className="text-xl sm:text-2xl font-bold text-amber-500 flex items-center gap-1">
-                    <Zap className="h-5 w-5 fill-amber-500" />
-                    {commissionDisplay(offer)}
-                  </div>
-                  <div className="text-xs text-muted-foreground hidden sm:block">commission</div>
-                  {commissionUsdHint(offer, btcUsd) && (
-                    <div className="text-xs text-muted-foreground">
-                      {commissionUsdHint(offer, btcUsd)}
-                    </div>
-                  )}
-                  {offer.total_revenue_sats > 0 && (
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {formatSats(offer.total_revenue_sats)} sats vol.
-                    </div>
-                  )}
-                </div>
+              <div className="flex items-start justify-between mb-3">
+                <h3 className="font-semibold text-lg group-hover:text-primary transition-colors line-clamp-1">
+                  {offer.title}
+                </h3>
+                <Badge className="shrink-0 ml-2 bg-amber-500/10 text-amber-600 border-amber-500/20">
+                  <Zap className="h-3 w-3 mr-1" />
+                  {commissionDisplay(offer)}
+                </Badge>
               </div>
 
+              {commissionUsdHint(offer, btcUsd) && (
+                <p className="text-[10px] text-muted-foreground -mt-2 mb-2 text-right">
+                  {commissionUsdHint(offer, btcUsd)}
+                </p>
+              )}
+
+              {offer.description && (
+                <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                  {offer.description}
+                </p>
+              )}
+
               {offer.tags && offer.tags.length > 0 && (
-                <div className="flex gap-1.5 mt-3 flex-wrap">
-                  {offer.tags.slice(0, 5).map((tag: string) => (
-                    <Link key={tag} href={`/affiliates?tag=${encodeURIComponent(tag)}`}>
-                      <Badge variant="secondary" className="text-xs cursor-pointer hover:bg-secondary/80 transition-colors">
-                        {tag}
-                      </Badge>
-                    </Link>
+                <div className="flex flex-wrap gap-1.5 mb-3">
+                  {offer.tags.slice(0, 4).map((tag: string) => (
+                    <span
+                      key={tag}
+                      className="text-xs px-2 py-0.5 bg-muted rounded-full text-muted-foreground"
+                    >
+                      {tag}
+                    </span>
                   ))}
-                  {offer.tags.length > 5 && (
-                    <Badge variant="secondary" className="text-xs">
-                      +{offer.tags.length - 5}
-                    </Badge>
+                  {offer.tags.length > 4 && (
+                    <span className="text-xs px-2 py-0.5 bg-muted rounded-full text-muted-foreground">
+                      +{offer.tags.length - 4}
+                    </span>
                   )}
                 </div>
               )}
-            </div>
+
+              {offer.product_url && (() => {
+                try {
+                  const parts = new URL(offer.product_url).hostname.split(".");
+                  const domain = parts.length > 2 ? parts.slice(-2).join(".") : parts.join(".");
+                  return (
+                    <p className="text-xs text-muted-foreground mb-3 flex items-center gap-1">
+                      <ExternalLink className="h-3 w-3" />
+                      {domain}
+                    </p>
+                  );
+                } catch { return null; }
+              })()}
+
+              <div className="flex items-center justify-between text-xs text-muted-foreground mt-auto pt-2 border-t border-border/50">
+                <div className="flex items-center gap-1.5">
+                  {profile?.username && (
+                    <span className="flex items-center gap-1">
+                      <Avatar className="h-4 w-4">
+                        {profile.avatar_url ? (
+                          <AvatarImage src={profile.avatar_url} alt={profile.username} />
+                        ) : null}
+                        <AvatarFallback className="text-[8px]">
+                          {(profile.full_name || profile.username)?.[0]?.toUpperCase() || "?"}
+                        </AvatarFallback>
+                      </Avatar>
+                      {profile.username}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  <span>{offer.cookie_days}d cookie</span>
+                  <span className="flex items-center gap-0.5">
+                    <Users className="h-3 w-3" />
+                    {offer.total_affiliates}
+                  </span>
+                  <span>{formatRelativeTime(offer.created_at)}</span>
+                </div>
+              </div>
+            </Link>
           );
         })}
       </div>
