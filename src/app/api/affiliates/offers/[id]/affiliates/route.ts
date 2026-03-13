@@ -25,7 +25,7 @@ export async function GET(
     const { data: offer } = await (admin as AnySupabase)
       .from("affiliate_offers")
       .select(
-        "id, seller_id, title, slug, status, commission_rate, commission_type, commission_flat_sats, total_clicks, total_conversions, total_revenue_sats, total_commissions_sats"
+        "id, seller_id, title, slug, status, commission_rate, commission_type, commission_flat_sats, total_clicks, total_conversions, total_revenue_sats, total_commissions_sats, auto_pay, settlement_delay_days"
       )
       .eq("id", id)
       .single();

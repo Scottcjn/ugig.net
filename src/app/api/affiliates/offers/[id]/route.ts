@@ -84,6 +84,7 @@ export async function PATCH(
     if (body.category !== undefined) updateData.category = body.category;
     if (body.tags !== undefined) updateData.tags = body.tags;
     if (body.status !== undefined) updateData.status = body.status;
+    if (body.auto_pay !== undefined) updateData.auto_pay = !!body.auto_pay;
 
     const { data: offer, error } = await (admin as AnySupabase)
       .from("affiliate_offers")

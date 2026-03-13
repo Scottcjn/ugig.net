@@ -32,6 +32,8 @@ interface OfferInfo {
   total_conversions: number;
   total_revenue_sats: number;
   total_commissions_sats: number;
+  auto_pay: boolean;
+  settlement_delay_days: number;
 }
 
 interface AffiliateEntry {
@@ -283,8 +285,31 @@ export default function SellerOfferDetailPage() {
               </Badge>
             </div>
             <p className="text-muted-foreground">
-              Commission: {commissionDisplay}
+              Commission: {commissionDisplay} · Settlement: {offer.settlement_delay_days || 7} days
             </p>
+            <label className="flex items-center gap-2 mt-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={offer.auto_pay || false}
+                onChange={async (e) => {
+                  const newVal = e.target.checked;
+                  const res = await fetch(`/api/affiliates/offers/${id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ auto_pay: newVal }),
+                  });
+                  if (res.ok) {
+                    setOffer({ ...offer, auto_pay: newVal });
+                  } else {
+                    alert("Failed to update auto-pay setting");
+                  }
+                }}
+                className="rounded border-border"
+              />
+              <span className="text-sm text-muted-foreground">
+                Auto-pay commissions after settlement period
+              </span>
+            </label>
           </div>
           <Link href={`/affiliates/${offer.slug}/edit`}>
             <Button variant="outline" size="sm">
