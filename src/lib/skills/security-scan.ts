@@ -1,5 +1,5 @@
 /**
- * SecureClaw — Security scanning gate for skill file uploads.
+ * SkillScanner — Security scanning gate for skill file uploads.
  *
  * Abstraction layer that scans uploaded skill files before they are
  * accepted into the marketplace.  Currently implements a built-in
@@ -32,21 +32,52 @@ export interface SecurityScanner {
 
 // ── Constants ──────────────────────────────────────────────────────
 
-export const SCANNER_VERSION = "secureclaw-0.1.0";
+export const SCANNER_VERSION = "skill-scanner-0.2.0";
 export const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024; // 50 MB
 export const SCAN_TIMEOUT_MS = 30_000;
 
 /** Patterns that indicate potentially dangerous content in skill files */
 const DANGEROUS_PATTERNS: { pattern: RegExp; rule: string; severity: ScanFinding["severity"]; detail: string }[] = [
-  { pattern: /eval\s*\(/i, rule: "no-eval", severity: "high", detail: "Use of eval() detected" },
-  { pattern: /child_process/i, rule: "no-child-process", severity: "high", detail: "child_process module usage detected" },
-  { pattern: /\bexec\s*\(/i, rule: "no-exec", severity: "medium", detail: "Potential exec() call detected" },
-  { pattern: /Function\s*\(/i, rule: "no-function-constructor", severity: "high", detail: "Function constructor detected" },
-  { pattern: /require\s*\(\s*['"`]fs['"`]\s*\)/i, rule: "no-fs-require", severity: "medium", detail: "Direct fs module import detected" },
-  { pattern: /process\.env/i, rule: "no-env-access", severity: "medium", detail: "Environment variable access detected" },
+  // ── Critical ──
+  { pattern: /curl\s+.*\|\s*(ba)?sh/i, rule: "no-pipe-to-shell", severity: "critical", detail: "Pipe-to-shell pattern detected (curl)" },
+  { pattern: /wget\s+.*\|\s*(ba)?sh/i, rule: "no-wget-pipe-to-shell", severity: "critical", detail: "Pipe-to-shell pattern detected (wget)" },
   { pattern: /\.ssh\//i, rule: "no-ssh-path", severity: "critical", detail: "SSH path reference detected" },
   { pattern: /rm\s+-rf\s+\//i, rule: "no-destructive-rm", severity: "critical", detail: "Destructive rm command detected" },
-  { pattern: /curl\s+.*\|\s*(ba)?sh/i, rule: "no-pipe-to-shell", severity: "critical", detail: "Pipe-to-shell pattern detected" },
+
+  // ── High ──
+  { pattern: /eval\s*\(/i, rule: "no-eval", severity: "high", detail: "Use of eval() detected" },
+  { pattern: /child_process/i, rule: "no-child-process", severity: "high", detail: "child_process module usage detected" },
+  { pattern: /Function\s*\(/i, rule: "no-function-constructor", severity: "high", detail: "Function constructor detected" },
+  { pattern: /import\s*\(\s*['"`]child_process/i, rule: "no-dynamic-import-child-process", severity: "high", detail: "Dynamic import of child_process detected" },
+  { pattern: /require\s*\(\s*['"`]net['"`]/i, rule: "no-net-require", severity: "high", detail: "Net module access detected" },
+  { pattern: /require\s*\(\s*['"`]http['"`]/i, rule: "no-http-require", severity: "high", detail: "HTTP module access detected (potential data exfiltration)" },
+  { pattern: /require\s*\(\s*['"`]https['"`]/i, rule: "no-https-require", severity: "high", detail: "HTTPS module access detected (potential data exfiltration)" },
+  { pattern: /require\s*\(\s*['"`]dgram['"`]/i, rule: "no-dgram-require", severity: "high", detail: "UDP socket (dgram) module access detected" },
+  { pattern: /import\s+.*from\s+['"`]net['"`]/i, rule: "no-net-import", severity: "high", detail: "ES module net import detected" },
+  { pattern: /import\s+.*from\s+['"`]http['"`]/i, rule: "no-http-import", severity: "high", detail: "ES module http import detected" },
+  { pattern: /import\s+.*from\s+['"`]https['"`]/i, rule: "no-https-import", severity: "high", detail: "ES module https import detected" },
+  { pattern: /net\.connect\s*\(|net\.createConnection\s*\(|net\.Socket\s*\(/i, rule: "no-raw-tcp-socket", severity: "high", detail: "Raw TCP socket usage detected" },
+  { pattern: /__proto__\b|\bprototype\s*\[/i, rule: "no-prototype-pollution", severity: "high", detail: "Prototype pollution pattern detected" },
+
+  // ── Medium ──
+  { pattern: /\bexec\s*\(/i, rule: "no-exec", severity: "medium", detail: "Potential exec() call detected" },
+  { pattern: /require\s*\(\s*['"`]fs['"`]\s*\)/i, rule: "no-fs-require", severity: "medium", detail: "Direct fs module import detected" },
+  { pattern: /process\.env/i, rule: "no-env-access", severity: "medium", detail: "Environment variable access detected" },
+  { pattern: /require\s*\(\s*['"`]os['"`]\s*\)/i, rule: "no-os-require", severity: "medium", detail: "OS module access detected" },
+  { pattern: /import\s+.*from\s+['"`]os['"`]/i, rule: "no-os-import", severity: "medium", detail: "ES module os import detected" },
+  { pattern: /require\s*\(\s*['"`]vm['"`]\s*\)/i, rule: "no-vm-require", severity: "medium", detail: "VM module access detected (sandbox escape risk)" },
+  { pattern: /import\s+.*from\s+['"`]vm['"`]/i, rule: "no-vm-import", severity: "medium", detail: "ES module vm import detected (sandbox escape risk)" },
+  { pattern: /\bfetch\s*\(/i, rule: "no-fetch", severity: "medium", detail: "Fetch API usage detected (data exfiltration vector)" },
+  { pattern: /XMLHttpRequest/i, rule: "no-xhr", severity: "medium", detail: "XMLHttpRequest usage detected (data exfiltration vector)" },
+  { pattern: /\bglobalThis\b/i, rule: "no-globalthis", severity: "medium", detail: "globalThis manipulation detected" },
+  { pattern: /\bwindow\b\s*\[|\bglobal\b\s*\[/i, rule: "no-dynamic-global-access", severity: "medium", detail: "Dynamic global access detected" },
+  { pattern: /\batob\s*\(|\bbtoa\s*\(/i, rule: "no-base64-codec", severity: "medium", detail: "Base64 encode/decode detected (potential obfuscation)" },
+  { pattern: /Buffer\.from\s*\([^)]*,\s*['"`]base64['"`]/i, rule: "no-buffer-base64", severity: "medium", detail: "Base64 decode via Buffer detected (obfuscated payload)" },
+  { pattern: /\\x[0-9a-fA-F]{2}/i, rule: "no-hex-escape", severity: "medium", detail: "Hex escape sequences detected (obfuscation indicator)" },
+  { pattern: /String\.fromCharCode/i, rule: "no-fromcharcode", severity: "medium", detail: "String.fromCharCode usage detected (obfuscation)" },
+  { pattern: /writeFileSync|writeFile\s*\(/i, rule: "no-file-write", severity: "medium", detail: "File write operation detected" },
+  { pattern: /unlinkSync|unlink\s*\(|rmSync|rmdirSync/i, rule: "no-file-delete", severity: "medium", detail: "File/directory deletion detected" },
+  { pattern: /chmodSync|chmod\s*\(|chownSync|chown\s*\(/i, rule: "no-permission-change", severity: "medium", detail: "File permission change detected" },
 ];
 
 /** File extensions we refuse outright */
@@ -80,7 +111,7 @@ export class BuiltInScanner implements SecurityScanner {
     }
 
     // Content analysis (only for text-like files)
-    const isLikelyText = !ext || [".ts", ".js", ".json", ".yaml", ".yml", ".md", ".txt", ".toml", ".cfg", ".ini", ".py", ".rb", ".go", ".rs", ".zip", ".tar", ".gz", ".tgz"].includes(ext)
+    const isLikelyText = !ext || [".ts", ".js", ".json", ".yaml", ".yml", ".md", ".txt", ".toml", ".cfg", ".ini", ".py", ".rb", ".go", ".rs"].includes(ext)
       ? true
       : false;
 
@@ -168,9 +199,15 @@ let _defaultScanner: SecurityScanner | undefined;
 
 export function getDefaultScanner(): SecurityScanner {
   if (!_defaultScanner) {
-    _defaultScanner = new BuiltInScanner();
+    if (process.env.SECURECLAW_API_KEY) {
+      // SecureClawScanner runs BuiltInScanner internally + enriches with community context
+      const { SecureClawScanner } = require("./secureclaw-scanner");
+      _defaultScanner = new SecureClawScanner();
+    } else {
+      _defaultScanner = new BuiltInScanner();
+    }
   }
-  return _defaultScanner;
+  return _defaultScanner!;
 }
 
 /** Override default scanner (useful for testing or external service integration) */

@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { title, tagline, description, price_sats, category, tags, status: requestedStatusRaw, source_url, skill_file_url, website_url } = parsed.data;
+    const { title, tagline, description, price_sats, category, tags, status: requestedStatusRaw, source_url, skill_file_url, website_url, clawhub_url } = parsed.data;
     const requestedStatus = requestedStatusRaw || "active";
 
     // Generate unique slug
@@ -137,6 +137,7 @@ export async function POST(request: NextRequest) {
         source_url: source_url || null,
         skill_file_url: skill_file_url || null,
         website_url: website_url || null,
+        clawhub_url: clawhub_url || null,
       })
       .select()
       .single();

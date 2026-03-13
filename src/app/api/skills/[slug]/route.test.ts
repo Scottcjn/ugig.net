@@ -218,11 +218,11 @@ describe("GET /api/skills/[slug]", () => {
         scan_source: "url_import",
         source_url: "https://example.com/SKILL.md",
         content_hash: "abc123def456",
-        scanner_version: "secureclaw-0.1.0",
+        scanner_version: "skill-scanner-0.1.0",
         findings_count_by_severity: { low: 1 },
         findings_summary: {
           risk_level: "low",
-          scanner_version: "secureclaw-0.1.0",
+          scanner_version: "skill-scanner-0.1.0",
           issues: [
             { severity: "low", detail: "Minor thing", rule: "internal-rule-1" },
           ],
@@ -248,7 +248,7 @@ describe("GET /api/skills/[slug]", () => {
     expect(json.security_scan.scan_source).toBe("url_import");
     expect(json.security_scan.source_url).toBe("https://example.com/SKILL.md");
     expect(json.security_scan.content_hash).toBe("abc123def456");
-    expect(json.security_scan.scanner_version).toBe("secureclaw-0.1.0");
+    expect(json.security_scan.scanner_version).toBe("skill-scanner-0.1.0");
     expect(json.security_scan.findings_count_by_severity).toEqual({ low: 1 });
   });
 

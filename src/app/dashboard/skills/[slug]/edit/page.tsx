@@ -57,6 +57,7 @@ export default async function EditSkillPage({ params }: EditSkillPageProps) {
             source_url: l.source_url || "",
             skill_file_url: l.skill_file_url || "",
             website_url: l.website_url || "",
+            clawhub_url: l.clawhub_url || "",
             skill_file_path: l.skill_file_path || "",
           }}
         />

@@ -177,7 +177,7 @@ describe("POST /api/skills/[slug]/scan", () => {
       fileHash: "abc123",
       fileSizeBytes: fileContent.length,
       findings: [],
-      scannerVersion: "secureclaw-0.1.0",
+      scannerVersion: "skill-scanner-0.1.0",
     });
 
     const res = await POST(makeRequest(), { params: makeParams() });
@@ -189,7 +189,7 @@ describe("POST /api/skills/[slug]/scan", () => {
     expect(json.scan.issues_count).toBe(0);
     expect(json.scan.issues).toEqual([]);
     expect(json.scan.file_hash).toBe("abc123");
-    expect(json.scan.scanner_version).toBe("secureclaw-0.1.0");
+    expect(json.scan.scanner_version).toBe("skill-scanner-0.1.0");
     expect(json.scan.scan_id).toBe("scan-1");
 
     // Verify scanner was called
@@ -223,7 +223,7 @@ describe("POST /api/skills/[slug]/scan", () => {
         { rule: "no-eval", severity: "high", detail: "Use of eval() detected" },
         { rule: "no-exec", severity: "medium", detail: "Potential exec() call detected" },
       ],
-      scannerVersion: "secureclaw-0.1.0",
+      scannerVersion: "skill-scanner-0.1.0",
     });
 
     const res = await POST(makeRequest(), { params: makeParams() });
@@ -268,7 +268,7 @@ describe("POST /api/skills/[slug]/scan", () => {
       fileHash: "remote123",
       fileSizeBytes: fileContent.length,
       findings: [],
-      scannerVersion: "secureclaw-0.1.0",
+      scannerVersion: "skill-scanner-0.1.0",
     });
 
     const res = await POST(makeRequest(), { params: makeParams() });

@@ -159,12 +159,19 @@ interface PublishElsewhereProps {
   slug: string;
   skillFileUrl?: string | null;
   sourceUrl?: string | null;
+  clawhubUrl?: string | null;
 }
 
-export function PublishElsewhere({ slug, skillFileUrl, sourceUrl }: PublishElsewhereProps) {
+export function PublishElsewhere({ slug, skillFileUrl, sourceUrl, clawhubUrl }: PublishElsewhereProps) {
   const [expanded, setExpanded] = useState(false);
 
   const repoUrl = sourceUrl || skillFileUrl || null;
+
+  // Extract ClawHub slug from URL if provided (e.g. "owner/skill-name")
+  const clawhubSlug = clawhubUrl
+    ? new URL(clawhubUrl).pathname.replace(/^\//, "").replace(/\/$/, "")
+    : null;
+
   const displayedMarketplaces = expanded ? MARKETPLACES : MARKETPLACES.slice(0, 4);
 
   return (
@@ -177,9 +184,17 @@ export function PublishElsewhere({ slug, skillFileUrl, sourceUrl }: PublishElsew
       {/* Marketplace list */}
       <div className="space-y-2">
         {displayedMarketplaces.map((mp) => {
-          const installCmd = mp.cliInstall ? renderCmd(mp.cliInstall, slug, repoUrl) : null;
-          const publishCmd = mp.cliPublish ? renderCmd(mp.cliPublish, slug, repoUrl) : null;
+          // For ClawHub, only show install/publish commands if we have the real ClawHub slug
+          const isClawHub = mp.name === "ClawHub";
+          const effectiveSlug = isClawHub && clawhubSlug ? clawhubSlug : slug;
+          const installCmd = mp.cliInstall
+            ? (isClawHub && !clawhubSlug ? null : renderCmd(mp.cliInstall, effectiveSlug, repoUrl))
+            : null;
+          const publishCmd = mp.cliPublish
+            ? (isClawHub && !clawhubSlug ? null : renderCmd(mp.cliPublish, effectiveSlug, repoUrl))
+            : null;
           const hasCommands = installCmd || publishCmd;
+          const showClawhubPrompt = isClawHub && !clawhubSlug;
 
           return (
             <div
@@ -226,6 +241,13 @@ export function PublishElsewhere({ slug, skillFileUrl, sourceUrl }: PublishElsew
                       <CopyButton text={publishCmd} />
                     </div>
                   )}
+                </div>
+              )}
+              {showClawhubPrompt && (
+                <div className="border-t border-border bg-amber-500/5 px-3 py-2">
+                  <p className="text-xs text-amber-600 dark:text-amber-400">
+                    Add your ClawHub URL in the listing editor to show install commands here.
+                  </p>
                 </div>
               )}
             </div>

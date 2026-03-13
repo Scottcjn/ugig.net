@@ -6,14 +6,25 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "crypto";
 import { createServiceClient } from "@/lib/supabase/service";
 import { generateAndStoreDid } from "@/lib/auth/did";
 
+function safeCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
+}
+
 export async function POST(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
+  const authHeader = request.headers.get("authorization") || "";
   const secret = process.env.AUTH_WEBHOOK_SECRET;
 
-  if (secret && authHeader !== `Bearer ${secret}`) {
+  if (!secret) {
+    console.error("AUTH_WEBHOOK_SECRET is not configured");
+    return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });
+  }
+
+  if (!safeCompare(authHeader, `Bearer ${secret}`) && !safeCompare(authHeader, secret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

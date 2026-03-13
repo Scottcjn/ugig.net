@@ -13,7 +13,7 @@ const MAX_FETCH_SIZE = 50 * 1024 * 1024; // 50 MB
 /**
  * POST /api/skills/[slug]/scan — Generate a security report
  *
- * Triggers a SecureClaw scan on the skill's content. Resolves content from
+ * Triggers a SkillScanner scan on the skill's content. Resolves content from
  * (in priority order):
  *   1. Remote skill_file_url (fetched server-side, freshest source)
  *   2. Stored file in storage (skill_file_path) as fallback
@@ -65,7 +65,7 @@ export async function POST(
       try {
         const res = await fetch(l.skill_file_url, {
           signal: AbortSignal.timeout(15_000),
-          headers: { "User-Agent": "SecureClaw/0.1 (ugig.net)" },
+          headers: { "User-Agent": "SkillScanner/0.1 (ugig.net)" },
         });
 
         if (res.ok) {

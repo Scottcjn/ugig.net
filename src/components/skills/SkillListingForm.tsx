@@ -23,6 +23,7 @@ interface SkillListingFormProps {
     source_url?: string;
     skill_file_url?: string;
     website_url?: string;
+    clawhub_url?: string;
     skill_file_path?: string;
   };
 }
@@ -50,6 +51,7 @@ export function SkillListingForm({ slug, listingId, initialData }: SkillListingF
   const [sourceUrl, setSourceUrl] = useState(initialData?.source_url || "");
   const [skillFileUrl, setSkillFileUrl] = useState(initialData?.skill_file_url || "");
   const [websiteUrl, setWebsiteUrl] = useState(initialData?.website_url || "");
+  const [clawhubUrl, setClawhubUrl] = useState(initialData?.clawhub_url || "");
   const [skillFilePath] = useState(initialData?.skill_file_path || "");
 
   const [loading, setLoading] = useState(false);
@@ -150,6 +152,7 @@ export function SkillListingForm({ slug, listingId, initialData }: SkillListingF
       source_url: sourceUrl || undefined,
       skill_file_url: skillFileUrl || undefined,
       website_url: websiteUrl || undefined,
+      clawhub_url: clawhubUrl || undefined,
     };
 
     try {
@@ -312,6 +315,24 @@ export function SkillListingForm({ slug, listingId, initialData }: SkillListingF
         </div>
         <p className="text-xs text-muted-foreground">
           Paste a website URL and click Autofill to populate title, description, and tags.
+        </p>
+      </div>
+
+      {/* ClawHub URL */}
+      <div className="space-y-2">
+        <Label htmlFor="clawhub_url">
+          <LinkIcon className="h-3.5 w-3.5 inline mr-1" />
+          ClawHub URL <span className="text-muted-foreground font-normal">(optional)</span>
+        </Label>
+        <Input
+          id="clawhub_url"
+          type="url"
+          value={clawhubUrl}
+          onChange={(e) => setClawhubUrl(e.target.value)}
+          placeholder="https://clawhub.ai/your-name/your-skill"
+        />
+        <p className="text-xs text-muted-foreground">
+          Link to your skill&apos;s page on ClawHub. Only add this if your skill is published on ClawHub.
         </p>
       </div>
 

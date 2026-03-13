@@ -62,7 +62,7 @@ export async function importSkillFromUrl(opts: {
   try {
     const res = await fetch(skillFileUrl, {
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-      headers: { "User-Agent": "SecureClaw/0.1 (ugig.net)" },
+      headers: { "User-Agent": "SkillScanner/0.1 (ugig.net)" },
       redirect: "follow",
     });
 

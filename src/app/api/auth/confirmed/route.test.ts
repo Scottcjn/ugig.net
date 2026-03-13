@@ -54,9 +54,9 @@ vi.stubGlobal("fetch", mockFetch);
 
 // ── Helpers ────────────────────────────────────────────────────────
 
-function makeRequest(body: unknown, secret?: string): NextRequest {
+function makeRequest(body: unknown, secret: string | null = "test-webhook-secret"): NextRequest {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (secret) headers["authorization"] = `Bearer ${secret}`;
+  if (secret !== null) headers["authorization"] = `Bearer ${secret}`;
   return new NextRequest("http://localhost/api/auth/confirmed", {
     method: "POST",
     headers,
@@ -97,7 +97,7 @@ function confirmationPayload(overrides?: {
 describe("POST /api/auth/confirmed", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    delete process.env.AUTH_WEBHOOK_SECRET;
+    process.env.AUTH_WEBHOOK_SECRET = "test-webhook-secret";
     delete process.env.COINPAYPORTAL_API_URL;
     delete process.env.COINPAYPORTAL_REPUTATION_API_KEY;
     mockUpdateEq.mockResolvedValue({ error: null });
@@ -148,19 +148,25 @@ describe("POST /api/auth/confirmed", () => {
     });
 
     it("rejects unauthorized requests when secret is configured", async () => {
-      process.env.AUTH_WEBHOOK_SECRET = "my-secret";
       const res = await POST(makeRequest(confirmationPayload(), "wrong-secret"));
       expect(res.status).toBe(401);
     });
 
+    it("returns 500 when AUTH_WEBHOOK_SECRET is not configured", async () => {
+      delete process.env.AUTH_WEBHOOK_SECRET;
+      const res = await POST(makeRequest(confirmationPayload(), null));
+      expect(res.status).toBe(500);
+      const json = await res.json();
+      expect(json.error).toBe("Server misconfiguration");
+    });
+
     it("accepts authorized requests when secret matches", async () => {
-      process.env.AUTH_WEBHOOK_SECRET = "my-secret";
       mockSingle.mockResolvedValue({
         data: { username: "testuser", full_name: null, account_type: "human", did: null },
         error: null,
       });
 
-      const res = await POST(makeRequest(confirmationPayload(), "my-secret"));
+      const res = await POST(makeRequest(confirmationPayload()));
       expect(res.status).toBe(200);
     });
 

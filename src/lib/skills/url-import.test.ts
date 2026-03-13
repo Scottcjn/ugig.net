@@ -150,7 +150,7 @@ describe("importSkillFromUrl", () => {
       fileHash: "abc123",
       fileSizeBytes: content.length,
       findings: [],
-      scannerVersion: "secureclaw-0.1.0",
+      scannerVersion: "skill-scanner-0.1.0",
     });
     mockUpload.mockResolvedValue({ error: null });
 
@@ -192,7 +192,7 @@ describe("importSkillFromUrl", () => {
         { rule: "no-exec", severity: "medium", detail: "exec() detected" },
         { rule: "no-fs", severity: "medium", detail: "fs access" },
       ],
-      scannerVersion: "secureclaw-0.1.0",
+      scannerVersion: "skill-scanner-0.1.0",
     });
     mockUpload.mockResolvedValue({ error: null });
 

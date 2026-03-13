@@ -18,7 +18,7 @@ const BUCKET = "skill-files";
  *
  * Flow:
  *   1. Validate auth + ownership
- *   2. Run SecureClaw security scan
+ *   2. Run SkillScanner security scan
  *   3. Persist scan results
  *   4. If clean, store file in Supabase Storage; otherwise reject
  */
@@ -148,6 +148,9 @@ export async function POST(request: NextRequest) {
         scan: {
           status: scanResult.status,
           file_hash: scanResult.fileHash,
+          file_size_bytes: scanResult.fileSizeBytes,
+          findings: scanResult.findings,
+          scanner_version: scanResult.scannerVersion,
           scan_id: (scanRecord as any)?.id,
         },
       },

@@ -214,6 +214,7 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
   const websiteUrl = sanitizeUrl(l.website_url);
   const skillFileUrl = sanitizeUrl(l.skill_file_url);
   const sourceUrl = sanitizeUrl(l.source_url);
+  const clawhubUrl = sanitizeUrl(l.clawhub_url);
 
   // Best URL for curl snippet: prefer skill_file_url, fallback website_url
   const curlUrl = skillFileUrl || websiteUrl;
@@ -356,7 +357,7 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
               {curlUrl && canDownload && (
                 <div>
                   <h2 className="text-xl font-semibold mb-3">Install</h2>
-                  <CurlSnippet url={curlUrl} slug={slug} />
+                  <CurlSnippet url={curlUrl} clawhubUrl={clawhubUrl || undefined} />
                 </div>
               )}
 
@@ -366,6 +367,7 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
                   slug={slug}
                   skillFileUrl={skillFileUrl}
                   sourceUrl={sourceUrl}
+                  clawhubUrl={clawhubUrl}
                 />
               )}
 

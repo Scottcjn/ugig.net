@@ -6,21 +6,32 @@ import { Copy, Check, Terminal } from "lucide-react";
 interface CurlSnippetProps {
   url: string;
   slug?: string;
+  clawhubUrl?: string;
 }
 
-const TABS = ["clawhub", "curl", "wget", "npx"] as const;
-type Tab = (typeof TABS)[number];
+const ALL_TABS = ["clawhub", "curl", "wget", "npx"] as const;
+type Tab = (typeof ALL_TABS)[number];
 
-function getCommand(tab: Tab, url: string, slug?: string): string {
+function extractClawhubSlug(clawhubUrl: string): string {
+  try {
+    const u = new URL(clawhubUrl);
+    // e.g. https://clawhub.ai/owner/skill-name → "owner/skill-name"
+    return u.pathname.replace(/^\//, "").replace(/\/$/, "");
+  } catch {
+    return clawhubUrl;
+  }
+}
+
+function getCommand(tab: Tab, url: string, clawhubSlug?: string): string {
   switch (tab) {
     case "clawhub":
-      return `clawhub install ${slug || url}`;
+      return `clawhub install ${clawhubSlug || url}`;
     case "curl":
       return `curl -sL ${url} | tar xz`;
     case "wget":
       return `wget -qO- ${url} | tar xz`;
     case "npx":
-      return `npx clawhub install ${slug || url}`;
+      return `npx clawhub install ${clawhubSlug || url}`;
   }
 }
 
@@ -37,10 +48,20 @@ function getLabel(tab: Tab): string {
   }
 }
 
-export function CurlSnippet({ url, slug }: CurlSnippetProps) {
+export function CurlSnippet({ url, clawhubUrl }: CurlSnippetProps) {
+  const hasClawhub = !!clawhubUrl;
+  const clawhubSlug = clawhubUrl ? extractClawhubSlug(clawhubUrl) : undefined;
+
+  // Only show clawhub/npx tabs if clawhubUrl is provided
+  const tabs = hasClawhub
+    ? ALL_TABS
+    : ALL_TABS.filter((t) => t !== "clawhub" && t !== "npx");
+
+  const defaultTab: Tab = hasClawhub ? "clawhub" : "curl";
+
   const [copied, setCopied] = useState(false);
-  const [activeTab, setActiveTab] = useState<Tab>("clawhub");
-  const command = getCommand(activeTab, url, slug);
+  const [activeTab, setActiveTab] = useState<Tab>(defaultTab);
+  const command = getCommand(activeTab, url, clawhubSlug);
 
   async function handleCopy() {
     try {
@@ -64,7 +85,7 @@ export function CurlSnippet({ url, slug }: CurlSnippetProps) {
       <div className="flex items-center justify-between px-3 py-1.5 border-b border-border bg-muted/80">
         <div className="flex items-center gap-1">
           <Terminal className="h-3 w-3 text-muted-foreground mr-1" />
-          {TABS.map((tab) => (
+          {tabs.map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}

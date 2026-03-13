@@ -174,6 +174,7 @@ export async function PATCH(
     if (parsed.data.source_url !== undefined) updateData.source_url = parsed.data.source_url || null;
     if (parsed.data.skill_file_url !== undefined) updateData.skill_file_url = parsed.data.skill_file_url || null;
     if (parsed.data.website_url !== undefined) updateData.website_url = parsed.data.website_url || null;
+    if (parsed.data.clawhub_url !== undefined) updateData.clawhub_url = parsed.data.clawhub_url || null;
 
     // Determine effective skill_file_url (new value or existing)
     const effectiveSkillFileUrl = parsed.data.skill_file_url !== undefined

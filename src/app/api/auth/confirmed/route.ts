@@ -13,19 +13,30 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { sendEmail, welcomeEmail } from "@/lib/email";
 import { generateAndStoreDid } from "@/lib/auth/did";
 import { createUserLnWallet } from "@/lib/lightning/create-wallet";
 
+function safeCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Verify the webhook secret to prevent unauthorized calls
-    const authHeader = request.headers.get("authorization");
+    const authHeader = request.headers.get("authorization") || "";
     const webhookSecret = process.env.AUTH_WEBHOOK_SECRET;
 
-    if (webhookSecret && authHeader !== `Bearer ${webhookSecret}`) {
+    if (!webhookSecret) {
+      console.error("AUTH_WEBHOOK_SECRET is not configured");
+      return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });
+    }
+
+    if (!safeCompare(authHeader, `Bearer ${webhookSecret}`) && !safeCompare(authHeader, webhookSecret)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
