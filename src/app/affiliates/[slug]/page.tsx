@@ -363,7 +363,10 @@ export default function OfferDetailPage() {
                 className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
               >
                 {(() => {
-                  try { return new URL(offer.product_url).hostname.replace(/^www\./, ""); } catch { return "View Product"; }
+                  try {
+                    const parts = new URL(offer.product_url).hostname.split(".");
+                    return parts.length > 2 ? parts.slice(-2).join(".") : parts.join(".");
+                  } catch { return "View Product"; }
                 })()}
                 <ExternalLink className="h-3 w-3 opacity-50" />
               </a>

@@ -209,7 +209,8 @@ async function AffiliatesList({ searchParams }: { searchParams: AffiliatesPagePr
                   </p>
                   {offer.product_url && (() => {
                     try {
-                      const domain = new URL(offer.product_url).hostname.replace(/^www\./, "");
+                      const parts = new URL(offer.product_url).hostname.split(".");
+                      const domain = parts.length > 2 ? parts.slice(-2).join(".") : parts.join(".");
                       return (
                         <p className="text-xs text-muted-foreground mb-3 flex items-center gap-1">
                           <ExternalLink className="h-3 w-3" />
