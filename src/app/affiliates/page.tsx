@@ -191,15 +191,16 @@ async function AffiliatesList({ searchParams }: { searchParams: AffiliatesPagePr
         {offers.map((offer: any) => {
           const profile = offer.profiles;
           return (
-            <Link
+            <div
               key={offer.id}
-              href={`/affiliates/${offer.slug}`}
               className="block p-6 border border-border rounded-lg hover:border-primary/50 hover:shadow-sm transition-all"
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-lg font-semibold truncate">{offer.title}</h3>
+                    <Link href={`/affiliates/${offer.slug}`} className="hover:underline">
+                      <h3 className="text-lg font-semibold truncate">{offer.title}</h3>
+                    </Link>
                     <Badge variant="outline" className="shrink-0 text-xs">
                       {offer.product_type}
                     </Badge>
@@ -271,9 +272,11 @@ async function AffiliatesList({ searchParams }: { searchParams: AffiliatesPagePr
               {offer.tags && offer.tags.length > 0 && (
                 <div className="flex gap-1.5 mt-3 flex-wrap">
                   {offer.tags.slice(0, 5).map((tag: string) => (
-                    <Badge key={tag} variant="secondary" className="text-xs">
-                      {tag}
-                    </Badge>
+                    <Link key={tag} href={`/affiliates?tag=${encodeURIComponent(tag)}`}>
+                      <Badge variant="secondary" className="text-xs cursor-pointer hover:bg-secondary/80 transition-colors">
+                        {tag}
+                      </Badge>
+                    </Link>
                   ))}
                   {offer.tags.length > 5 && (
                     <Badge variant="secondary" className="text-xs">
@@ -282,7 +285,7 @@ async function AffiliatesList({ searchParams }: { searchParams: AffiliatesPagePr
                   )}
                 </div>
               )}
-            </Link>
+            </div>
           );
         })}
       </div>
