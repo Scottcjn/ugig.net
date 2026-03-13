@@ -217,12 +217,17 @@ export default function SellerOfferDetailPage() {
           note: convNote.trim() || undefined,
         }),
       });
+      const data = await res.json();
       if (res.ok) {
         setConversionForm(null);
         setConvAmount("");
         setConvNote("");
         await fetchData();
+      } else {
+        alert(data.error || "Failed to record conversion");
       }
+    } catch (err) {
+      alert("Failed to record conversion. Please try again.");
     } finally {
       setConvSubmitting(false);
     }
