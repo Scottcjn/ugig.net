@@ -17,6 +17,7 @@ import {
   Pencil,
   Plus,
   X,
+  Trash2,
 } from "lucide-react";
 
 interface OfferInfo {
@@ -532,6 +533,7 @@ export default function SellerOfferDetailPage() {
                   <th className="text-center p-3 font-medium">Source</th>
                   <th className="text-center p-3 font-medium">Status</th>
                   <th className="text-left p-3 font-medium">Note</th>
+                  <th className="text-center p-3 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -585,6 +587,61 @@ export default function SellerOfferDetailPage() {
                     </td>
                     <td className="p-3 text-muted-foreground text-xs max-w-[200px] truncate">
                       {conv.note || "—"}
+                    </td>
+                    <td className="p-3 text-center">
+                      {conv.status !== "paid" && (
+                        <div className="flex items-center justify-center gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 px-2 text-xs"
+                            onClick={async () => {
+                              const newNote = prompt("Edit note:", conv.note || "");
+                              if (newNote === null) return;
+                              const newAmount = prompt("Edit sale amount (sats):", String(conv.sale_amount_sats));
+                              if (newAmount === null) return;
+                              const res = await fetch(`/api/affiliates/offers/${id}/conversions`, {
+                                method: "PUT",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                  conversion_id: conv.id,
+                                  note: newNote,
+                                  sale_amount_sats: parseInt(newAmount) || conv.sale_amount_sats,
+                                }),
+                              });
+                              if (res.ok) {
+                                await fetchData();
+                              } else {
+                                const data = await res.json();
+                                alert(data.error || "Failed to update");
+                              }
+                            }}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 px-2 text-xs text-red-500 hover:text-red-700"
+                            onClick={async () => {
+                              if (!confirm("Delete this conversion?")) return;
+                              const res = await fetch(`/api/affiliates/offers/${id}/conversions`, {
+                                method: "DELETE",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ conversion_id: conv.id }),
+                              });
+                              if (res.ok) {
+                                await fetchData();
+                              } else {
+                                const data = await res.json();
+                                alert(data.error || "Failed to delete");
+                              }
+                            }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}

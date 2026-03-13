@@ -37,8 +37,9 @@ export async function GET(
       return NextResponse.json({ error: "Not authorized" }, { status: 403 });
     }
 
-    // Fetch conversions with affiliate profile info
-    const { data: conversions, error: convErr } = await (admin as AnySupabase)
+    // Fetch conversions — try with profile join, fallback without
+    let conversions: any[] = [];
+    const { data: convData, error: convErr } = await (admin as AnySupabase)
       .from("affiliate_conversions")
       .select(`
         id,
@@ -55,10 +56,18 @@ export async function GET(
       .order("created_at", { ascending: false });
 
     if (convErr) {
-      return NextResponse.json({ error: convErr.message }, { status: 400 });
+      // FK join might not exist — retry without join
+      const { data: fallbackData } = await (admin as AnySupabase)
+        .from("affiliate_conversions")
+        .select("id, affiliate_id, sale_amount_sats, commission_sats, status, source, note, created_at")
+        .eq("offer_id", id)
+        .order("created_at", { ascending: false });
+      conversions = fallbackData || [];
+    } else {
+      conversions = convData || [];
     }
 
-    const list = (conversions || []).map(
+    const list = conversions.map(
       (c: {
         id: string;
         affiliate_id: string;
@@ -68,7 +77,7 @@ export async function GET(
         source: string | null;
         note: string | null;
         created_at: string;
-        profiles: { username: string } | null;
+        profiles?: { username: string } | null;
       }) => ({
         id: c.id,
         affiliate_id: c.affiliate_id,
@@ -191,5 +200,135 @@ export async function POST(
       { error: "An unexpected error occurred" },
       { status: 500 }
     );
+  }
+}
+
+/**
+ * PUT /api/affiliates/offers/[id]/conversions - Update a conversion (seller only)
+ * Body: { conversion_id, sale_amount_sats?, note?, status? }
+ */
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const auth = await getAuthContext(request);
+    if (!auth) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const admin = createServiceClient();
+
+    const { data: offer } = await (admin as AnySupabase)
+      .from("affiliate_offers")
+      .select("id, seller_id, commission_rate, commission_type, commission_flat_sats")
+      .eq("id", id)
+      .single();
+
+    if (!offer || offer.seller_id !== auth.user.id) {
+      return NextResponse.json({ error: "Not authorized" }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const { conversion_id, sale_amount_sats, note, status } = body;
+
+    if (!conversion_id) {
+      return NextResponse.json({ error: "conversion_id is required" }, { status: 400 });
+    }
+
+    const updateData: Record<string, unknown> = {};
+    if (typeof note === "string") updateData.note = note.trim();
+    if (typeof status === "string" && ["pending", "paid", "clawed_back"].includes(status)) {
+      updateData.status = status;
+    }
+    if (typeof sale_amount_sats === "number" && sale_amount_sats > 0) {
+      updateData.sale_amount_sats = sale_amount_sats;
+      const { calculateCommission } = await import("@/lib/affiliates/commission");
+      updateData.commission_sats = calculateCommission(offer, sale_amount_sats);
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
+    }
+
+    const { error: updateErr } = await (admin as AnySupabase)
+      .from("affiliate_conversions")
+      .update(updateData)
+      .eq("id", conversion_id)
+      .eq("offer_id", id);
+
+    if (updateErr) {
+      return NextResponse.json({ error: updateErr.message }, { status: 400 });
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch {
+    return NextResponse.json({ error: "An unexpected error occurred" }, { status: 500 });
+  }
+}
+
+/**
+ * DELETE /api/affiliates/offers/[id]/conversions - Delete a conversion (seller only)
+ * Body: { conversion_id }
+ */
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const auth = await getAuthContext(request);
+    if (!auth) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const admin = createServiceClient();
+
+    const { data: offer } = await (admin as AnySupabase)
+      .from("affiliate_offers")
+      .select("id, seller_id")
+      .eq("id", id)
+      .single();
+
+    if (!offer || offer.seller_id !== auth.user.id) {
+      return NextResponse.json({ error: "Not authorized" }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const { conversion_id } = body;
+
+    if (!conversion_id) {
+      return NextResponse.json({ error: "conversion_id is required" }, { status: 400 });
+    }
+
+    const { data: conv } = await (admin as AnySupabase)
+      .from("affiliate_conversions")
+      .select("id, status")
+      .eq("id", conversion_id)
+      .eq("offer_id", id)
+      .single();
+
+    if (!conv) {
+      return NextResponse.json({ error: "Conversion not found" }, { status: 404 });
+    }
+
+    if (conv.status === "paid") {
+      return NextResponse.json({ error: "Cannot delete a paid conversion" }, { status: 400 });
+    }
+
+    const { error: delErr } = await (admin as AnySupabase)
+      .from("affiliate_conversions")
+      .delete()
+      .eq("id", conversion_id)
+      .eq("offer_id", id);
+
+    if (delErr) {
+      return NextResponse.json({ error: delErr.message }, { status: 400 });
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch {
+    return NextResponse.json({ error: "An unexpected error occurred" }, { status: 500 });
   }
 }
