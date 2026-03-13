@@ -3,6 +3,14 @@ import { getAuthContext } from "@/lib/auth/get-user";
 import { createServiceClient } from "@/lib/supabase/service";
 import { PLATFORM_FEE_RATE, PLATFORM_WALLET_USER_ID } from "@/lib/constants";
 import { getUserDid, onZapSent, onZapReceived } from "@/lib/reputation-hooks";
+import {
+  getUserLnWallet,
+  getLnBalance,
+  internalTransfer,
+  syncBalanceCache,
+} from "@/lib/lightning/wallet-utils";
+
+const LNBITS_INVOICE_KEY = process.env.LNBITS_INVOICE_KEY || "";
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,79 +38,111 @@ export async function POST(request: NextRequest) {
 
     const admin = createServiceClient();
 
-    // Calculate fee
-    const fee_sats = Math.floor(amount_sats * PLATFORM_FEE_RATE);
-    const recipient_amount = amount_sats - fee_sats;
+    // Get sender's LNbits wallet
+    const senderWallet = await getUserLnWallet(admin, senderId);
+    if (!senderWallet) {
+      return NextResponse.json({ error: "No Lightning wallet found" }, { status: 400 });
+    }
 
-    // Get sender wallet
-    const { data: senderWallet } = await admin
-      .from("wallets" as any)
-      .select("id, balance_sats")
-      .eq("user_id", senderId)
-      .single();
-
-    const senderBalance = (senderWallet as any)?.balance_sats ?? 0;
+    // Check sender's real LNbits balance
+    const senderBalance = await getLnBalance(senderWallet.invoice_key);
     if (senderBalance < amount_sats) {
       return NextResponse.json({ error: "Insufficient balance", balance_sats: senderBalance }, { status: 400 });
     }
 
-    // Deduct full amount from sender
-    const newSenderBalance = senderBalance - amount_sats;
-    await admin.from("wallets" as any).update({ balance_sats: newSenderBalance, updated_at: new Date().toISOString() }).eq("user_id", senderId);
-
-    // Credit recipient (amount minus fee)
-    const { data: recipientWallet } = await admin
-      .from("wallets" as any)
-      .select("id, balance_sats")
-      .eq("user_id", recipient_id)
-      .single();
-
-    let newRecipientBalance: number;
-    if (recipientWallet) {
-      newRecipientBalance = ((recipientWallet as any).balance_sats ?? 0) + recipient_amount;
-      await admin.from("wallets" as any).update({ balance_sats: newRecipientBalance, updated_at: new Date().toISOString() }).eq("user_id", recipient_id);
-    } else {
-      newRecipientBalance = recipient_amount;
-      await admin.from("wallets" as any).insert({ user_id: recipient_id, balance_sats: newRecipientBalance });
+    // Get recipient's LNbits wallet
+    const recipientWallet = await getUserLnWallet(admin, recipient_id);
+    if (!recipientWallet) {
+      return NextResponse.json({ error: "Recipient has no Lightning wallet" }, { status: 400 });
     }
 
-    // Credit platform wallet with fee
-    let newPlatformBalance = 0;
-    if (fee_sats > 0) {
-      const { data: platformWallet } = await admin
-        .from("wallets" as any)
-        .select("id, balance_sats")
-        .eq("user_id", PLATFORM_WALLET_USER_ID)
-        .single();
+    // Calculate fee
+    const fee_sats = Math.floor(amount_sats * PLATFORM_FEE_RATE);
+    const recipient_amount = amount_sats - fee_sats;
 
-      if (platformWallet) {
-        newPlatformBalance = ((platformWallet as any).balance_sats ?? 0) + fee_sats;
-        await admin.from("wallets" as any).update({ balance_sats: newPlatformBalance, updated_at: new Date().toISOString() }).eq("user_id", PLATFORM_WALLET_USER_ID);
-      } else {
-        newPlatformBalance = fee_sats;
-        await admin.from("wallets" as any).insert({ user_id: PLATFORM_WALLET_USER_ID, balance_sats: newPlatformBalance });
+    // Transfer recipient's share: sender → recipient (instant internal transfer)
+    try {
+      await internalTransfer(
+        senderWallet.admin_key,
+        recipientWallet.invoice_key,
+        recipient_amount,
+        `ugig.net zap`,
+      );
+    } catch (err) {
+      console.error("[Zap] Transfer to recipient failed:", err);
+      return NextResponse.json({ error: "Zap transfer failed" }, { status: 502 });
+    }
+
+    // Transfer platform fee: sender → platform wallet
+    if (fee_sats > 0) {
+      try {
+        await internalTransfer(
+          senderWallet.admin_key,
+          LNBITS_INVOICE_KEY,
+          fee_sats,
+          `ugig.net zap fee`,
+        );
+      } catch (err) {
+        // Fee transfer failed but recipient got paid — log it, don't fail the zap
+        console.error("[Zap] Platform fee transfer failed:", err);
       }
     }
 
-    // Create zap record (with fee)
+    // Get updated balances from LNbits
+    const newSenderBalance = await getLnBalance(senderWallet.invoice_key);
+    const newRecipientBalance = await getLnBalance(recipientWallet.invoice_key);
+
+    // Sync Supabase caches
+    await syncBalanceCache(admin, senderId, newSenderBalance);
+    await syncBalanceCache(admin, recipient_id, newRecipientBalance);
+
+    // Create zap record
     const { data: zap } = await admin
       .from("zaps" as any)
-      .insert({ sender_id: senderId, recipient_id, amount_sats, fee_sats, target_type, target_id, note: note || null })
+      .insert({
+        sender_id: senderId,
+        recipient_id,
+        amount_sats,
+        fee_sats,
+        target_type,
+        target_id,
+        note: note || null,
+      })
       .select()
       .single();
 
     const zapId = (zap as any)?.id;
 
-    // Create wallet transactions: sender, recipient, platform fee
+    // Create wallet transactions for audit trail
     const txns: any[] = [
-      { user_id: senderId, type: "zap_sent", amount_sats, balance_after: newSenderBalance, reference_id: zapId, status: "completed" },
-      { user_id: recipient_id, type: "zap_received", amount_sats: recipient_amount, balance_after: newRecipientBalance, reference_id: zapId, status: "completed" },
+      {
+        user_id: senderId,
+        type: "zap_sent",
+        amount_sats,
+        balance_after: newSenderBalance,
+        reference_id: zapId,
+        status: "completed",
+      },
+      {
+        user_id: recipient_id,
+        type: "zap_received",
+        amount_sats: recipient_amount,
+        balance_after: newRecipientBalance,
+        reference_id: zapId,
+        status: "completed",
+      },
     ];
     if (fee_sats > 0) {
-      txns.push({ user_id: PLATFORM_WALLET_USER_ID, type: "zap_fee", amount_sats: fee_sats, balance_after: newPlatformBalance, reference_id: zapId, status: "completed" });
+      txns.push({
+        user_id: PLATFORM_WALLET_USER_ID,
+        type: "zap_fee",
+        amount_sats: fee_sats,
+        balance_after: 0,
+        reference_id: zapId,
+        status: "completed",
+      });
     }
     await admin.from("wallet_transactions" as any).insert(txns);
-
 
     // Notify recipient
     const { data: recipientProfile } = await admin
@@ -121,7 +161,6 @@ export async function POST(request: NextRequest) {
 
     if ((recipientProfile as any)?.ln_address) {
       await (admin.from("notifications") as any).insert({
-
         user_id: recipient_id,
         type: "zap_received",
         title: "You received a zap! ⚡",
@@ -130,7 +169,6 @@ export async function POST(request: NextRequest) {
       });
     } else {
       await (admin.from("notifications") as any).insert({
-
         user_id: recipient_id,
         type: "zap_received",
         title: "You received a zap! ⚡",

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthContext } from "@/lib/auth/get-user";
 import { createServiceClient } from "@/lib/supabase/service";
+import { getUserLnWallet, getLnBalance, syncBalanceCache } from "@/lib/lightning/wallet-utils";
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,18 +11,23 @@ export async function GET(request: NextRequest) {
     }
 
     const admin = createServiceClient();
-    const { data: wallet } = await admin
-      .from("wallets" as any)
-      .select("balance_sats")
-      .eq("user_id", auth.user.id)
-      .single() as any;
+    const userId = auth.user.id;
 
-    if (wallet) {
-      return NextResponse.json({ balance_sats: wallet.balance_sats });
+    // Look up user's LNbits wallet
+    const lnWallet = await getUserLnWallet(admin, userId);
+    if (!lnWallet) {
+      // No LNbits wallet yet — ensure Supabase cache exists and return 0
+      await syncBalanceCache(admin, userId, 0);
+      return NextResponse.json({ balance_sats: 0 });
     }
 
-    await admin.from("wallets" as any).insert({ user_id: auth.user.id, balance_sats: 0 });
-    return NextResponse.json({ balance_sats: 0 });
+    // Get real balance from LNbits
+    const balance_sats = await getLnBalance(lnWallet.invoice_key);
+
+    // Update Supabase cache
+    await syncBalanceCache(admin, userId, balance_sats);
+
+    return NextResponse.json({ balance_sats });
   } catch {
     return NextResponse.json({ error: "An unexpected error occurred" }, { status: 500 });
   }

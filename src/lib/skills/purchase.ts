@@ -1,5 +1,13 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import { SKILL_FEE_RATES, PLATFORM_WALLET_USER_ID } from "@/lib/constants";
+import {
+  getUserLnWallet,
+  getLnBalance,
+  internalTransfer,
+  syncBalanceCache,
+} from "@/lib/lightning/wallet-utils";
+
+const LNBITS_INVOICE_KEY = process.env.LNBITS_INVOICE_KEY || "";
 
 export interface PurchaseResult {
   ok: boolean;
@@ -26,7 +34,7 @@ export function calculateSkillFee(priceSats: number, feeRate: number): number {
 }
 
 /**
- * Execute a skill purchase using wallet ledger.
+ * Execute a skill purchase using LNbits internal transfers.
  * Runs as service role — caller must authorize.
  */
 export async function executeSkillPurchase(
@@ -37,7 +45,7 @@ export async function executeSkillPurchase(
     listingId: string;
     priceSats: number;
     sellerPlan: string | null;
-  }
+  },
 ): Promise<PurchaseResult> {
   const { buyerId, sellerId, listingId, priceSats, sellerPlan } = params;
 
@@ -64,73 +72,64 @@ export async function executeSkillPurchase(
     return { ok: true, purchase_id: (purchase as any).id, fee_sats: 0, fee_rate: 0 };
   }
 
-  // Paid skills: wallet flow
+  // Paid skills: LNbits wallet flow
   const feeRate = getSellerFeeRate(sellerPlan);
   const feeSats = calculateSkillFee(priceSats, feeRate);
   const sellerAmount = priceSats - feeSats;
 
-  // Check buyer balance
-  const { data: buyerWallet } = await admin
-    .from("wallets" as any)
-    .select("balance_sats")
-    .eq("user_id", buyerId)
-    .single();
+  // Get buyer's LNbits wallet
+  const buyerWallet = await getUserLnWallet(admin, buyerId);
+  if (!buyerWallet) {
+    return { ok: false, error: "No Lightning wallet found" };
+  }
 
-  const buyerBalance = (buyerWallet as any)?.balance_sats ?? 0;
+  // Check buyer's real LNbits balance
+  const buyerBalance = await getLnBalance(buyerWallet.invoice_key);
   if (buyerBalance < priceSats) {
     return { ok: false, error: "Insufficient balance" };
   }
 
-  // Deduct from buyer
-  const newBuyerBalance = buyerBalance - priceSats;
-  await admin
-    .from("wallets" as any)
-    .update({ balance_sats: newBuyerBalance, updated_at: new Date().toISOString() })
-    .eq("user_id", buyerId);
-
-  // Credit seller
-  const { data: sellerWallet } = await admin
-    .from("wallets" as any)
-    .select("balance_sats")
-    .eq("user_id", sellerId)
-    .single();
-
-  let newSellerBalance: number;
-  if (sellerWallet) {
-    newSellerBalance = ((sellerWallet as any).balance_sats ?? 0) + sellerAmount;
-    await admin
-      .from("wallets" as any)
-      .update({ balance_sats: newSellerBalance, updated_at: new Date().toISOString() })
-      .eq("user_id", sellerId);
-  } else {
-    newSellerBalance = sellerAmount;
-    await admin
-      .from("wallets" as any)
-      .insert({ user_id: sellerId, balance_sats: newSellerBalance });
+  // Get seller's LNbits wallet
+  const sellerWallet = await getUserLnWallet(admin, sellerId);
+  if (!sellerWallet) {
+    return { ok: false, error: "Seller has no Lightning wallet" };
   }
 
-  // Credit platform fee
-  let newPlatformBalance = 0;
-  if (feeSats > 0) {
-    const { data: platformWallet } = await admin
-      .from("wallets" as any)
-      .select("balance_sats")
-      .eq("user_id", PLATFORM_WALLET_USER_ID)
-      .single();
+  // Transfer seller's share: buyer → seller (instant internal transfer)
+  try {
+    await internalTransfer(
+      buyerWallet.admin_key,
+      sellerWallet.invoice_key,
+      sellerAmount,
+      "ugig.net skill purchase",
+    );
+  } catch (err) {
+    console.error("[purchase] Transfer to seller failed:", err);
+    return { ok: false, error: "Payment transfer failed" };
+  }
 
-    if (platformWallet) {
-      newPlatformBalance = ((platformWallet as any).balance_sats ?? 0) + feeSats;
-      await admin
-        .from("wallets" as any)
-        .update({ balance_sats: newPlatformBalance, updated_at: new Date().toISOString() })
-        .eq("user_id", PLATFORM_WALLET_USER_ID);
-    } else {
-      newPlatformBalance = feeSats;
-      await admin
-        .from("wallets" as any)
-        .insert({ user_id: PLATFORM_WALLET_USER_ID, balance_sats: newPlatformBalance });
+  // Transfer platform fee: buyer → platform wallet
+  if (feeSats > 0) {
+    try {
+      await internalTransfer(
+        buyerWallet.admin_key,
+        LNBITS_INVOICE_KEY,
+        feeSats,
+        "ugig.net skill purchase fee",
+      );
+    } catch (err) {
+      // Fee transfer failed but seller got paid — log it
+      console.error("[purchase] Platform fee transfer failed:", err);
     }
   }
+
+  // Get updated balances from LNbits
+  const newBuyerBalance = await getLnBalance(buyerWallet.invoice_key);
+  const newSellerBalance = await getLnBalance(sellerWallet.invoice_key);
+
+  // Sync Supabase caches
+  await syncBalanceCache(admin, buyerId, newBuyerBalance);
+  await syncBalanceCache(admin, sellerId, newSellerBalance);
 
   // Create purchase record
   const { data: purchase, error: purchaseError } = await admin
@@ -147,7 +146,6 @@ export async function executeSkillPurchase(
     .single();
 
   if (purchaseError) {
-    // Rollback: ideally use a DB transaction. For MVP, log the error.
     console.error("Purchase insert failed after wallet ops:", purchaseError);
     if (purchaseError.code === "23505") return { ok: false, error: "Already purchased" };
     return { ok: false, error: purchaseError.message };
@@ -155,7 +153,7 @@ export async function executeSkillPurchase(
 
   const purchaseId = (purchase as any).id;
 
-  // Record wallet transactions
+  // Record wallet transactions for audit trail
   const txns: any[] = [
     {
       user_id: buyerId,
@@ -179,7 +177,7 @@ export async function executeSkillPurchase(
       user_id: PLATFORM_WALLET_USER_ID,
       type: "skill_sale_fee",
       amount_sats: feeSats,
-      balance_after: newPlatformBalance,
+      balance_after: 0,
       reference_id: purchaseId,
       status: "completed",
     });

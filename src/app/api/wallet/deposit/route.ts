@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthContext } from "@/lib/auth/get-user";
 import { createServiceClient } from "@/lib/supabase/service";
-
-const LNBITS_URL = process.env.LNBITS_URL || "https://ln.coinpayportal.com";
-const LNBITS_INVOICE_KEY = process.env.LNBITS_INVOICE_KEY || "";
+import { getUserLnWallet, createInvoice, getLnBalance } from "@/lib/lightning/wallet-utils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,37 +15,48 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid amount (1-1,000,000 sats)" }, { status: 400 });
     }
 
-    // Get user's personal LNbits wallet key, fall back to platform wallet
     const admin = createServiceClient();
     const userId = auth.user.id;
-    const { data: userWallet } = await admin.from("user_ln_wallets" as any)
-      .select("invoice_key")
+
+    // Look up user's LNbits wallet — deposits go to THEIR wallet
+    const lnWallet = await getUserLnWallet(admin, userId);
+    if (!lnWallet) {
+      return NextResponse.json(
+        { error: "No Lightning wallet found. Please contact support." },
+        { status: 400 },
+      );
+    }
+
+    // Create invoice on the USER's wallet
+    const { payment_request, payment_hash } = await createInvoice(
+      lnWallet.invoice_key,
+      amount_sats,
+      `ugig.net deposit (${userId.slice(0, 8)})`,
+    );
+
+    // Get current balance for the transaction log
+    const currentBalance = await getLnBalance(lnWallet.invoice_key);
+
+    // Ensure Supabase wallet row exists
+    const { data: wallet } = (await admin
+      .from("wallets" as any)
+      .select("id, balance_sats")
       .eq("user_id", userId)
-      .single() as any;
-    const invoiceKey = userWallet?.invoice_key || LNBITS_INVOICE_KEY;
+      .single()) as any;
 
-    // Create invoice via LNbits (from user's wallet if available, otherwise platform)
-    const lnRes = await fetch(`${LNBITS_URL}/api/v1/payments`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Api-Key": invoiceKey },
-      body: JSON.stringify({ out: false, amount: amount_sats, memo: "ugig.net deposit" }),
-    });
-
-    if (!lnRes.ok) {
-      console.error("LNbits invoice error:", await lnRes.text());
-      return NextResponse.json({ error: "Failed to create invoice" }, { status: 502 });
-    }
-
-    const { payment_request, payment_hash } = await lnRes.json();
-
-    // Ensure wallet exists
-    const { data: wallet } = await admin.from("wallets" as any).select("id, balance_sats").eq("user_id", userId).single() as any;
     if (!wallet) {
-      await admin.from("wallets" as any).insert({ user_id: userId, balance_sats: 0 });
+      await admin.from("wallets" as any).insert({ user_id: userId, balance_sats: currentBalance });
     }
 
+    // Log the pending deposit
     await admin.from("wallet_transactions" as any).insert({
-      user_id: userId, type: "deposit", amount_sats, balance_after: wallet?.balance_sats ?? 0, bolt11: payment_request, payment_hash, status: "pending",
+      user_id: userId,
+      type: "deposit",
+      amount_sats,
+      balance_after: currentBalance,
+      bolt11: payment_request,
+      payment_hash,
+      status: "pending",
     });
 
     return NextResponse.json({ ok: true, payment_request, payment_hash, amount_sats });

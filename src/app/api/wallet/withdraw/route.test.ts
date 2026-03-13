@@ -29,7 +29,20 @@ vi.mock("@/lib/supabase/service", () => ({
   }),
 }));
 
-// Mock fetch for LNbits
+// Mock wallet-utils
+const mockGetUserLnWallet = vi.fn();
+const mockGetLnBalance = vi.fn();
+const mockPayInvoice = vi.fn();
+const mockSyncBalanceCache = vi.fn();
+
+vi.mock("@/lib/lightning/wallet-utils", () => ({
+  getUserLnWallet: (...args: any[]) => mockGetUserLnWallet(...args),
+  getLnBalance: (...args: any[]) => mockGetLnBalance(...args),
+  payInvoice: (...args: any[]) => mockPayInvoice(...args),
+  syncBalanceCache: (...args: any[]) => mockSyncBalanceCache(...args),
+}));
+
+// Mock fetch for LNURL resolution
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
@@ -60,6 +73,18 @@ describe("POST /api/wallet/withdraw", () => {
         }),
       }),
     });
+
+    // Default: user has an LNbits wallet
+    mockGetUserLnWallet.mockResolvedValue({
+      admin_key: "admin-key-123",
+      invoice_key: "invoice-key-123",
+    });
+
+    // Default: user has 1000 sats
+    mockGetLnBalance.mockResolvedValue(1000);
+
+    // Default: sync succeeds
+    mockSyncBalanceCache.mockResolvedValue(undefined);
   });
 
   it("rejects unauthenticated requests", async () => {
@@ -90,7 +115,6 @@ describe("POST /api/wallet/withdraw", () => {
   });
 
   it("rejects non-integer amounts", async () => {
-    // Set up the chain to get past rate limiting
     const chainMock = {
       select: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
@@ -109,7 +133,6 @@ describe("POST /api/wallet/withdraw", () => {
   });
 
   it("rejects invalid destination", async () => {
-    // Set up full chain mock for rate limit + daily limit + balance
     let callCount = 0;
     mockFrom.mockImplementation(() => {
       callCount++;
@@ -125,20 +148,11 @@ describe("POST /api/wallet/withdraw", () => {
           }),
         };
       }
-      // Balance check
+      // wallet_transactions insert
       return {
-        select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            single: vi.fn().mockResolvedValue({ data: { balance_sats: 1000 } }),
-          }),
-        }),
-        update: vi.fn().mockReturnValue({
-          eq: vi.fn().mockResolvedValue({ data: null }),
-        }),
+        insert: vi.fn().mockResolvedValue({ data: null }),
       };
     });
-
-    mockRpc.mockResolvedValue({ data: [{ user_id: "user-123", balance_sats: 900 }], error: null });
 
     const res = await POST(makeRequest({ amount_sats: 100, destination: "not-valid" }));
     expect(res.status).toBe(502);
@@ -147,6 +161,9 @@ describe("POST /api/wallet/withdraw", () => {
   });
 
   it("prevents withdrawing more than balance", async () => {
+    // User only has 50 sats
+    mockGetLnBalance.mockResolvedValue(50);
+
     let callCount = 0;
     mockFrom.mockImplementation(() => {
       callCount++;
@@ -165,23 +182,37 @@ describe("POST /api/wallet/withdraw", () => {
         select: vi.fn().mockReturnValue({
           eq: vi.fn().mockReturnValue({
             single: vi.fn().mockResolvedValue({ data: { balance_sats: 50 } }),
-            eq: vi.fn().mockResolvedValue({ data: null }),
-          }),
-        }),
-        update: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            eq: vi.fn().mockResolvedValue({ data: null }),
           }),
         }),
       };
     });
 
-    // Atomic rpc returns empty (insufficient balance)
-    mockRpc.mockResolvedValue({ data: [], error: null });
-
     const res = await POST(makeRequest({ amount_sats: 100, destination: "user@wallet.com" }));
     expect(res.status).toBe(400);
     const data = await res.json();
     expect(data.error).toMatch(/insufficient/i);
+  });
+
+  it("returns 400 when user has no LNbits wallet", async () => {
+    mockGetUserLnWallet.mockResolvedValue(null);
+
+    let callCount = 0;
+    mockFrom.mockImplementation(() => {
+      callCount++;
+      return {
+        select: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              gte: vi.fn().mockResolvedValue({ count: 0, data: [] }),
+            }),
+          }),
+        }),
+      };
+    });
+
+    const res = await POST(makeRequest({ amount_sats: 100, destination: "user@wallet.com" }));
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toMatch(/no lightning wallet/i);
   });
 });

@@ -3,7 +3,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 
 const LNBITS_URL = process.env.LNBITS_URL || "https://ln.coinpayportal.com";
 const LNBITS_INVOICE_KEY = process.env.LNBITS_INVOICE_KEY || "";
-const LNBITS_PAYLINK_KEY = process.env.LNBITS_PAYLINK_KEY || "";
+// Single platform wallet — no external wallet mixing
 const SYSTEM_WALLET_USER = "00000000-0000-0000-0000-000000000000";
 
 async function getWalletBalance(apiKey: string): Promise<number> {
@@ -22,14 +22,8 @@ async function getWalletBalance(apiKey: string): Promise<number> {
 
 export async function GET() {
   try {
-    // Sum balances from both the ugig platform wallet and the pay link wallet
-    const [platformSats, paylinkSats] = await Promise.all([
-      getWalletBalance(LNBITS_INVOICE_KEY),
-      LNBITS_PAYLINK_KEY && LNBITS_PAYLINK_KEY !== LNBITS_INVOICE_KEY
-        ? getWalletBalance(LNBITS_PAYLINK_KEY)
-        : Promise.resolve(0),
-    ]);
-    const totalSats = platformSats + paylinkSats;
+    // Read balance from ugig-platform wallet only
+    const totalSats = await getWalletBalance(LNBITS_INVOICE_KEY);
 
     // Fetch system wallet commission from Supabase
     const supabase = createServiceClient();
