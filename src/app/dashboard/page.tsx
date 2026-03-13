@@ -12,6 +12,8 @@ import {
   ArrowRight,
   MessageSquare,
   FolderOpen,
+  Megaphone,
+  HandCoins,
 } from "lucide-react";
 
 export const metadata = {
@@ -60,6 +62,31 @@ export default async function DashboardPage() {
   const totalApplications = applicationsResult.count || 0;
   const totalViews =
     viewsResult.data?.reduce((sum, gig) => sum + (gig.views_count || 0), 0) || 0;
+
+  // Fetch affiliate stats
+  const [myOffersResult, myAffiliationsResult] = await Promise.all([
+    supabase
+      .from("affiliate_offers" as any)
+      .select("id, total_affiliates, total_conversions, total_revenue_sats", { count: "exact" })
+      .eq("seller_id", user.id)
+      .eq("status", "active"),
+    supabase
+      .from("affiliate_applications" as any)
+      .select("id", { count: "exact", head: true })
+      .eq("affiliate_id", user.id)
+      .eq("status", "approved"),
+  ]);
+
+  const totalOffers = myOffersResult.count || 0;
+  const totalAffiliations = myAffiliationsResult.count || 0;
+  const offerStats = (myOffersResult.data || []).reduce(
+    (acc: { affiliates: number; conversions: number; revenue: number }, o: any) => ({
+      affiliates: acc.affiliates + (o.total_affiliates || 0),
+      conversions: acc.conversions + (o.total_conversions || 0),
+      revenue: acc.revenue + (o.total_revenue_sats || 0),
+    }),
+    { affiliates: 0, conversions: 0, revenue: 0 }
+  );
 
   // Fetch recent applications to user's gigs
   const { data: recentApplications } = await supabase
@@ -123,7 +150,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
           <div className="p-6 bg-card rounded-lg border border-border shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-200">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-primary/10 rounded-xl">
@@ -176,6 +203,63 @@ export default async function DashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* Affiliate Stats */}
+        {(totalOffers > 0 || totalAffiliations > 0) && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <Link href="/dashboard/affiliates" className="p-6 bg-card rounded-lg border border-border shadow-sm hover:shadow-md hover:border-amber-500/30 transition-all duration-200">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-amber-500/10 rounded-xl">
+                  <Megaphone className="h-5 w-5 text-amber-500" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{totalOffers}</p>
+                  <p className="text-sm text-muted-foreground">My Offers</p>
+                </div>
+              </div>
+            </Link>
+
+            <Link href="/dashboard/affiliates" className="p-6 bg-card rounded-lg border border-border shadow-sm hover:shadow-md hover:border-cyan-500/30 transition-all duration-200">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-cyan-500/10 rounded-xl">
+                  <HandCoins className="h-5 w-5 text-cyan-500" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{totalAffiliations}</p>
+                  <p className="text-sm text-muted-foreground">Promoting</p>
+                </div>
+              </div>
+            </Link>
+
+            {offerStats.conversions > 0 && (
+              <div className="p-6 bg-card rounded-lg border border-border shadow-sm hover:shadow-md hover:border-green-500/30 transition-all duration-200">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-green-500/10 rounded-xl">
+                    <TrendingUp className="h-5 w-5 text-green-500" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{offerStats.conversions}</p>
+                    <p className="text-sm text-muted-foreground">Affiliate Sales</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {offerStats.affiliates > 0 && (
+              <div className="p-6 bg-card rounded-lg border border-border shadow-sm hover:shadow-md hover:border-indigo-500/30 transition-all duration-200">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-indigo-500/10 rounded-xl">
+                    <Users className="h-5 w-5 text-indigo-500" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{offerStats.affiliates}</p>
+                    <p className="text-sm text-muted-foreground">Total Affiliates</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -261,6 +345,32 @@ export default async function DashboardPage() {
                   <h3 className="font-medium">My Portfolio</h3>
                   <p className="text-sm text-muted-foreground mt-1">
                     Showcase your completed projects
+                  </p>
+                </Link>
+
+                <Link
+                  href="/affiliates/new"
+                  className="p-4 border border-border rounded-lg shadow-sm hover:shadow-md hover:border-amber-500/40 hover:bg-amber-500/5 transition-all duration-200"
+                >
+                  <div className="p-2.5 bg-amber-500/10 rounded-xl w-fit mb-3">
+                    <Megaphone className="h-5 w-5 text-amber-500" />
+                  </div>
+                  <h3 className="font-medium">Create Affiliate Offer</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Let others promote your products
+                  </p>
+                </Link>
+
+                <Link
+                  href="/affiliates"
+                  className="p-4 border border-border rounded-lg shadow-sm hover:shadow-md hover:border-cyan-500/40 hover:bg-cyan-500/5 transition-all duration-200"
+                >
+                  <div className="p-2.5 bg-cyan-500/10 rounded-xl w-fit mb-3">
+                    <HandCoins className="h-5 w-5 text-cyan-500" />
+                  </div>
+                  <h3 className="font-medium">Browse Affiliate Offers</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Earn commissions promoting products
                   </p>
                 </Link>
               </div>
@@ -422,6 +532,12 @@ export default async function DashboardPage() {
                   className="block p-2.5 pl-3 rounded-lg hover:bg-muted/50 text-muted-foreground border-l-2 border-transparent hover:border-muted-foreground/30 transition-all duration-150"
                 >
                   Skill Library
+                </Link>
+                <Link
+                  href="/dashboard/affiliates"
+                  className="block p-2.5 pl-3 rounded-lg hover:bg-muted/50 text-muted-foreground border-l-2 border-transparent hover:border-muted-foreground/30 transition-all duration-150"
+                >
+                  My Affiliates
                 </Link>
                 <Link
                   href="/profile"
