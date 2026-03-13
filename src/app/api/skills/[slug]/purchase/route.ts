@@ -75,25 +75,29 @@ export async function POST(
       return NextResponse.json({ error: result.error }, { status });
     }
 
-    // Notify seller
-    const { data: buyerProfile } = await admin
-      .from("profiles")
-      .select("username")
-      .eq("id", auth.user.id)
-      .single();
+    // Notify seller (non-blocking)
+    try {
+      const { data: buyerProfile } = await admin
+        .from("profiles")
+        .select("username")
+        .eq("id", auth.user.id)
+        .single();
 
-    await (admin.from("notifications") as any).insert({
-      user_id: (listing as any).seller_id,
-      type: "skill_purchased",
-      title: "Skill purchased! 🎉",
-      body: `${buyerProfile?.username || "Someone"} purchased "${(listing as any).title}"`,
-      data: {
-        listing_id: (listing as any).id,
-        purchase_id: result.purchase_id,
-        amount_sats: (listing as any).price_sats,
-        fee_sats: result.fee_sats,
-      },
-    });
+      await (admin.from("notifications") as any).insert({
+        user_id: (listing as any).seller_id,
+        type: "skill_purchased",
+        title: "Skill purchased! 🎉",
+        body: `${buyerProfile?.username || "Someone"} purchased "${(listing as any).title}"`,
+        data: {
+          listing_id: (listing as any).id,
+          purchase_id: result.purchase_id,
+          amount_sats: (listing as any).price_sats,
+          fee_sats: result.fee_sats,
+        },
+      });
+    } catch (notifErr) {
+      console.error("[purchase] Notification failed (non-fatal):", notifErr);
+    }
 
     // Check for affiliate attribution (non-blocking)
     try {
