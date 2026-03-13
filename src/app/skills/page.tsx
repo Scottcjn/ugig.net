@@ -42,9 +42,17 @@ interface SkillsPageProps {
   }>;
 }
 
+async function fetchBtcRate(): Promise<number | null> {
+  try {
+    const res = await fetch("https://coinpayportal.com/api/rates?coin=BTC", { next: { revalidate: 300 } });
+    const d = await res.json();
+    return d.success && d.rate ? d.rate : null;
+  } catch { return null; }
+}
+
 async function SkillsList({ searchParams }: { searchParams: SkillsPageProps["searchParams"] }) {
   const queryParams = await searchParams;
-  const supabase = await createClient();
+  const [supabase, btcUsd] = await Promise.all([createClient(), fetchBtcRate()]);
 
   const page = parseInt(queryParams.page || "1");
   const limit = 20;
@@ -139,10 +147,17 @@ async function SkillsList({ searchParams }: { searchParams: SkillsPageProps["sea
                   Free
                 </Badge>
               ) : (
-                <Badge className="shrink-0 ml-2 bg-amber-500/10 text-amber-600 border-amber-500/20">
-                  <Zap className="h-3 w-3 mr-1" />
-                  {listing.price_sats.toLocaleString()}
-                </Badge>
+                <div className="shrink-0 ml-2 text-right">
+                  <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20">
+                    <Zap className="h-3 w-3 mr-1" />
+                    {listing.price_sats.toLocaleString()}
+                  </Badge>
+                  {btcUsd && (
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      ≈ ${((listing.price_sats / 1e8) * btcUsd).toFixed(2)}
+                    </p>
+                  )}
+                </div>
               )}
             </div>
 
