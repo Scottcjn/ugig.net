@@ -98,6 +98,9 @@ function WithdrawSection({ balance, onWithdraw }: { balance: number; onWithdraw:
                 {withdrawing ? "Sending..." : "Withdraw"}
               </Button>
             </div>
+            {amount && parseInt(amount) > 0 && (
+              <p className="text-xs text-amber-500"><SatsAmount sats={parseInt(amount)} /></p>
+            )}
             <p className="text-xs text-muted-foreground">Min: 10 sats · Max: {Math.min(balance, 100000).toLocaleString()} sats · Available: <SatsAmount sats={balance} /></p>
           </div>
         </>
@@ -266,6 +269,9 @@ export default function WalletPage() {
                 {depositing ? "Creating..." : "Deposit"}
               </Button>
             </div>
+            {customAmount && parseInt(customAmount) > 0 && (
+              <p className="text-xs text-amber-500"><SatsAmount sats={parseInt(customAmount)} /></p>
+            )}
           </>
         )}
 
