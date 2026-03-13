@@ -531,7 +531,7 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
                     </p>
                     {btcUsd && (
                       <p className="text-sm text-muted-foreground mt-1">
-                        ≈ ${((l.price_sats / 1e8) * btcUsd).toFixed(2)} USD
+                        ≈ {"$"}{((l.price_sats / 1e8) * btcUsd).toFixed(2)} USD
                       </p>
                     )}
                   )}
