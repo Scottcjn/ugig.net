@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MarkdownContent } from "@/components/ui/MarkdownContent";
-import { ArrowLeft, Users, TrendingUp, Calendar, ExternalLink } from "lucide-react";
+import { ArrowLeft, Users, TrendingUp, Calendar, ExternalLink, Zap } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 interface AffiliateOffer {
@@ -272,9 +272,10 @@ export default function OfferDetailPage() {
             {/* Commission card */}
             <div className="p-6 border border-border rounded-lg bg-card sticky top-6">
               <div className="text-center mb-4">
-                <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                <p className="text-2xl font-bold text-amber-500 flex items-center justify-center gap-1">
+                  <Zap className="h-6 w-6 fill-amber-500" />
                   {commissionDisplay}
-                </div>
+                </p>
                 {(() => {
                   if (offer.commission_type === "percentage" && offer.price_sats > 0) {
                     const usd = (offer.price_sats * offer.commission_rate).toFixed(2);
