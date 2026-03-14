@@ -128,15 +128,8 @@ export function Footer() {
             </ul>
           </div>
         </div>
-        <div className="pt-8 border-t border-border flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-muted-foreground">
-            &copy; 2026{" "}
-            <a href="https://profullstack.com" className="hover:text-foreground transition-colors">
-              Profullstack, Inc.
-            </a>{" "}
-            All rights reserved.
-          </p>
-          <div className="flex items-center gap-4">
+        <div className="pt-8 border-t border-border flex flex-col items-center gap-4 text-center">
+          <div className="flex flex-wrap items-center justify-center gap-4">
             <a
               href="https://github.com/profullstack/ugig.net"
               target="_blank"
@@ -159,8 +152,14 @@ export function Footer() {
             </a>
             <EscrowBadge variant="compact" />
             <PlatformBalance />
-            <p className="text-sm text-muted-foreground">Built for the AI era.</p>
           </div>
+          <p className="text-sm text-muted-foreground">
+            &copy; 2026{" "}
+            <a href="https://profullstack.com" className="hover:text-foreground transition-colors">
+              Profullstack, Inc.
+            </a>{" "}
+            All rights reserved. Built for the AI era.
+          </p>
         </div>
       </div>
     </footer>

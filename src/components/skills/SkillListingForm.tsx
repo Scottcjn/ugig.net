@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { SKILL_CATEGORIES, SUPPORTED_AGENT_OPTIONS } from "@/lib/constants";
 import { Loader2, Trash2, Link as LinkIcon, Sparkles, Shield, CheckCircle, AlertCircle, Terminal, Copy, Check } from "lucide-react";
 import { GenerateScanButton } from "./GenerateScanButton";
+import { useDialog } from "@/components/providers/DialogProvider";
 
 interface SkillListingFormProps {
   slug?: string; // If editing
@@ -30,6 +31,7 @@ interface SkillListingFormProps {
 
 export function SkillListingForm({ slug, listingId, initialData }: SkillListingFormProps) {
   const router = useRouter();
+  const { confirm } = useDialog();
   const isEdit = !!slug;
 
   const [title, setTitle] = useState(initialData?.title || "");
@@ -225,7 +227,7 @@ export function SkillListingForm({ slug, listingId, initialData }: SkillListingF
   }
 
   async function handleDelete() {
-    if (!confirm("Archive this skill listing? It will be hidden from the marketplace.")) return;
+    if (!await confirm("Archive this skill listing? It will be hidden from the marketplace.")) return;
 
     setDeleting(true);
     try {

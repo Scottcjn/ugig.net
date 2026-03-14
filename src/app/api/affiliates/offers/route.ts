@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
     // Sort
     switch (sort) {
       case "commission":
-        query = query.order("commission_rate", { ascending: false });
+        query = query.order("commission_flat_sats", { ascending: false });
         break;
       case "popular":
         query = query.order("total_affiliates", { ascending: false });
@@ -79,8 +79,39 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
+    // Hide product_url from unauthenticated users (#20)
+    let auth: { user: { id: string } } | null = null;
+    try {
+      auth = await getAuthContext(request);
+    } catch {
+      // not authenticated
+    }
+
+    let approvedOfferIds: Set<string> = new Set();
+    if (auth) {
+      // Check which offers this user is an approved affiliate for
+      const { data: apps } = await (admin as AnySupabase)
+        .from("affiliate_applications")
+        .select("offer_id")
+        .eq("affiliate_id", auth.user.id)
+        .eq("status", "approved");
+      if (apps) {
+        approvedOfferIds = new Set(apps.map((a: any) => a.offer_id));
+      }
+    }
+
+    const sanitizedOffers = (offers || []).map((offer: any) => {
+      const isOwner = auth && offer.seller_id === auth.user.id;
+      const isApprovedAffiliate = auth && approvedOfferIds.has(offer.id);
+      if (!isOwner && !isApprovedAffiliate) {
+        const { product_url, ...rest } = offer;
+        return rest;
+      }
+      return offer;
+    });
+
     return NextResponse.json({
-      offers: offers || [],
+      offers: sanitizedOffers,
       total: count || 0,
       page,
       limit,

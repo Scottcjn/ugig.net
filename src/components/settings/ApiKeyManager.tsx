@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useDialog } from "@/components/providers/DialogProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +21,7 @@ interface ApiKeyManagerProps {
 }
 
 export function ApiKeyManager({ initialKeys }: ApiKeyManagerProps) {
+  const { confirm } = useDialog();
   const [keys, setKeys] = useState<ApiKeyData[]>(initialKeys);
   const [newKeyName, setNewKeyName] = useState("");
   const [createdKey, setCreatedKey] = useState<string | null>(null);
@@ -70,7 +72,7 @@ export function ApiKeyManager({ initialKeys }: ApiKeyManagerProps) {
   };
 
   const handleRevoke = async (id: string) => {
-    if (!confirm("Are you sure you want to revoke this API key? This action cannot be undone.")) {
+    if (!await confirm("Are you sure you want to revoke this API key? This action cannot be undone.")) {
       return;
     }
 
