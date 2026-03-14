@@ -104,4 +104,79 @@ describe("validateOfferInput", () => {
     expect(result.ok).toBe(false);
     expect(result.errors.some((e) => e.includes("price_sats"))).toBe(true);
   });
+
+  it("trims whitespace-only product_url to undefined", () => {
+    const result = validateOfferInput({
+      ...validInput,
+      product_url: "   ",
+    });
+    expect(result.ok).toBe(true);
+    expect(result.sanitized!.product_url).toBeFalsy();
+  });
+
+  // Regression tests for defaults
+  it("defaults commission_rate to 0.20 for percentage type", () => {
+    const result = validateOfferInput({
+      ...validInput,
+      commission_type: "percentage",
+      commission_rate: undefined,
+    });
+    expect(result.ok).toBe(true);
+    expect(result.sanitized!.commission_rate).toBe(0.2);
+  });
+
+  it("defaults cookie_days to 30", () => {
+    const result = validateOfferInput({
+      ...validInput,
+      cookie_days: undefined,
+    });
+    expect(result.ok).toBe(true);
+    expect(result.sanitized!.cookie_days).toBe(30);
+  });
+
+  it("defaults settlement_delay_days to 7", () => {
+    const result = validateOfferInput({
+      ...validInput,
+      settlement_delay_days: undefined,
+    });
+    expect(result.ok).toBe(true);
+    expect(result.sanitized!.settlement_delay_days).toBe(7);
+  });
+
+  it("defaults product_type to digital", () => {
+    const result = validateOfferInput({
+      ...validInput,
+      product_type: undefined,
+    });
+    expect(result.ok).toBe(true);
+    expect(result.sanitized!.product_type).toBe("digital");
+  });
+
+  it("normalizes tags to lowercase and trims", () => {
+    const result = validateOfferInput({
+      ...validInput,
+      tags: [" Finance ", "CRYPTO", " "],
+    });
+    expect(result.ok).toBe(true);
+    expect(result.sanitized!.tags).toEqual(["finance", "crypto"]);
+  });
+
+  it("rejects more than 10 tags", () => {
+    const result = validateOfferInput({
+      ...validInput,
+      tags: Array(11).fill("tag"),
+    });
+    expect(result.ok).toBe(false);
+    expect(result.errors.some((e) => e.includes("10 tags"))).toBe(true);
+  });
+
+  it("rejects title shorter than 3 characters", () => {
+    const result = validateOfferInput({ ...validInput, title: "AB" });
+    expect(result.ok).toBe(false);
+  });
+
+  it("rejects description shorter than 10 characters", () => {
+    const result = validateOfferInput({ ...validInput, description: "Short" });
+    expect(result.ok).toBe(false);
+  });
 });

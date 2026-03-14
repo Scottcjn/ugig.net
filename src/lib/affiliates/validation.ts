@@ -5,7 +5,7 @@ export interface OfferInput {
   description: string;
   product_url?: string;
   product_type?: string;
-  price_sats: number;
+  price_sats?: number;
   commission_rate?: number;
   commission_type?: string;
   commission_flat_sats?: number;
@@ -59,9 +59,12 @@ export function validateOfferInput(input: OfferInput): ValidationResult {
     errors.push("Description must be at least 10 characters");
   }
 
-  // Validate product_url scheme (#18 - XSS prevention)
-  if (input.product_url && input.product_url.trim()) {
-    if (!isValidUrl(input.product_url)) {
+  // Normalize product_url — trim whitespace, treat blank as null (#18 - XSS prevention)
+  if (input.product_url) {
+    input.product_url = input.product_url.trim();
+    if (input.product_url.length === 0) {
+      input.product_url = undefined;
+    } else if (!isValidUrl(input.product_url)) {
       errors.push("product_url must use http:// or https:// scheme");
     }
   }

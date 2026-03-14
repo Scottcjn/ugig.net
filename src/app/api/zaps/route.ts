@@ -7,16 +7,29 @@ import { createServiceClient } from "@/lib/supabase/service";
 export async function POST(request: NextRequest) {
   const url = new URL("/api/wallet/zap", request.url);
   const body = await request.text();
-  const headers = new Headers(request.headers);
+  
+  // Only forward safe headers — avoid hop-by-hop/forbidden headers
+  const forwardHeaders: Record<string, string> = {};
+  const auth = request.headers.get("authorization");
+  const cookie = request.headers.get("cookie");
+  const contentType = request.headers.get("content-type");
+  if (auth) forwardHeaders["authorization"] = auth;
+  if (cookie) forwardHeaders["cookie"] = cookie;
+  if (contentType) forwardHeaders["content-type"] = contentType;
   
   const res = await fetch(url.toString(), {
     method: "POST",
-    headers,
+    headers: forwardHeaders,
     body,
   });
 
-  const data = await res.json();
-  return NextResponse.json(data, { status: res.status });
+  try {
+    const data = await res.json();
+    return NextResponse.json(data, { status: res.status });
+  } catch {
+    const text = await res.text().catch(() => "");
+    return NextResponse.json({ error: text || "Upstream error" }, { status: res.status });
+  }
 }
 
 export async function GET(request: NextRequest) {

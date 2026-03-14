@@ -47,19 +47,34 @@ describe("GET /api/affiliates/offers", () => {
   });
 
   it("sorts by commission_flat_sats when sort=commission (#24/#34)", async () => {
+    const orderSpy = vi.fn();
     const offers = [
-      { id: "1", title: "A", commission_flat_sats: 500, seller_id: "s1" },
-      { id: "2", title: "B", commission_flat_sats: 1000, seller_id: "s2" },
+      { id: "1", title: "A", commission_flat_sats: 1000, seller_id: "s1" },
+      { id: "2", title: "B", commission_flat_sats: 500, seller_id: "s2" },
     ];
-    mockFrom.mockReturnValue(chainable(offers, null, 2));
+
+    // Build a chainable that captures the order() call
+    const queryChain: Record<string, any> = {};
+    const chainHandler: ProxyHandler<any> = {
+      get(_target, prop) {
+        if (prop === "then") return undefined;
+        if (prop === "data") return offers;
+        if (prop === "error") return null;
+        if (prop === "count") return 2;
+        if (prop === "order") {
+          return (...args: any[]) => {
+            orderSpy(...args);
+            return new Proxy(queryChain, chainHandler);
+          };
+        }
+        return (..._args: any[]) => new Proxy(queryChain, chainHandler);
+      },
+    };
+    mockFrom.mockReturnValue(new Proxy(queryChain, chainHandler));
 
     const res = await GET(makeRequest({ sort: "commission" }));
-    const body = await res.json();
-
     expect(res.status).toBe(200);
-    expect(body.offers).toHaveLength(2);
-    // Verify that mockFrom was called and the chain included order with commission_flat_sats
-    expect(mockFrom).toHaveBeenCalled();
+    expect(orderSpy).toHaveBeenCalledWith("commission_flat_sats", expect.objectContaining({ ascending: false }));
   });
 
   it("filters by search query (#21)", async () => {
@@ -144,12 +159,11 @@ describe("POST /api/affiliates/offers", () => {
     });
 
     const res = await POST(req);
-    // If we get 201, the title was sanitized and accepted
-    // If insert is called, check the title was stripped
-    if (insertMock.mock.calls.length > 0) {
-      const insertData = insertMock.mock.calls[0][0];
-      expect(insertData.title).not.toContain("<b>");
-    }
+    expect(res.status).toBe(201);
+    expect(insertMock).toHaveBeenCalled();
+    const insertData = insertMock.mock.calls[0][0];
+    expect(insertData.title).toBe("Test Offer");
+    expect(insertData.title).not.toContain("<b>");
   });
 
   it("rejects negative commission_flat_sats (#23)", async () => {
