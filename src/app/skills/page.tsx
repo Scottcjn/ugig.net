@@ -55,7 +55,7 @@ async function SkillsList({ searchParams }: { searchParams: SkillsPageProps["sea
   const [supabase, btcUsd] = await Promise.all([createClient(), fetchBtcRate()]);
 
   const page = parseInt(queryParams.page || "1");
-  const limit = 20;
+  const limit = 21;
   const offset = (page - 1) * limit;
 
   let query = supabase
