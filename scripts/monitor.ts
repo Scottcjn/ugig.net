@@ -10,7 +10,7 @@
  *   APP_URL — base URL (default: https://ugig.net)
  */
 
-const APP_URL = process.env.APP_URL || "https://ugig.net";
+const APP_URL = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "https://ugig.net";
 const CRON_SECRET = process.env.CRON_SECRET;
 
 if (!CRON_SECRET) {
