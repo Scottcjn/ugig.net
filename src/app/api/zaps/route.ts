@@ -24,11 +24,15 @@ export async function POST(request: NextRequest) {
   });
 
   try {
-    const data = await res.json();
-    return NextResponse.json(data, { status: res.status });
+    const text = await res.text();
+    try {
+      const data = JSON.parse(text);
+      return NextResponse.json(data, { status: res.status });
+    } catch {
+      return NextResponse.json({ error: text || "Upstream error" }, { status: res.status || 502 });
+    }
   } catch {
-    const text = await res.text().catch(() => "");
-    return NextResponse.json({ error: text || "Upstream error" }, { status: res.status });
+    return NextResponse.json({ error: "Upstream error" }, { status: 502 });
   }
 }
 

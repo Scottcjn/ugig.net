@@ -19,7 +19,17 @@ export async function POST(request: NextRequest) {
     const rl = checkRateLimit(getRateLimitIdentifier(request, user.id), "write");
     if (!rl.allowed) return rateLimitExceeded(rl);
 
-    const body = await request.json();
+    let body: unknown;
+    try {
+      const text = await request.text();
+      if (!text || text.trim().length === 0) {
+        return NextResponse.json({ error: "Request body is required" }, { status: 400 });
+      }
+      body = JSON.parse(text);
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+
     const validationResult = applicationSchema.safeParse(body);
 
     if (!validationResult.success) {

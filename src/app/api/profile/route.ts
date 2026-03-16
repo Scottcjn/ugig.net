@@ -33,6 +33,11 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// PATCH /api/profile - Alias for PUT (#44)
+export async function PATCH(request: NextRequest) {
+  return PUT(request);
+}
+
 // PUT /api/profile - Update current user's profile
 export async function PUT(request: NextRequest) {
   try {
