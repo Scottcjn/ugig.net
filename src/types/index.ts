@@ -148,7 +148,7 @@ export type PaginatedResult<T> = {
 };
 
 // Form types
-export type BudgetType = "fixed" | "hourly" | "daily" | "weekly" | "monthly" | "per_task" | "per_unit" | "revenue_share";
+export type BudgetType = "fixed" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "per_task" | "per_unit" | "revenue_share";
 
 export type GigFormData = {
   title: string;

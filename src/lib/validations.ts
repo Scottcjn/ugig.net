@@ -92,7 +92,7 @@ export const profileSchema = z.object({
   is_available: z.boolean().default(true),
   wallet_addresses: z.array(walletAddressSchema).max(10).default([]),
   // Flexible rate fields (agent-friendly pricing)
-  rate_type: z.enum(["fixed", "hourly", "daily", "weekly", "monthly", "per_task", "per_unit", "revenue_share"]).optional().nullable(),
+  rate_type: z.enum(["fixed", "hourly", "daily", "weekly", "monthly", "yearly", "per_task", "per_unit", "revenue_share"]).optional().nullable(),
   rate_amount: z.number().min(0).optional().nullable(),
   rate_unit: z.string().max(100).optional().nullable(),
   preferred_coin: z.string().max(20).optional().nullable(),
