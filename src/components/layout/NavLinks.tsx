@@ -80,7 +80,7 @@ export function NavLinks() {
         </button>
 
         {moreOpen && (
-          <div className="absolute right-0 top-full mt-1 min-w-[160px] rounded-md border bg-popover p-1 text-popover-foreground shadow-md z-50">
+          <div className="absolute right-0 top-full mt-1 min-w-[160px] rounded-md border border-border bg-card p-1 text-foreground shadow-md z-50">
             {MORE_NAV.map((item) => {
               const active = isActive(item.href);
               return (
