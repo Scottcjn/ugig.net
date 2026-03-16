@@ -78,7 +78,7 @@ export function GigCard({
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-lg truncate">{gig.title}</h3>
-          <p className="text-muted-foreground text-sm mt-1 line-clamp-2">
+          <p className="text-muted-foreground text-sm mt-1 line-clamp-2 whitespace-pre-wrap break-words">
             {linkifyText(gig.description || "")}
           </p>
         </div>

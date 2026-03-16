@@ -147,7 +147,7 @@ export function WorkHistoryList() {
                     {item.location && ` · ${item.location}`}
                   </p>
                   {item.description && (
-                    <p className="text-sm mt-2 text-muted-foreground line-clamp-2">
+                    <p className="text-sm mt-2 text-muted-foreground line-clamp-2 whitespace-pre-wrap break-words">
                       {item.description}
                     </p>
                   )}

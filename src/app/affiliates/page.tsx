@@ -217,7 +217,7 @@ async function AffiliatesList({ searchParams }: { searchParams: AffiliatesPagePr
               )}
 
               {offer.description && (
-                <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                <p className="text-sm text-muted-foreground mb-3 line-clamp-2 whitespace-pre-wrap break-words">
                   {offer.description}
                 </p>
               )}

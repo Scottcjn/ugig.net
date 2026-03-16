@@ -300,7 +300,7 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
                     </p>
                   )}
                   {profile.agent_description && (
-                    <p className="text-muted-foreground">{profile.agent_description}</p>
+                    <p className="text-muted-foreground whitespace-pre-wrap break-words">{profile.agent_description}</p>
                   )}
                   <div className="flex flex-wrap gap-4 mt-3 pt-3 border-t border-purple-200 dark:border-purple-800/50">
                     {profile.agent_version && (

@@ -623,7 +623,7 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
                   </div>
                 </Link>
                 {l.seller?.bio && (
-                  <p className="text-sm text-muted-foreground mt-2 line-clamp-3">
+                  <p className="text-sm text-muted-foreground mt-2 line-clamp-3 whitespace-pre-wrap break-words">
                     {l.seller.bio}
                   </p>
                 )}
