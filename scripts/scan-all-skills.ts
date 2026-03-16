@@ -1,9 +1,9 @@
 #!/usr/bin/env npx tsx
 /**
- * Batch fetch, store, and security scan all skill listings.
+ * Batch security scan all skill listings by fetching their skill_file_url.
  *
- * For skills with a skill_file_url: fetches the file, stores it in Supabase
- * Storage, runs a security scan, and updates the DB.
+ * Fetches each skill file URL, runs the security scanner, and updates
+ * the scan results in the DB. Does NOT store the file — just scans it.
  *
  * Usage:
  *   npx tsx --env-file=.env scripts/scan-all-skills.ts          # scan unscanned with URLs
@@ -17,7 +17,6 @@ import { createHash } from "crypto";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const BUCKET = "skill-files";
 const MAX_FETCH_SIZE = 50 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 15_000;
 
@@ -34,7 +33,7 @@ const args = process.argv.slice(2);
 const scanAll = args.includes("--all");
 const dryRun = args.includes("--dry-run");
 
-async function fetchSkillFile(url: string): Promise<{ buffer: Buffer; fileName: string; contentType: string } | null> {
+async function fetchFile(url: string): Promise<{ buffer: Buffer; fileName: string } | null> {
   try {
     const res = await fetch(url, {
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
@@ -44,19 +43,15 @@ async function fetchSkillFile(url: string): Promise<{ buffer: Buffer; fileName: 
 
     if (!res.ok) return null;
 
-    const contentLength = parseInt(res.headers.get("content-length") || "0", 10);
-    if (contentLength > MAX_FETCH_SIZE) return null;
-
     const ab = await res.arrayBuffer();
     if (ab.byteLength > MAX_FETCH_SIZE) return null;
 
-    const contentType = (res.headers.get("content-type") || "application/octet-stream").split(";")[0].trim();
     let fileName = "skill-file";
     try {
       fileName = new URL(url).pathname.split("/").pop() || fileName;
     } catch { /* keep default */ }
 
-    return { buffer: Buffer.from(ab), fileName, contentType };
+    return { buffer: Buffer.from(ab), fileName };
   } catch {
     return null;
   }
@@ -66,10 +61,9 @@ async function main() {
   console.log(`\n🔍 Skill Security Scanner (${SCANNER_VERSION})`);
   console.log(`   Mode: ${scanAll ? "rescan all" : "unscanned only"}${dryRun ? " [DRY RUN]" : ""}\n`);
 
-  // Fetch listings with skill_file_url
   let query = supabase
     .from("skill_listings")
-    .select("id, slug, title, seller_id, skill_file_path, skill_file_url, scan_status")
+    .select("id, slug, title, seller_id, skill_file_url, scan_status")
     .eq("status", "active")
     .not("skill_file_url", "is", null)
     .order("created_at", { ascending: true });
@@ -90,9 +84,9 @@ async function main() {
     return;
   }
 
-  console.log(`Found ${listings.length} skill(s) with file URLs to process:\n`);
+  console.log(`Found ${listings.length} skill(s) to scan:\n`);
 
-  const results = { processed: 0, fetched: 0, clean: 0, suspicious: 0, malicious: 0, error: 0, fetchFailed: 0 };
+  const results = { processed: 0, clean: 0, suspicious: 0, malicious: 0, error: 0, fetchFailed: 0 };
 
   for (const listing of listings) {
     const l = listing as any;
@@ -101,42 +95,23 @@ async function main() {
     process.stdout.write(`    URL: ${l.skill_file_url}\n`);
 
     if (dryRun) {
-      console.log(`    → would fetch, store, and scan\n`);
+      console.log(`    → would fetch and scan\n`);
       continue;
     }
 
-    // 1. Fetch the file
+    // Fetch
     process.stdout.write(`    Fetching... `);
-    const fetched = await fetchSkillFile(l.skill_file_url);
+    const fetched = await fetchFile(l.skill_file_url);
 
     if (!fetched) {
-      console.log(`❌ fetch failed`);
+      console.log(`❌ fetch failed\n`);
       results.fetchFailed++;
       continue;
     }
 
-    console.log(`✅ ${fetched.buffer.length} bytes (${fetched.fileName})`);
-    results.fetched++;
+    console.log(`✅ ${fetched.buffer.length} bytes`);
 
-    // 2. Store in Supabase Storage
-    const storagePath = `${l.seller_id}/${l.slug}/${fetched.fileName}`;
-    process.stdout.write(`    Storing to ${storagePath}... `);
-
-    const { error: uploadError } = await supabase.storage
-      .from(BUCKET)
-      .upload(storagePath, fetched.buffer, {
-        contentType: fetched.contentType || "application/octet-stream",
-        upsert: true,
-      });
-
-    if (uploadError) {
-      console.log(`❌ ${uploadError.message}`);
-      results.error++;
-      continue;
-    }
-    console.log(`✅`);
-
-    // 3. Run security scan
+    // Scan
     process.stdout.write(`    Scanning... `);
     try {
       const scanResult = await scanWithRetry(scanner, fetched.buffer, fetched.fileName, {
@@ -162,57 +137,43 @@ async function main() {
 
       const scannedAt = new Date().toISOString();
 
-      // 4. Persist scan record
-      await supabase
-        .from("skill_security_scans")
-        .insert({
-          listing_id: l.id,
-          file_path: storagePath,
-          file_hash: scanResult.fileHash,
-          file_size_bytes: scanResult.fileSizeBytes,
-          scan_status: scanResult.status,
-          scan_source: "url_import",
-          source_url: l.skill_file_url,
-          content_hash: contentHash,
+      // Save scan record
+      await supabase.from("skill_security_scans").insert({
+        listing_id: l.id,
+        file_path: l.skill_file_url,
+        file_hash: scanResult.fileHash,
+        file_size_bytes: scanResult.fileSizeBytes,
+        scan_status: scanResult.status,
+        scan_source: "batch_scan",
+        source_url: l.skill_file_url,
+        content_hash: contentHash,
+        scanner_version: scanResult.scannerVersion,
+        findings_count_by_severity: findingsCountBySeverity,
+        findings_summary: {
+          risk_level: riskLevel,
+          issues: scanResult.findings.map((f) => ({ severity: f.severity, detail: f.detail })),
           scanner_version: scanResult.scannerVersion,
-          findings_count_by_severity: findingsCountBySeverity,
-          findings_summary: {
-            risk_level: riskLevel,
-            issues: scanResult.findings.map((f) => ({
-              severity: f.severity,
-              detail: f.detail,
-            })),
-            scanner_version: scanResult.scannerVersion,
-          },
-          scanned_at: scannedAt,
-        });
+        },
+        scanned_at: scannedAt,
+      });
 
-      // 5. Update listing with file path + scan status
+      // Update listing scan status
       await supabase
         .from("skill_listings")
-        .update({
-          skill_file_path: storagePath,
-          scan_status: scanResult.status,
-          content_hash: contentHash,
-          scan_source: "url_import",
-        })
+        .update({ scan_status: scanResult.status, content_hash: contentHash, scan_source: "batch_scan" })
         .eq("id", l.id);
 
-      const statusEmoji = scanResult.status === "clean" ? "✅" : scanResult.status === "suspicious" ? "⚠️" : scanResult.status === "malicious" ? "🚨" : "❌";
-      console.log(`${statusEmoji} ${scanResult.status} (${scanResult.findings.length} findings)`);
+      const emoji = scanResult.status === "clean" ? "✅" : scanResult.status === "suspicious" ? "⚠️" : "🚨";
+      console.log(`${emoji} ${scanResult.status} (${scanResult.findings.length} findings)`);
 
       if (scanResult.findings.length > 0) {
         for (const f of scanResult.findings.slice(0, 3)) {
           console.log(`      ${f.severity}: ${f.detail}`);
         }
-        if (scanResult.findings.length > 3) {
-          console.log(`      +${scanResult.findings.length - 3} more`);
-        }
+        if (scanResult.findings.length > 3) console.log(`      +${scanResult.findings.length - 3} more`);
       }
 
       results[scanResult.status as keyof typeof results] = ((results[scanResult.status as keyof typeof results] as number) || 0) + 1;
-
-      // Small delay between skills
       await new Promise((r) => setTimeout(r, 300));
     } catch (err) {
       console.log(`❌ ${err instanceof Error ? err.message : String(err)}`);
@@ -224,7 +185,6 @@ async function main() {
 
   console.log(`📊 Results:`);
   console.log(`   Processed: ${results.processed}`);
-  console.log(`   Fetched & stored: ${results.fetched}`);
   console.log(`   Clean: ${results.clean}`);
   console.log(`   Suspicious: ${results.suspicious}`);
   console.log(`   Malicious: ${results.malicious}`);
