@@ -436,11 +436,13 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
                     sourceUrl={securityScan.sourceUrl}
                     findingsCountBySeverity={securityScan.findingsCountBySeverity}
                   />
-                ) : (
+                ) : l.skill_file_url ? (
                   <SecurityScanBadge
                     status="pending"
                     issuesCount={0}
                   />
+                ) : (
+                  <p className="text-xs text-muted-foreground">No skill file provided — scan not available.</p>
                 )}
               </div>
 
