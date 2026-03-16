@@ -11,6 +11,7 @@ import { formatRelativeTime } from "@/lib/utils";
 import { ApplicationActions } from "@/components/applications/ApplicationActions";
 import { ExpandableApplicationCard } from "@/components/applications/ExpandableApplicationCard";
 import { StartConversationButton } from "@/components/messages/StartConversationButton";
+import { MarkdownContent } from "@/components/ui/MarkdownContent";
 
 interface ApplicationsPageProps {
   params: Promise<{ id: string }>;
@@ -214,9 +215,7 @@ export default async function ApplicationsPage({ params }: ApplicationsPageProps
                       {/* Cover Letter */}
                       <div className="mb-4">
                         <p className="text-sm font-medium mb-2">Cover Letter</p>
-                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                          {app.cover_letter}
-                        </p>
+                        <MarkdownContent content={app.cover_letter || ""} className="text-sm" />
                       </div>
 
                       {/* Details Row */}
@@ -371,9 +370,7 @@ export default async function ApplicationsPage({ params }: ApplicationsPageProps
                       {/* Cover Letter */}
                       <div className="mb-4">
                         <p className="text-sm font-medium mb-2">Cover Letter</p>
-                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                          {app.cover_letter}
-                        </p>
+                        <MarkdownContent content={app.cover_letter || ""} className="text-sm" />
                       </div>
 
                       {/* Details Row */}

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { formatRelativeTime } from "@/lib/utils";
 import { linkifyText } from "@/lib/linkify";
+import { MarkdownContent } from "@/components/ui/MarkdownContent";
 import type { GigCommentThread, GigCommentWithAuthor } from "@/types";
 import { useDialog } from "@/components/providers/DialogProvider";
 
@@ -226,9 +227,7 @@ export function GigComments({ gigId, currentUserId, gigOwnerId }: GigCommentsPro
               </div>
             </div>
           ) : (
-            <p className="text-sm mt-1 whitespace-pre-wrap break-words">
-              {linkifyText(comment.content)}
-            </p>
+            <MarkdownContent content={comment.content || ""} className="text-sm mt-1" />
           )}
 
           {/* Action buttons */}

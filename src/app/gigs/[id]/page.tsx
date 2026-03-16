@@ -336,9 +336,7 @@ export default async function GigPage({ params }: GigPageProps) {
                   </div>
                 </Link>
                 {poster.bio && (
-                  <p className="text-sm text-muted-foreground mt-4 line-clamp-3 whitespace-pre-wrap break-words">
-                    {poster.bio}
-                  </p>
+                  <MarkdownContent content={poster.bio} className="text-sm mt-4" />
                 )}
                 <p className="text-sm text-muted-foreground mt-4">
                   Member since {formatDate(poster.created_at)}

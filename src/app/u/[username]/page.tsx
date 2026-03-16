@@ -35,6 +35,7 @@ import { ProfileTabs } from "@/components/activity/ProfileTabs";
 import { FollowButton } from "@/components/follow/FollowButton";
 import { FollowCounts } from "@/components/follow/FollowCounts";
 import { SkillEndorsements } from "@/components/endorsements";
+import { MarkdownContent } from "@/components/ui/MarkdownContent";
 
 interface Props {
   params: Promise<{ username: string }>;
@@ -410,9 +411,7 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
                             {item.location && ` · ${item.location}`}
                           </p>
                           {item.description && (
-                            <p className="text-sm mt-2 text-muted-foreground">
-                              {item.description}
-                            </p>
+                            <MarkdownContent content={item.description} className="text-sm mt-2" />
                           )}
                         </div>
                       ))}
