@@ -11,8 +11,12 @@ export async function GET(request: NextRequest) {
     }
     const { user, supabase } = auth;
 
+    // Check if requesting archived conversations
+    const { searchParams } = new URL(request.url);
+    const showArchived = searchParams.get("archived") === "true";
+
     // Get conversations where user is a participant
-    const { data: conversations, error } = await supabase
+    let query = supabase
       .from("conversations")
       .select(
         `
@@ -25,6 +29,14 @@ export async function GET(request: NextRequest) {
       )
       .contains("participant_ids", [user.id])
       .order("last_message_at", { ascending: false, nullsFirst: false });
+
+    if (showArchived) {
+      query = query.not("archived_at", "is", null);
+    } else {
+      query = query.is("archived_at", null);
+    }
+
+    const { data: conversations, error } = await query;
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
@@ -210,6 +222,62 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({ data: conversation }, { status: 201 });
     }
+  } catch {
+    return NextResponse.json(
+      { error: "An unexpected error occurred" },
+      { status: 500 }
+    );
+  }
+}
+
+// PATCH /api/conversations - Archive or unarchive a conversation
+export async function PATCH(request: NextRequest) {
+  try {
+    const auth = await getAuthContext(request);
+    if (!auth) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const { user, supabase } = auth;
+
+    const body = await request.json();
+    const { conversation_id, archive } = body;
+
+    if (!conversation_id) {
+      return NextResponse.json(
+        { error: "conversation_id is required" },
+        { status: 400 }
+      );
+    }
+
+    // Verify user is a participant
+    const { data: conv } = await supabase
+      .from("conversations")
+      .select("id, participant_ids")
+      .eq("id", conversation_id)
+      .contains("participant_ids", [user.id])
+      .single();
+
+    if (!conv) {
+      return NextResponse.json(
+        { error: "Conversation not found" },
+        { status: 404 }
+      );
+    }
+
+    const { data: updated, error } = await supabase
+      .from("conversations")
+      .update({
+        archived_at: archive === false ? null : new Date().toISOString(),
+      })
+      .eq("id", conversation_id)
+      .select()
+      .single();
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    return NextResponse.json({ data: updated });
   } catch {
     return NextResponse.json(
       { error: "An unexpected error occurred" },
