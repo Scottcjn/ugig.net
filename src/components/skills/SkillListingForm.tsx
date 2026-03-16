@@ -248,7 +248,7 @@ export function SkillListingForm({ slug, listingId, initialData }: SkillListingF
       <div className="space-y-2">
         <Label htmlFor="skill_file_url">
           <LinkIcon className="h-3.5 w-3.5 inline mr-1" />
-          Skill File URL
+          Skill File URL *
         </Label>
         <div className="flex gap-2">
           <Input
@@ -258,6 +258,7 @@ export function SkillListingForm({ slug, listingId, initialData }: SkillListingF
             onChange={(e) => setSkillFileUrl(e.target.value)}
             placeholder="https://github.com/user/repo/blob/main/SKILL.md"
             className="flex-1"
+            required
           />
           {isEdit && (
             <Button
