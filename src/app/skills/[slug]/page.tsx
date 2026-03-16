@@ -419,11 +419,11 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
               )}
 
               {/* ─── Security scan ────────────────────────────────── */}
-              {securityScan && (
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2">
-                    Security Scan
-                  </h3>
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground mb-2">
+                  Security Scan
+                </h3>
+                {securityScan ? (
                   <SecurityScanBadge
                     status={securityScan.status}
                     riskLevel={securityScan.riskLevel}
@@ -436,8 +436,13 @@ export default async function SkillDetailPage({ params }: SkillDetailProps) {
                     sourceUrl={securityScan.sourceUrl}
                     findingsCountBySeverity={securityScan.findingsCountBySeverity}
                   />
-                </div>
-              )}
+                ) : (
+                  <SecurityScanBadge
+                    status="pending"
+                    issuesCount={0}
+                  />
+                )}
+              </div>
 
               {/* Comments */}
               <SkillComments slug={slug} isAuthenticated={!!user} />
