@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Megaphone, Users, TrendingUp, ExternalLink, Zap } from "lucide-react";
+import { Megaphone, Users, TrendingUp, Zap } from "lucide-react";
 import { SKILL_CATEGORIES } from "@/lib/constants";
 
 export const metadata: Metadata = {
@@ -127,7 +127,7 @@ async function AffiliatesList({ searchParams }: { searchParams: AffiliatesPagePr
 
   switch (queryParams.sort) {
     case "commission":
-      query = query.order("commission_rate", { ascending: false });
+      query = query.order("commission_flat_sats", { ascending: false });
       break;
     case "popular":
       query = query.order("total_affiliates", { ascending: false });
@@ -151,7 +151,9 @@ async function AffiliatesList({ searchParams }: { searchParams: AffiliatesPagePr
       <div className="text-center py-12 bg-muted/30 rounded-lg">
         <Megaphone className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
         <p className="text-muted-foreground mb-2">
-          {queryParams.search || queryParams.category || queryParams.tag
+          {queryParams.category
+            ? "No offers in this category yet."
+            : queryParams.search || queryParams.tag
             ? "No affiliate offers found matching your criteria."
             : "No affiliate offers yet. Create the first one!"}
         </p>
@@ -236,18 +238,7 @@ async function AffiliatesList({ searchParams }: { searchParams: AffiliatesPagePr
                 </div>
               )}
 
-              {offer.product_url && (() => {
-                try {
-                  const parts = new URL(offer.product_url).hostname.split(".");
-                  const domain = parts.length > 2 ? parts.slice(-2).join(".") : parts.join(".");
-                  return (
-                    <p className="text-xs text-muted-foreground mb-3 flex items-center gap-1">
-                      <ExternalLink className="h-3 w-3" />
-                      {domain}
-                    </p>
-                  );
-                } catch { return null; }
-              })()}
+              {/* product_url domain hint removed — URL is hidden from public listing (#20) */}
 
               <div className="flex items-center justify-between text-xs text-muted-foreground mt-auto pt-2 border-t border-border/50">
                 <div className="flex items-center gap-1.5">

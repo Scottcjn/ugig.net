@@ -61,7 +61,9 @@ export function DialogProvider({ children }: { children: React.ReactNode }) {
         setState({ open: true, kind, message, resolve });
         // showModal on next tick so the element is rendered
         requestAnimationFrame(() => {
-          dialogRef.current?.showModal();
+          if (dialogRef.current?.showModal) {
+            dialogRef.current.showModal();
+          }
         });
       });
     },
@@ -70,9 +72,12 @@ export function DialogProvider({ children }: { children: React.ReactNode }) {
 
   const close = useCallback(
     (result: boolean) => {
-      dialogRef.current?.close();
-      resolveRef.current?.(result);
-      resolveRef.current = null;
+      const resolver = resolveRef.current;
+      resolveRef.current = null; // Clear before close to prevent re-entrancy via onClose
+      if (dialogRef.current?.close) {
+        dialogRef.current.close();
+      }
+      resolver?.(result);
       setState((s) => ({ ...s, open: false, resolve: null }));
     },
     [],
@@ -103,8 +108,8 @@ export function DialogProvider({ children }: { children: React.ReactNode }) {
             close(false);
           }}
           onClose={() => {
-            // Ensure resolve fires if closed via ESC (backup)
-            if (state.resolve) close(false);
+            // Only resolve if not already handled (e.g. browser-native close)
+            if (resolveRef.current) close(false);
           }}
         >
           <div className="flex flex-col gap-4 p-6">
