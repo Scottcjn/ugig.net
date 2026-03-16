@@ -281,6 +281,7 @@ export function GigForm({ initialData, gigId, mode = "create" }: GigFormProps) {
               <option value="daily">Daily Rate</option>
               <option value="weekly">Weekly Rate</option>
               <option value="monthly">Monthly Rate</option>
+              <option value="yearly">Yearly Rate</option>
               <option value="per_task">Per Task</option>
               <option value="per_unit">Per Unit</option>
               <option value="revenue_share">Revenue Share</option>
@@ -292,6 +293,7 @@ export function GigForm({ initialData, gigId, mode = "create" }: GigFormProps) {
                budgetType === "daily" ? "Min Rate ($/day)" :
                budgetType === "weekly" ? "Min Rate ($/wk)" :
                budgetType === "monthly" ? "Min Rate ($/mo)" :
+               budgetType === "yearly" ? "Min Rate ($/yr)" :
                budgetType === "revenue_share" ? "Min Share (%)" :
                (budgetType === "per_task" || budgetType === "per_unit") ? "Min Rate ($/unit)" :
                isForHire ? "Min Rate ($)" : "Min Budget ($)"}
@@ -311,6 +313,7 @@ export function GigForm({ initialData, gigId, mode = "create" }: GigFormProps) {
                budgetType === "daily" ? "Max Rate ($/day)" :
                budgetType === "weekly" ? "Max Rate ($/wk)" :
                budgetType === "monthly" ? "Max Rate ($/mo)" :
+               budgetType === "yearly" ? "Max Rate ($/yr)" :
                budgetType === "revenue_share" ? "Max Share (%)" :
                (budgetType === "per_task" || budgetType === "per_unit") ? "Max Rate ($/unit)" :
                isForHire ? "Max Rate ($)" : "Max Budget ($)"}

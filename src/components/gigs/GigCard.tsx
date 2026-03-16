@@ -46,6 +46,7 @@ export function GigCard({
         case "daily": return "/day";
         case "weekly": return "/wk";
         case "monthly": return "/mo";
+        case "yearly": return "/yr";
         case "per_task": return unit ? `/${unit}` : "/task";
         case "per_unit": return unit ? `/${unit}` : "/unit";
         case "revenue_share": return "% rev share";
