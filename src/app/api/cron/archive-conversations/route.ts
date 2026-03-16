@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 
 /**
- * Cron: auto-archive conversations with no messages in the last 14 days.
+ * Cron: auto-archive conversations with no messages in the last 7 days.
  *
  * Auth: requires CRON_SECRET header to prevent unauthorized calls.
  */
@@ -18,10 +18,10 @@ export async function POST(request: NextRequest) {
     const supabase = createServiceClient();
 
     const fourteenDaysAgo = new Date(
-      Date.now() - 14 * 24 * 60 * 60 * 1000
+      Date.now() - 7 * 24 * 60 * 60 * 1000
     ).toISOString();
 
-    // Find conversations that are not archived and have last_message_at older than 14 days
+    // Find conversations that are not archived and have last_message_at older than 7 days
     const { data: candidates, error: fetchError } = await supabase
       .from("conversations")
       .select("id")
