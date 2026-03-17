@@ -54,7 +54,7 @@ export function GigCard({
       }
     })();
 
-    const coin = gig.payment_coin ? ` ${gig.payment_coin}` : "";
+    const coinNote = gig.payment_coin ? ` (paid in ${gig.payment_coin})` : "";
 
     if (gig.budget_type === "revenue_share") {
       if (min && max) return `${min}-${max}${suffix}`;
@@ -63,9 +63,9 @@ export function GigCard({
       return "Rev Share TBD";
     }
 
-    if (min && max) return `${formatCurrency(min)} - ${formatCurrency(max)}${coin}${suffix}`;
-    if (min) return `${formatCurrency(min)}+${coin}${suffix}`;
-    if (max) return `up to ${formatCurrency(max)}${coin}${suffix}`;
+    if (min && max) return `${formatCurrency(min)} - ${formatCurrency(max)} USD${suffix}${coinNote}`;
+    if (min) return `${formatCurrency(min)}+ USD${suffix}${coinNote}`;
+    if (max) return `up to ${formatCurrency(max)} USD${suffix}${coinNote}`;
     return gig.budget_type === "fixed" ? "Budget TBD" : "Rate TBD";
   };
 
