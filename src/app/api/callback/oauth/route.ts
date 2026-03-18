@@ -112,33 +112,39 @@ export async function GET(request: NextRequest) {
       // Existing linked user
       userId = existingIdentity.user_id;
     } else {
-      // Check if email already exists in auth.users
-      const { data: existingUsers } = await supabase.auth.admin.listUsers();
-      const existingUser = existingUsers?.users?.find(
-        (u) => u.email?.toLowerCase() === email.toLowerCase()
-      );
+      // Try to create user first; if email exists, look them up
+      const randomPassword = randomBytes(32).toString("hex");
+      const { data: newUser, error: createErr } = await supabase.auth.admin.createUser({
+        email,
+        password: randomPassword,
+        email_confirm: true,
+        user_metadata: { full_name: name, oauth_provider: "coinpay" },
+      });
 
-      if (existingUser) {
-        // Link to existing user
-        userId = existingUser.id;
-      } else {
-        // Create new user
-        const randomPassword = randomBytes(32).toString("hex");
-        const { data: newUser, error: createErr } = await supabase.auth.admin.createUser({
-          email,
-          password: randomPassword,
-          email_confirm: true,
-          user_metadata: { full_name: name, oauth_provider: "coinpay" },
-        });
-
-        if (createErr || !newUser.user) {
-          console.error("[CoinPay OAuth] Failed to create user:", createErr);
-          return NextResponse.redirect(`${loginUrl}?error=coinpay_create_failed`);
+      if (createErr) {
+        if ((createErr as any).code === "email_exists" || createErr.message?.includes("already been registered")) {
+          // User exists — find them via listUsers with page iteration
+          let existingUser: any = null;
+          let page = 1;
+          while (!existingUser) {
+            const { data: { users } } = await supabase.auth.admin.listUsers({ page, perPage: 100 });
+            if (!users || users.length === 0) break;
+            existingUser = users.find((u: any) => u.email?.toLowerCase() === email.toLowerCase());
+            page++;
+          }
+          if (!existingUser) {
+            console.error("[CoinPay OAuth] User exists but couldn't find by email:", email);
+            return NextResponse.redirect(`${loginUrl}?error=coinpay_create_failed&detail=user_lookup_failed`);
+          }
+          userId = existingUser.id;
+        } else {
+          console.error("[CoinPay OAuth] Failed to create user:", createErr?.message);
+          return NextResponse.redirect(`${loginUrl}?error=coinpay_create_failed&detail=${encodeURIComponent(createErr?.message || 'unknown')}`);
         }
+      } else {
+        userId = newUser.user!.id;
 
-        userId = newUser.user.id;
-
-        // Create profile
+        // Create profile for new user
         const username = generateUsername(email, name);
         await supabase.from("profiles").insert({
           id: userId,
