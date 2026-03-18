@@ -41,7 +41,7 @@ export default async function LoginPage({
               : error === "confirmation_failed"
               ? "Email confirmation failed. The link may have expired."
               : error?.startsWith("coinpay_")
-              ? "CoinPay login failed. Please try again or use email/password."
+              ? `CoinPay login failed (${error}). Please try again or use email/password.`
               : "An error occurred. Please try again."}
           </div>
         )}
