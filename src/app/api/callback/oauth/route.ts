@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { randomBytes } from "crypto";
+import { sendEmail } from "@/lib/email";
 
 const TOKEN_URL = "https://coinpayportal.com/api/oauth/token";
 const USERINFO_URL = "https://coinpayportal.com/api/oauth/userinfo";
@@ -152,6 +153,35 @@ export async function GET(request: NextRequest) {
           full_name: name || null,
           profile_completed: false,
         });
+
+        // Send welcome email with password setup link
+        try {
+          const { data: resetLink } = await supabase.auth.admin.generateLink({
+            type: "recovery",
+            email,
+          });
+          const resetUrl = resetLink?.properties?.hashed_token
+            ? `${appUrl}/auth/confirm?token_hash=${resetLink.properties.hashed_token}&type=recovery&next=/reset-password`
+            : `${appUrl}/forgot-password`;
+
+          await sendEmail({
+            to: email,
+            subject: "Welcome to ugig.net — Set your password",
+            html: `
+              <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #667eea;">Welcome to ugig.net${name ? `, ${name}` : ''}! 🎉</h2>
+                <p>Your account has been created via CoinPay. You can always log in using CoinPay, but if you'd like to set a password for direct login, click below:</p>
+                <p style="margin: 25px 0;">
+                  <a href="${resetUrl}" style="background: #667eea; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Set Your Password</a>
+                </p>
+                <p style="color: #6b7280; font-size: 14px;">This link expires in 24 hours. If you don't need a password, you can ignore this — CoinPay login will always work.</p>
+              </div>
+            `,
+            text: `Welcome to ugig.net! Set your password here: ${resetUrl}`,
+          });
+        } catch (emailErr) {
+          console.error("[CoinPay OAuth] Welcome email failed (non-fatal):", emailErr);
+        }
       }
 
       // Link the OAuth identity
