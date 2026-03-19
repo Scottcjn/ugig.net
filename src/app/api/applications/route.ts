@@ -106,14 +106,8 @@ export async function POST(request: NextRequest) {
       onApplicationSubmitted(userDid, gig_id);
     }
 
-    // Create notification for gig poster
-    await supabase.from("notifications").insert({
-      user_id: gig.poster_id,
-      type: "new_application",
-      title: "New application received",
-      body: "Someone applied to your gig",
-      data: { gig_id, application_id: application.id },
-    });
+    // Note: notification is created by DB trigger (notify_on_new_application)
+    // Do NOT insert a duplicate notification here.
 
     // Send email notification to gig poster
     // Get poster email from auth.users (not in profiles table)
