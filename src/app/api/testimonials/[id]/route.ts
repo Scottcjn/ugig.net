@@ -1,3 +1,4 @@
+import { createServiceClient } from "@/lib/supabase/service";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthContext } from "@/lib/auth/get-user";
 
@@ -25,7 +26,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     }
 
     // RLS ensures only profile_id owner can update
-    const { data, error } = await supabase
+    const { data, error } = await createServiceClient()
       .from("testimonials")
       .update({ status })
       .eq("id", id)
@@ -59,7 +60,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     const { id } = await params;
 
     // RLS ensures only author can delete
-    const { error } = await supabase
+    const { error } = await createServiceClient()
       .from("testimonials")
       .delete()
       .eq("id", id)

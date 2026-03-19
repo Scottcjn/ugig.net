@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthContext } from "@/lib/auth/get-user";
+import { createServiceClient } from "@/lib/supabase/service";
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,7 +42,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data, error } = await supabase
+    const serviceClient = createServiceClient();
+    const { data, error } = await serviceClient
       .from("testimonials")
       .insert({
         profile_id,
