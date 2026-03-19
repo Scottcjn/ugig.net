@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServiceClient();
 
-    const fourteenDaysAgo = new Date(
+    const sevenDaysAgo = new Date(
       Date.now() - 7 * 24 * 60 * 60 * 1000
     ).toISOString();
 
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       .from("conversations")
       .select("id")
       .is("archived_at", null)
-      .lt("last_message_at", fourteenDaysAgo);
+      .lt("last_message_at", sevenDaysAgo);
 
     if (fetchError) {
       console.error("[archive-conversations] Query error:", fetchError);
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
         .from("messages")
         .select("*", { count: "exact", head: true })
         .eq("conversation_id", conv.id)
-        .gte("created_at", fourteenDaysAgo);
+        .gte("created_at", sevenDaysAgo);
 
       if (count === 0) {
         toArchive.push(conv.id);
