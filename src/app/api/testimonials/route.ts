@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
       // In-app notification
       await serviceClient.from("notifications").insert({
         user_id: profile_id,
-        type: "testimonial",
+        type: "review_received",
         title: `${authorName} left you a ${rating}-star testimonial`,
         message: content.trim().slice(0, 200),
         link: "/dashboard/testimonials",
