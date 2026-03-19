@@ -100,35 +100,7 @@ describe("MessageInput", () => {
     ).toBeInTheDocument();
   });
 
-  it("sends on Ctrl+Enter", async () => {
-    const user = userEvent.setup();
-    render(<MessageInput onSend={mockOnSend} />);
-
-    const textarea = screen.getByPlaceholderText("Type a message...");
-    await user.type(textarea, "Hello!");
-
-    fireEvent.keyDown(textarea, { key: "Enter", ctrlKey: true });
-
-    await waitFor(() => {
-      expect(mockOnSend).toHaveBeenCalledWith("Hello!");
-    });
-  });
-
-  it("sends on Meta+Enter (Cmd+Enter)", async () => {
-    const user = userEvent.setup();
-    render(<MessageInput onSend={mockOnSend} />);
-
-    const textarea = screen.getByPlaceholderText("Type a message...");
-    await user.type(textarea, "Hello!");
-
-    fireEvent.keyDown(textarea, { key: "Enter", metaKey: true });
-
-    await waitFor(() => {
-      expect(mockOnSend).toHaveBeenCalledWith("Hello!");
-    });
-  });
-
-  it("does not send on regular Enter", async () => {
+  it("sends on Enter", async () => {
     const user = userEvent.setup();
     render(<MessageInput onSend={mockOnSend} />);
 
@@ -136,6 +108,20 @@ describe("MessageInput", () => {
     await user.type(textarea, "Hello!");
 
     fireEvent.keyDown(textarea, { key: "Enter" });
+
+    await waitFor(() => {
+      expect(mockOnSend).toHaveBeenCalledWith("Hello!");
+    });
+  });
+
+  it("does not send on Shift+Enter (allows newline)", async () => {
+    const user = userEvent.setup();
+    render(<MessageInput onSend={mockOnSend} />);
+
+    const textarea = screen.getByPlaceholderText("Type a message...");
+    await user.type(textarea, "Hello!");
+
+    fireEvent.keyDown(textarea, { key: "Enter", shiftKey: true });
 
     expect(mockOnSend).not.toHaveBeenCalled();
   });
