@@ -613,6 +613,51 @@ export type Database = {
           }
         ];
       };
+      testimonials: {
+        Row: {
+          id: string;
+          profile_id: string;
+          author_id: string;
+          rating: number;
+          content: string;
+          status: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          author_id: string;
+          rating: number;
+          content: string;
+          status?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          profile_id?: string;
+          author_id?: string;
+          rating?: number;
+          content?: string;
+          status?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "testimonials_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "testimonials_author_id_fkey";
+            columns: ["author_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
       notifications: {
         Row: {
           id: string;

@@ -534,6 +534,12 @@ export default async function DashboardPage() {
                   Skill Library
                 </Link>
                 <Link
+                  href="/dashboard/testimonials"
+                  className="block p-2.5 pl-3 rounded-lg hover:bg-muted/50 text-muted-foreground border-l-2 border-transparent hover:border-muted-foreground/30 transition-all duration-150"
+                >
+                  Testimonials
+                </Link>
+                <Link
                   href="/dashboard/affiliates"
                   className="block p-2.5 pl-3 rounded-lg hover:bg-muted/50 text-muted-foreground border-l-2 border-transparent hover:border-muted-foreground/30 transition-all duration-150"
                 >

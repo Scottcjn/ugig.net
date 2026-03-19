@@ -36,6 +36,7 @@ import { FollowButton } from "@/components/follow/FollowButton";
 import { FollowCounts } from "@/components/follow/FollowCounts";
 import { SkillEndorsements } from "@/components/endorsements";
 import { MarkdownContent } from "@/components/ui/MarkdownContent";
+import { TestimonialSection } from "@/components/testimonials/TestimonialSection";
 
 interface Props {
   params: Promise<{ username: string }>;
@@ -133,6 +134,49 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
     .eq("status", "active")
     .order("created_at", { ascending: false })
     .limit(3);
+
+  // Get approved testimonials for this profile
+  const { data: testimonials } = await supabase
+    .from("testimonials")
+    .select("id, rating, content, created_at, author_id")
+    .eq("profile_id", profile.id)
+    .eq("status", "approved")
+    .order("created_at", { ascending: false });
+
+  // Fetch testimonial author profiles
+  const testimonialAuthorIds = [...new Set((testimonials || []).map((t) => t.author_id))];
+  let testimonialAuthors: Record<string, { username: string; full_name: string | null; avatar_url: string | null }> = {};
+  if (testimonialAuthorIds.length > 0) {
+    const { data: tAuthors } = await supabase
+      .from("profiles")
+      .select("id, username, full_name, avatar_url")
+      .in("id", testimonialAuthorIds);
+    if (tAuthors) {
+      testimonialAuthors = Object.fromEntries(
+        tAuthors.map((a) => [a.id, { username: a.username, full_name: a.full_name, avatar_url: a.avatar_url }])
+      );
+    }
+  }
+
+  const formattedTestimonials = (testimonials || []).map((t) => ({
+    id: t.id,
+    rating: t.rating,
+    content: t.content,
+    created_at: t.created_at,
+    author: testimonialAuthors[t.author_id] || { username: "unknown", full_name: null, avatar_url: null },
+  }));
+
+  // Check if current user already left a testimonial
+  let hasExistingTestimonial = false;
+  if (currentUser && currentUser.id !== profile.id) {
+    const { data: existing } = await supabase
+      .from("testimonials")
+      .select("id")
+      .eq("profile_id", profile.id)
+      .eq("author_id", currentUser.id)
+      .limit(1);
+    hasExistingTestimonial = (existing && existing.length > 0) || false;
+  }
 
   // Get work history
   const { data: workHistory } = await supabase
@@ -450,6 +494,14 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
                 )}
               </div>
             </ProfileTabs>
+            {/* Testimonials Section */}
+            <TestimonialSection
+              profileId={profile.id}
+              currentUserId={currentUser?.id || null}
+              isOwnProfile={currentUser?.id === profile.id}
+              initialTestimonials={formattedTestimonials}
+              hasExisting={hasExistingTestimonial}
+            />
           </div>
 
           {/* Sidebar */}
