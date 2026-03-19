@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Check, X, Star, Eye, Loader2 } from "lucide-react";
+import { Check, X, Star, Eye, Loader2, RotateCcw } from "lucide-react";
 
 interface ApplicationActionsProps {
   applicationId: string;
@@ -71,6 +71,20 @@ export function ApplicationActions({
       icon: X,
       variant: "destructive" as const,
       show: ["pending", "reviewing", "shortlisted"].includes(currentStatus),
+    },
+    {
+      status: "pending",
+      label: "Unreject",
+      icon: RotateCcw,
+      variant: "outline" as const,
+      show: currentStatus === "rejected",
+    },
+    {
+      status: "accepted",
+      label: "Accept",
+      icon: Check,
+      variant: "default" as const,
+      show: currentStatus === "rejected",
     },
   ];
 
