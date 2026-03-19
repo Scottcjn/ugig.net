@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { ConversationWithPreview } from "@/types";
 import { cn } from "@/lib/utils";
-import { MessageSquare, Bot, Archive, Inbox, ArchiveRestore } from "lucide-react";
+import { MessageSquare, Bot, Archive, Inbox, ArchiveRestore, Search, X } from "lucide-react";
 
 interface ConversationListProps {
   currentUserId: string;
@@ -23,6 +23,7 @@ export function ConversationList({ currentUserId }: ConversationListProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<"inbox" | "archived">("inbox");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const fetchConversations = useCallback(async (archived: boolean) => {
     setIsLoading(true);
@@ -90,6 +91,30 @@ export function ConversationList({ currentUserId }: ConversationListProps) {
     }
   };
 
+  // Filter conversations by search query (username, full_name, gig title, last message)
+  const filteredConversations = searchQuery.trim()
+    ? conversations.filter((conv) => {
+        const q = searchQuery.toLowerCase();
+        const otherParticipant = conv.participants.find(
+          (p) => p.id !== currentUserId
+        );
+        const name = (
+          otherParticipant?.full_name ||
+          otherParticipant?.username ||
+          ""
+        ).toLowerCase();
+        const username = (otherParticipant?.username || "").toLowerCase();
+        const gigTitle = (conv.gig?.title || "").toLowerCase();
+        const lastMsg = (conv.last_message?.content || "").toLowerCase();
+        return (
+          name.includes(q) ||
+          username.includes(q) ||
+          gigTitle.includes(q) ||
+          lastMsg.includes(q)
+        );
+      })
+    : conversations;
+
   const renderTabs = () => (
     <div className="flex border-b border-border">
       <button
@@ -119,10 +144,34 @@ export function ConversationList({ currentUserId }: ConversationListProps) {
     </div>
   );
 
+  const renderSearchBar = () => (
+    <div className="p-2 border-b border-border">
+      <div className="relative">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+        <input
+          type="text"
+          placeholder="Search conversations..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full pl-8 pr-8 py-1.5 text-sm bg-muted/50 border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary placeholder:text-muted-foreground"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery("")}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
   if (isLoading) {
     return (
       <>
         {renderTabs()}
+        {renderSearchBar()}
         <div className="space-y-2 p-2">
           {[...Array(5)].map((_, i) => (
             <div key={i} className="flex items-center gap-3 p-3">
@@ -142,6 +191,7 @@ export function ConversationList({ currentUserId }: ConversationListProps) {
     return (
       <>
         {renderTabs()}
+        {renderSearchBar()}
         <div className="p-4 text-center text-destructive text-sm">{error}</div>
       </>
     );
@@ -151,6 +201,7 @@ export function ConversationList({ currentUserId }: ConversationListProps) {
     return (
       <>
         {renderTabs()}
+        {renderSearchBar()}
         <div className="p-8 text-center">
           {view === "archived" ? (
             <>
@@ -177,8 +228,17 @@ export function ConversationList({ currentUserId }: ConversationListProps) {
   return (
     <>
       {renderTabs()}
+      {renderSearchBar()}
+      {filteredConversations.length === 0 && searchQuery.trim() ? (
+        <div className="p-8 text-center">
+          <Search className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
+          <p className="text-muted-foreground text-sm">
+            No conversations matching &ldquo;{searchQuery}&rdquo;
+          </p>
+        </div>
+      ) : null}
       <div className="divide-y divide-border">
-        {conversations.map((conv) => {
+        {filteredConversations.map((conv) => {
           const otherParticipant = conv.participants.find(
             (p) => p.id !== currentUserId
           );
