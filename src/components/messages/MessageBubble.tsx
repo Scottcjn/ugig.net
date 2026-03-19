@@ -1,8 +1,8 @@
 "use client";
 
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Check, CheckCheck, Bot } from "lucide-react";
-import type { MessageWithSender } from "@/types";
+import { Check, CheckCheck, Bot, FileIcon, Download } from "lucide-react";
+import type { MessageWithSender, Attachment } from "@/types";
 import { cn } from "@/lib/utils";
 import { linkifyText } from "@/lib/linkify";
 
@@ -11,6 +11,52 @@ interface MessageBubbleProps {
   isOwn: boolean;
   showAvatar?: boolean;
   otherParticipantId?: string;
+}
+
+function isImageAttachment(attachment: Attachment): boolean {
+  return /^image\/(jpeg|jpg|png|gif|webp|svg\+xml)$/i.test(attachment.type);
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function AttachmentDisplay({ attachment }: { attachment: Attachment }) {
+  if (isImageAttachment(attachment)) {
+    return (
+      <a
+        href={attachment.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block mt-1"
+      >
+        <img
+          src={attachment.url}
+          alt={attachment.filename}
+          className="max-w-full max-h-[400px] rounded-md object-cover cursor-pointer hover:opacity-90 transition-opacity"
+        />
+      </a>
+    );
+  }
+
+  return (
+    <a
+      href={attachment.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      download={attachment.filename}
+      className="flex items-center gap-2 mt-1 px-3 py-2 rounded-md bg-background/50 hover:bg-background/80 transition-colors text-xs"
+    >
+      <FileIcon className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+      <span className="truncate min-w-0">{attachment.filename}</span>
+      <span className="text-muted-foreground flex-shrink-0">
+        {formatFileSize(attachment.size)}
+      </span>
+      <Download className="h-3 w-3 flex-shrink-0 text-muted-foreground" />
+    </a>
+  );
 }
 
 export function MessageBubble({
@@ -32,11 +78,12 @@ export function MessageBubble({
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
-  // Check if message has been read by the other participant
   const isRead =
     isOwn &&
     otherParticipantId &&
     message.read_by?.includes(otherParticipantId);
+
+  const attachments = (message.attachments as Attachment[] | null) || [];
 
   return (
     <div
@@ -100,7 +147,18 @@ export function MessageBubble({
               : "bg-muted text-foreground"
           )}
         >
-          <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{linkifyText(message.content, linkifyClass)}</p>
+          {message.content && (
+            <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
+              {linkifyText(message.content, linkifyClass)}
+            </p>
+          )}
+          {attachments.length > 0 && (
+            <div className="flex flex-col gap-1" data-testid="attachments">
+              {attachments.map((attachment, index) => (
+                <AttachmentDisplay key={index} attachment={attachment} />
+              ))}
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-1 mt-1">
           <span className="text-xs text-muted-foreground">

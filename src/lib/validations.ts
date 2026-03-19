@@ -270,12 +270,23 @@ export const postCommentUpdateSchema = z.object({
 // MESSAGING SCHEMAS
 // =============================================
 
+const attachmentSchema = z.object({
+  url: z.string().url(),
+  filename: z.string().min(1),
+  size: z.number().positive(),
+  type: z.string().min(1),
+});
+
 export const messageSchema = z.object({
   content: z
     .string()
-    .min(1, "Message is required")
-    .max(5000, "Message must be at most 5000 characters"),
-});
+    .max(5000, "Message must be at most 5000 characters")
+    .default(""),
+  attachments: z.array(attachmentSchema).max(5).optional(),
+}).refine(
+  (data) => data.content.trim().length > 0 || (data.attachments && data.attachments.length > 0),
+  { message: "Message must have content or attachments", path: ["content"] }
+);
 
 export const conversationCreateSchema = z.object({
   gig_id: z.string().uuid("Invalid gig ID").optional().nullable().or(z.literal("")),

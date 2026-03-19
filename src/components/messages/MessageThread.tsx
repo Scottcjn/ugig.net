@@ -11,7 +11,8 @@ import { MessageInput } from "./MessageInput";
 import { TypingIndicator } from "./TypingIndicator";
 import { StartVideoCallButton } from "@/components/video/StartVideoCallButton";
 import { useMessageStream } from "@/hooks/useMessageStream";
-import type { MessageWithSender, Profile, Gig } from "@/types";
+import type { MessageWithSender, Profile, Gig, Attachment } from "@/types";
+import { createClient } from "@/lib/supabase/client";
 import { ArrowLeft, Wifi, WifiOff, ExternalLink } from "lucide-react";
 
 interface MessageThreadProps {
@@ -89,14 +90,58 @@ export function MessageThread({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Upload files to Supabase storage and return attachment metadata
+  const uploadFiles = async (files: File[]): Promise<Attachment[]> => {
+    const supabase = createClient();
+    const attachments: Attachment[] = [];
+
+    for (const file of files) {
+      const uniqueName = `${crypto.randomUUID()}-${file.name}`;
+      const path = `${conversationId}/${uniqueName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("attachments")
+        .upload(path, file, {
+          contentType: file.type,
+          upsert: false,
+        });
+
+      if (uploadError) {
+        throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
+      }
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("attachments").getPublicUrl(path);
+
+      attachments.push({
+        url: publicUrl,
+        filename: file.name,
+        size: file.size,
+        type: file.type,
+      });
+    }
+
+    return attachments;
+  };
+
   // Send message handler
-  const handleSend = async (content: string) => {
+  const handleSend = async (content: string, files?: File[]) => {
+    let attachments: Attachment[] | undefined;
+
+    if (files && files.length > 0) {
+      attachments = await uploadFiles(files);
+    }
+
     const response = await fetch(
       `/api/conversations/${conversationId}/messages`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({
+          content: content || "",
+          ...(attachments && attachments.length > 0 ? { attachments } : {}),
+        }),
       }
     );
 

@@ -98,6 +98,14 @@ export type EndorsementWithEndorser = Endorsement & {
   endorser: Pick<Profile, "id" | "username" | "full_name" | "avatar_url">;
 };
 
+// Attachment type for message file uploads
+export interface Attachment {
+  url: string;
+  filename: string;
+  size: number;
+  type: string;
+}
+
 export type SkillEndorsementSummary = {
   skill: string;
   count: number;
