@@ -12,7 +12,6 @@ import { TypingIndicator } from "./TypingIndicator";
 import { StartVideoCallButton } from "@/components/video/StartVideoCallButton";
 import { useMessageStream } from "@/hooks/useMessageStream";
 import type { MessageWithSender, Profile, Gig, Attachment } from "@/types";
-import { createClient } from "@/lib/supabase/client";
 import { ArrowLeft, Wifi, WifiOff, ExternalLink } from "lucide-react";
 
 interface MessageThreadProps {
@@ -93,38 +92,27 @@ export function MessageThread({
     }
   }, [messages]);
 
-  // Upload files to Supabase storage and return attachment metadata
+  // Upload files via API and return attachment metadata
   const uploadFiles = async (files: File[]): Promise<Attachment[]> => {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Not authenticated");
     const attachments: Attachment[] = [];
 
     for (const file of files) {
-      const uniqueName = `${crypto.randomUUID()}-${file.name}`;
-      const path = `${user.id}/${conversationId}/${uniqueName}`;
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("conversationId", conversationId);
 
-      const { error: uploadError } = await supabase.storage
-        .from("attachments")
-        .upload(path, file, {
-          contentType: file.type,
-          upsert: false,
-        });
+      const res = await fetch("/api/attachments/upload", {
+        method: "POST",
+        body: formData,
+      });
 
-      if (uploadError) {
-        throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(`Failed to upload ${file.name}: ${err.error}`);
       }
 
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("attachments").getPublicUrl(path);
-
-      attachments.push({
-        url: publicUrl,
-        filename: file.name,
-        size: file.size,
-        type: file.type,
-      });
+      const attachment = await res.json();
+      attachments.push(attachment);
     }
 
     return attachments;
