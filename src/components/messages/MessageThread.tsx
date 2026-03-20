@@ -96,11 +96,13 @@ export function MessageThread({
   // Upload files to Supabase storage and return attachment metadata
   const uploadFiles = async (files: File[]): Promise<Attachment[]> => {
     const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Not authenticated");
     const attachments: Attachment[] = [];
 
     for (const file of files) {
       const uniqueName = `${crypto.randomUUID()}-${file.name}`;
-      const path = `${conversationId}/${uniqueName}`;
+      const path = `${user.id}/${conversationId}/${uniqueName}`;
 
       const { error: uploadError } = await supabase.storage
         .from("attachments")
