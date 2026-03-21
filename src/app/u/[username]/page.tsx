@@ -37,6 +37,7 @@ import { FollowCounts } from "@/components/follow/FollowCounts";
 import { SkillEndorsements } from "@/components/endorsements";
 import { MarkdownContent } from "@/components/ui/MarkdownContent";
 import { TestimonialSection } from "@/components/testimonials/TestimonialSection";
+import { CompletedGigs } from "@/components/profile/CompletedGigs";
 
 interface Props {
   params: Promise<{ username: string }>;
@@ -176,6 +177,41 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
       .eq("author_id", currentUser.id)
       .limit(1);
     hasExistingTestimonial = (existing && existing.length > 0) || false;
+  }
+
+  // Get completed gigs (where this user was the accepted applicant)
+  const { data: completedApps } = await supabase
+    .from("applications")
+    .select("id, gig_id, updated_at, status, gig:gigs!gig_id(id, title, budget_type, budget_min, poster_id, poster:profiles!poster_id(username, full_name))")
+    .eq("applicant_id", profile.id)
+    .eq("status", "accepted")
+    .order("updated_at", { ascending: false });
+
+  const completedGigsList = (completedApps || []).map((app: any) => ({
+    id: app.id,
+    gig_id: app.gig?.id || app.gig_id,
+    gig_title: app.gig?.title || "Untitled Gig",
+    gig_budget_type: app.gig?.budget_type || "fixed",
+    gig_budget_min: app.gig?.budget_min || null,
+    poster_username: app.gig?.poster?.username || "unknown",
+    poster_full_name: app.gig?.poster?.full_name || null,
+    completed_at: app.updated_at,
+  }));
+
+  // Check which gigs the current user already left testimonials for
+  let existingTestimonialGigIds = new Set<string>();
+  if (currentUser && completedGigsList.length > 0) {
+    const gigIds = completedGigsList.map((g: any) => g.gig_id);
+    const { data: existingGigTestimonials } = await supabase
+      .from("testimonials")
+      .select("gig_id")
+      .eq("author_id", currentUser.id)
+      .eq("profile_id", profile.id)
+      .in("gig_id", gigIds);
+
+    existingTestimonialGigIds = new Set(
+      (existingGigTestimonials || []).map((t: any) => t.gig_id).filter(Boolean)
+    );
   }
 
   // Get work history
@@ -494,6 +530,18 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
                 )}
               </div>
             </ProfileTabs>
+            {/* Completed Gigs */}
+            {completedGigsList.length > 0 && (
+              <CompletedGigs
+                profileId={profile.id}
+                profileUsername={profile.username}
+                gigs={completedGigsList}
+                currentUserId={currentUser?.id || null}
+                isOwnProfile={currentUser?.id === profile.id}
+                existingTestimonialGigIds={existingTestimonialGigIds}
+              />
+            )}
+
             {/* Testimonials Section */}
             <TestimonialSection
               profileId={profile.id}
