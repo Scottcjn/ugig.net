@@ -180,6 +180,9 @@ export const applicationStatusSchema = z.object({
     "completed",
     "paid",
   ]),
+  metadata: z.object({
+    tx_id: z.string().optional(),
+  }).optional(),
 });
 
 // =============================================
