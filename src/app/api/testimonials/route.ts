@@ -81,12 +81,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (profile_id && gig_id) {
-      return NextResponse.json(
-        { error: "Provide either profile_id or gig_id, not both" },
-        { status: 400 }
-      );
-    }
+    // Both profile_id and gig_id allowed (e.g. reviewing a worker for a gig)
 
     if (!rating || !content) {
       return NextResponse.json(

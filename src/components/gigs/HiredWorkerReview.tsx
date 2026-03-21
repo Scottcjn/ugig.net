@@ -58,6 +58,7 @@ export function HiredWorkerReview({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           profile_id: workerId,
+          gig_id: gigId,
           rating,
           content: content.trim(),
         }),
