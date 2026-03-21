@@ -48,16 +48,25 @@ export function EmojiPicker({ onSelect, disabled }: EmojiPickerProps) {
       </Button>
 
       {open && (
-        <div className="absolute bottom-full mb-2 left-0 bg-popover border border-border rounded-lg shadow-lg z-50 w-[280px]">
+        <div
+          className="absolute bottom-full mb-2 left-0 border border-border rounded-lg shadow-xl z-50 w-[300px]"
+          style={{ backgroundColor: "hsl(var(--card))" }}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
           {/* Category tabs */}
-          <div className="flex border-b border-border overflow-x-auto p-1 gap-0.5">
+          <div className="flex border-b border-border overflow-x-auto p-1.5 gap-1">
             {Object.keys(EMOJI_CATEGORIES).map((cat) => (
               <button
                 key={cat}
-                onClick={() => setActiveCategory(cat)}
-                className={`px-2 py-1 text-sm rounded whitespace-nowrap transition-colors ${
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setActiveCategory(cat);
+                }}
+                className={`px-2.5 py-1.5 text-base rounded-md whitespace-nowrap transition-colors cursor-pointer ${
                   activeCategory === cat
-                    ? "bg-primary/10 text-primary"
+                    ? "bg-primary/15 text-primary"
                     : "text-muted-foreground hover:bg-muted"
                 }`}
               >
@@ -67,15 +76,18 @@ export function EmojiPicker({ onSelect, disabled }: EmojiPickerProps) {
           </div>
 
           {/* Emoji grid */}
-          <div className="p-2 grid grid-cols-8 gap-0.5 max-h-[200px] overflow-y-auto">
-            {EMOJI_CATEGORIES[activeCategory as keyof typeof EMOJI_CATEGORIES].map((emoji) => (
+          <div className="p-2 grid grid-cols-8 gap-1 max-h-[220px] overflow-y-auto">
+            {EMOJI_CATEGORIES[activeCategory as keyof typeof EMOJI_CATEGORIES].map((emoji, i) => (
               <button
-                key={emoji}
-                onClick={() => {
+                key={`${emoji}-${i}`}
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
                   onSelect(emoji);
                   setOpen(false);
                 }}
-                className="h-8 w-8 flex items-center justify-center text-lg hover:bg-muted rounded transition-colors"
+                className="h-9 w-9 flex items-center justify-center text-xl hover:bg-muted rounded-md transition-colors cursor-pointer"
               >
                 {emoji}
               </button>
