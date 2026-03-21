@@ -40,20 +40,32 @@ export async function POST(request: NextRequest) {
 
     switch (payload.type) {
       case "payment.confirmed": {
-        // Payment confirmed - update payment record and activate subscription/service
         await handlePaymentConfirmed(supabase, payload);
         break;
       }
 
       case "payment.forwarded": {
-        // Funds forwarded to merchant wallet - update payment with tx hash
         await handlePaymentForwarded(supabase, payload);
         break;
       }
 
       case "payment.expired": {
-        // Payment expired - mark as expired
         await handlePaymentExpired(supabase, payload);
+        break;
+      }
+
+      case "escrow.funded": {
+        await handleEscrowFunded(supabase, payload);
+        break;
+      }
+
+      case "escrow.released": {
+        await handleEscrowReleased(supabase, payload);
+        break;
+      }
+
+      case "escrow.refunded": {
+        await handleEscrowRefunded(supabase, payload);
         break;
       }
 
@@ -187,4 +199,154 @@ async function handlePaymentExpired(
       },
     });
   }
+}
+
+// ─── Escrow webhook handlers ───────────────────────────────────────────────
+
+async function handleEscrowFunded(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  payload: CoinPayWebhookPayload
+) {
+  const escrowId = payload.data.metadata?.coinpay_escrow_id as string || payload.data.payment_id;
+  const now = new Date().toISOString();
+
+  // Find matching gig_escrow
+  const { data: escrow } = await (supabase as any)
+    .from("gig_escrows")
+    .select("*")
+    .eq("coinpay_escrow_id", escrowId)
+    .single();
+
+  if (!escrow) {
+    console.error("Escrow not found for webhook:", escrowId);
+    return;
+  }
+
+  // Update escrow status
+  await (supabase as any)
+    .from("gig_escrows")
+    .update({
+      status: "funded",
+      funded_at: now,
+      updated_at: now,
+    })
+    .eq("id", escrow.id);
+
+  // Update application status to in_progress
+  await supabase
+    .from("applications")
+    .update({
+      status: "in_progress" as any,
+      updated_at: now,
+    })
+    .eq("id", escrow.application_id);
+
+  // Get gig title
+  const { data: gig } = await supabase
+    .from("gigs")
+    .select("title")
+    .eq("id", escrow.gig_id)
+    .single();
+
+  // Notify worker
+  await supabase.from("notifications").insert({
+    user_id: escrow.worker_id,
+    type: "payment_received",
+    title: "Escrow funded — work can begin!",
+    body: `$${escrow.amount_usd} has been deposited in escrow for "${gig?.title || "your gig"}". You can start working now!`,
+    data: {
+      gig_id: escrow.gig_id,
+      escrow_id: escrow.id,
+    },
+  });
+
+  // Notify poster
+  await supabase.from("notifications").insert({
+    user_id: escrow.poster_id,
+    type: "payment_received",
+    title: "Escrow funded successfully",
+    body: `Your $${escrow.amount_usd} escrow for "${gig?.title || "your gig"}" has been funded. The worker has been notified to begin.`,
+    data: {
+      gig_id: escrow.gig_id,
+      escrow_id: escrow.id,
+    },
+  });
+}
+
+async function handleEscrowReleased(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  payload: CoinPayWebhookPayload
+) {
+  const escrowId = payload.data.metadata?.coinpay_escrow_id as string || payload.data.payment_id;
+  const now = new Date().toISOString();
+
+  const { data: escrow } = await (supabase as any)
+    .from("gig_escrows")
+    .select("*")
+    .eq("coinpay_escrow_id", escrowId)
+    .single();
+
+  if (!escrow) {
+    console.error("Escrow not found for release webhook:", escrowId);
+    return;
+  }
+
+  // Update if not already released (release route may have already updated)
+  if (escrow.status !== "released") {
+    await (supabase as any)
+      .from("gig_escrows")
+      .update({
+        status: "released",
+        released_at: now,
+        updated_at: now,
+      })
+      .eq("id", escrow.id);
+
+    await supabase
+      .from("applications")
+      .update({
+        status: "completed" as any,
+        updated_at: now,
+      })
+      .eq("id", escrow.application_id);
+  }
+}
+
+async function handleEscrowRefunded(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  payload: CoinPayWebhookPayload
+) {
+  const escrowId = payload.data.metadata?.coinpay_escrow_id as string || payload.data.payment_id;
+  const now = new Date().toISOString();
+
+  const { data: escrow } = await (supabase as any)
+    .from("gig_escrows")
+    .select("*")
+    .eq("coinpay_escrow_id", escrowId)
+    .single();
+
+  if (!escrow) {
+    console.error("Escrow not found for refund webhook:", escrowId);
+    return;
+  }
+
+  await (supabase as any)
+    .from("gig_escrows")
+    .update({
+      status: "refunded",
+      updated_at: now,
+    })
+    .eq("id", escrow.id);
+
+  // Notify poster
+  await supabase.from("notifications").insert({
+    user_id: escrow.poster_id,
+    type: "payment_received",
+    title: "Escrow refunded",
+    body: `Your $${escrow.amount_usd} escrow has been refunded.`,
+    data: {
+      gig_id: escrow.gig_id,
+      escrow_id: escrow.id,
+    },
+  });
 }

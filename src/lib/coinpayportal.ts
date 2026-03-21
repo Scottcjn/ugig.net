@@ -4,7 +4,7 @@ const COINPAYPORTAL_API_URL = "https://coinpayportal.com/api";
 
 export interface CoinPayWebhookPayload {
   id: string;
-  type: "payment.confirmed" | "payment.forwarded" | "payment.expired";
+  type: "payment.confirmed" | "payment.forwarded" | "payment.expired" | "escrow.funded" | "escrow.released" | "escrow.refunded" | "escrow.disputed";
   data: {
     payment_id: string;
     status: string;
@@ -139,3 +139,135 @@ export const SUPPORTED_CURRENCIES = {
 } as const;
 
 export type SupportedCurrency = keyof typeof SUPPORTED_CURRENCIES;
+
+// ─── Escrow API ────────────────────────────────────────────────────────────
+
+export interface CreateEscrowOptions {
+  amount_usd: number;
+  currency: SupportedCurrency;
+  depositor_email: string;
+  beneficiary_email: string;
+  description?: string;
+  auto_release_hours?: number;
+  webhook_url?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface EscrowResponse {
+  success: boolean;
+  escrow: {
+    id: string;
+    status: string;
+    amount: number;
+    currency: string;
+    payment_address?: string;
+    checkout_url?: string;
+    expires_at?: string;
+  };
+}
+
+export interface EscrowStatusResponse {
+  success: boolean;
+  escrow: {
+    id: string;
+    status: string;
+    amount: number;
+    currency: string;
+    funded_at?: string;
+    released_at?: string;
+    refunded_at?: string;
+    tx_hash?: string;
+  };
+}
+
+/**
+ * Create an escrow via CoinPayPortal
+ */
+export async function createEscrow(
+  options: CreateEscrowOptions
+): Promise<EscrowResponse> {
+  const apiKey = process.env.COINPAYPORTAL_API_KEY;
+  const merchantId = process.env.COINPAYPORTAL_MERCHANT_ID;
+
+  if (!apiKey || !merchantId) {
+    throw new Error("CoinPayPortal credentials not configured");
+  }
+
+  const appUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "https://ugig.net";
+
+  const response = await fetch(`${COINPAYPORTAL_API_URL}/escrow`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      business_id: merchantId,
+      amount: options.amount_usd,
+      currency: options.currency,
+      depositor_email: options.depositor_email,
+      beneficiary_email: options.beneficiary_email,
+      description: options.description,
+      auto_release_hours: options.auto_release_hours,
+      webhook_url: options.webhook_url || `${appUrl}/api/payments/coinpayportal/webhook`,
+      metadata: options.metadata,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: "Unknown error" }));
+    throw new Error(error.message || `Escrow creation failed: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Release escrow funds to the beneficiary
+ */
+export async function releaseEscrow(escrowId: string): Promise<EscrowStatusResponse> {
+  const apiKey = process.env.COINPAYPORTAL_API_KEY;
+
+  if (!apiKey) {
+    throw new Error("CoinPayPortal credentials not configured");
+  }
+
+  const response = await fetch(`${COINPAYPORTAL_API_URL}/escrow/${escrowId}/release`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: "Unknown error" }));
+    throw new Error(error.message || `Escrow release failed: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Get escrow status from CoinPayPortal
+ */
+export async function getEscrowStatus(escrowId: string): Promise<EscrowStatusResponse> {
+  const apiKey = process.env.COINPAYPORTAL_API_KEY;
+
+  if (!apiKey) {
+    throw new Error("CoinPayPortal credentials not configured");
+  }
+
+  const response = await fetch(`${COINPAYPORTAL_API_URL}/escrow/${escrowId}`, {
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: "Unknown error" }));
+    throw new Error(error.message || `Escrow status failed: ${response.status}`);
+  }
+
+  return response.json();
+}

@@ -22,6 +22,7 @@ import { GigComments } from "@/components/gigs/GigComments";
 import { AddToPortfolioPrompt } from "@/components/portfolio/AddToPortfolioPrompt";
 import { EscrowBadge } from "@/components/gigs/EscrowBadge";
 import { CloseGigButton } from "@/components/gigs/CloseGigButton";
+import { EscrowPaymentButton } from "@/components/gigs/EscrowPaymentButton";
 import { ZapButton } from "@/components/zaps/ZapButton";
 import { GigTestimonialSection } from "@/components/testimonials/GigTestimonialSection";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -105,6 +106,7 @@ export default async function GigPage({ params }: GigPageProps) {
 
   // Check if already applied
   let hasApplied = false;
+  let userApplicationId: string | null = null;
   if (user && !isOwner) {
     const { data: existingApp } = await supabase
       .from("applications")
@@ -113,6 +115,42 @@ export default async function GigPage({ params }: GigPageProps) {
       .eq("applicant_id", user.id)
       .single();
     hasApplied = !!existingApp;
+    userApplicationId = existingApp?.id || null;
+  }
+
+  // Fetch accepted application + escrow for this gig
+  let acceptedApplication: { id: string; applicant_id: string; proposed_rate: number | null } | null = null;
+  let gigEscrow: Record<string, unknown> | null = null;
+
+  if (user) {
+    // Get accepted application (poster sees the one they accepted, worker sees their own)
+    const { data: acceptedApps } = await supabase
+      .from("applications")
+      .select("id, applicant_id, proposed_rate")
+      .eq("gig_id", id)
+      .eq("status", "accepted")
+      .limit(1);
+
+    if (acceptedApps && acceptedApps.length > 0) {
+      acceptedApplication = acceptedApps[0];
+    }
+
+    // Get escrow if exists
+    if (acceptedApplication) {
+      const { data: escrows } = await (supabase as any)
+        .from("gig_escrows")
+        .select(`
+          *,
+          worker:profiles!worker_id(id, username, full_name, avatar_url),
+          poster:profiles!poster_id(id, username, full_name, avatar_url)
+        `)
+        .eq("gig_id", id)
+        .eq("application_id", acceptedApplication.id)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      gigEscrow = escrows?.[0] || null;
+    }
   }
 
   // Fetch testimonials for the gig
@@ -332,9 +370,22 @@ export default async function GigPage({ params }: GigPageProps) {
                   <>
                     {user ? (
                       hasApplied ? (
-                        <Button disabled className="w-full">
-                          Already Applied
-                        </Button>
+                        <>
+                          <Button disabled className="w-full">
+                            Already Applied
+                          </Button>
+                          {gigEscrow && userApplicationId && (
+                            <EscrowPaymentButton
+                              gigId={id}
+                              applicationId={userApplicationId}
+                              currentUserId={user!.id}
+                              isPoster={false}
+                              isWorker={true}
+                              budgetAmount={null}
+                              existingEscrow={gigEscrow as any}
+                            />
+                          )}
+                        </>
                       ) : (
                         <Link href={`/gigs/${id}/apply`} className="block">
                           <Button className="w-full">Apply Now</Button>
@@ -361,6 +412,17 @@ export default async function GigPage({ params }: GigPageProps) {
                       </Button>
                     </Link>
                     <CloseGigButton gigId={id} status={gig.status} />
+                    {acceptedApplication && (
+                      <EscrowPaymentButton
+                        gigId={id}
+                        applicationId={acceptedApplication.id}
+                        currentUserId={user!.id}
+                        isPoster={true}
+                        isWorker={false}
+                        budgetAmount={acceptedApplication.proposed_rate || gig.budget_min || gig.budget_max}
+                        existingEscrow={gigEscrow as any}
+                      />
+                    )}
                   </div>
                 )}
               </div>
