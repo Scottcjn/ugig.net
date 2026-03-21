@@ -147,6 +147,8 @@ export interface CreateEscrowOptions {
   currency: SupportedCurrency;
   depositor_email: string;
   beneficiary_email: string;
+  depositor_address: string;
+  beneficiary_address: string;
   description?: string;
   auto_release_hours?: number;
   webhook_url?: string;
@@ -159,10 +161,12 @@ export interface EscrowResponse {
     id: string;
     status: string;
     amount: number;
-    currency: string;
+    chain: string;
+    escrow_address?: string;
     payment_address?: string;
     checkout_url?: string;
     expires_at?: string;
+    amount_usd?: number;
   };
 }
 
@@ -203,8 +207,10 @@ export async function createEscrow(
     },
     body: JSON.stringify({
       business_id: merchantId,
-      amount: options.amount_usd,
+      amount_usd: options.amount_usd,
       currency: options.currency,
+      depositor_address: options.depositor_address,
+      beneficiary_address: options.beneficiary_address,
       depositor_email: options.depositor_email,
       beneficiary_email: options.beneficiary_email,
       description: options.description,

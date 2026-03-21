@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -11,8 +11,15 @@ import {
   Clock,
   DollarSign,
   AlertCircle,
+  Wallet,
 } from "lucide-react";
 import { SUPPORTED_CURRENCIES, type SupportedCurrency } from "@/lib/coinpayportal";
+
+interface WalletAddress {
+  currency: string;
+  address: string;
+  is_preferred?: boolean;
+}
 
 interface GigEscrow {
   id: string;
@@ -24,6 +31,7 @@ interface GigEscrow {
   released_at: string | null;
   metadata: {
     checkout_url?: string;
+    payment_address?: string;
   };
   worker?: { id: string; username: string; full_name?: string };
   poster?: { id: string; username: string; full_name?: string };
@@ -37,6 +45,7 @@ interface EscrowPaymentButtonProps {
   isWorker: boolean;
   budgetAmount: number | null;
   existingEscrow?: GigEscrow | null;
+  workerId?: string;
 }
 
 export function EscrowPaymentButton({
@@ -47,6 +56,7 @@ export function EscrowPaymentButton({
   isWorker,
   budgetAmount,
   existingEscrow,
+  workerId,
 }: EscrowPaymentButtonProps) {
   const [isCreating, setIsCreating] = useState(false);
   const [isReleasing, setIsReleasing] = useState(false);
@@ -54,8 +64,63 @@ export function EscrowPaymentButton({
   const [selectedCurrency, setSelectedCurrency] = useState<SupportedCurrency>("usdc_sol");
   const [showCurrencySelect, setShowCurrencySelect] = useState(false);
   const [escrow, setEscrow] = useState<GigEscrow | null>(existingEscrow || null);
+  const [posterAddresses, setPosterAddresses] = useState<WalletAddress[]>([]);
+  const [workerAddresses, setWorkerAddresses] = useState<WalletAddress[]>([]);
+  const [depositorAddress, setDepositorAddress] = useState("");
+  const [beneficiaryAddress, setBeneficiaryAddress] = useState("");
+  const [manualDepositor, setManualDepositor] = useState(false);
+  const [manualBeneficiary, setManualBeneficiary] = useState(false);
+
+  // Fetch wallet addresses when currency select opens
+  useEffect(() => {
+    if (!showCurrencySelect) return;
+    fetch(`/api/profile/wallet-addresses${workerId ? `?worker_id=${workerId}` : ""}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.poster_addresses) setPosterAddresses(d.poster_addresses);
+        if (d.worker_addresses) setWorkerAddresses(d.worker_addresses);
+      })
+      .catch(() => {});
+  }, [showCurrencySelect]);
+
+  // Map currency to chain for address filtering
+  const currencyToChain = (c: string): string => {
+    const map: Record<string, string> = {
+      usdc_pol: "pol", usdc_sol: "sol", usdc_eth: "eth",
+      pol: "pol", sol: "sol", eth: "eth", btc: "btc",
+      usdt: "eth",
+    };
+    return map[c] || c;
+  };
+
+  const chain = currencyToChain(selectedCurrency);
+  const filteredPosterAddrs = posterAddresses.filter(
+    (w) => w.currency.toLowerCase() === chain || w.currency.toLowerCase() === selectedCurrency
+  );
+  const filteredWorkerAddrs = workerAddresses.filter(
+    (w) => w.currency.toLowerCase() === chain || w.currency.toLowerCase() === selectedCurrency
+  );
+
+  // Auto-select preferred/first address when currency changes
+  useEffect(() => {
+    const preferred = filteredPosterAddrs.find((w) => w.is_preferred);
+    if (preferred) setDepositorAddress(preferred.address);
+    else if (filteredPosterAddrs.length === 1) setDepositorAddress(filteredPosterAddrs[0].address);
+    else if (!manualDepositor) setDepositorAddress("");
+  }, [selectedCurrency, posterAddresses.length]);
+
+  useEffect(() => {
+    const preferred = filteredWorkerAddrs.find((w) => w.is_preferred);
+    if (preferred) setBeneficiaryAddress(preferred.address);
+    else if (filteredWorkerAddrs.length === 1) setBeneficiaryAddress(filteredWorkerAddrs[0].address);
+    else if (!manualBeneficiary) setBeneficiaryAddress("");
+  }, [selectedCurrency, workerAddresses.length]);
 
   const handleCreateEscrow = async () => {
+    if (!depositorAddress || !beneficiaryAddress) {
+      setError("Both depositor and beneficiary wallet addresses are required.");
+      return;
+    }
     setIsCreating(true);
     setError(null);
 
@@ -66,6 +131,8 @@ export function EscrowPaymentButton({
         body: JSON.stringify({
           application_id: applicationId,
           currency: selectedCurrency,
+          depositor_address: depositorAddress,
+          beneficiary_address: beneficiaryAddress,
         }),
       });
 
@@ -76,11 +143,6 @@ export function EscrowPaymentButton({
         return;
       }
 
-      // Redirect to checkout
-      if (result.data.checkout_url) {
-        window.open(result.data.checkout_url, "_blank");
-      }
-
       setEscrow({
         id: result.data.escrow_id,
         amount_usd: result.data.amount_usd,
@@ -89,7 +151,9 @@ export function EscrowPaymentButton({
         status: "pending_payment",
         funded_at: null,
         released_at: null,
-        metadata: { checkout_url: result.data.checkout_url },
+        metadata: {
+          payment_address: result.data.payment_address,
+        },
       });
       setShowCurrencySelect(false);
     } catch {
@@ -188,14 +252,14 @@ export function EscrowPaymentButton({
           <p className="text-sm text-destructive">{error}</p>
         )}
 
-        {/* Poster: pending → show pay link */}
-        {isPoster && escrow.status === "pending_payment" && escrow.metadata?.checkout_url && (
-          <Button asChild className="w-full" size="sm">
-            <a href={escrow.metadata.checkout_url} target="_blank" rel="noopener noreferrer">
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Fund Escrow
-            </a>
-          </Button>
+        {/* Poster: pending → show payment address */}
+        {isPoster && escrow.status === "pending_payment" && escrow.metadata?.payment_address && (
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">Send crypto to this escrow address:</p>
+            <code className="block text-xs bg-muted p-2 rounded break-all select-all">
+              {escrow.metadata.payment_address}
+            </code>
+          </div>
         )}
 
         {/* Poster: funded → show release */}
@@ -256,10 +320,97 @@ export function EscrowPaymentButton({
           )}
         </div>
 
+        {/* Depositor (poster) address */}
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+            <Wallet className="h-3 w-3" /> Your wallet (depositor)
+          </label>
+          {filteredPosterAddrs.length > 0 && !manualDepositor ? (
+            <div className="space-y-1">
+              <select
+                value={depositorAddress}
+                onChange={(e) => setDepositorAddress(e.target.value)}
+                className="w-full text-sm border rounded-md px-2 py-1.5 bg-background"
+              >
+                <option value="">Select address...</option>
+                {filteredPosterAddrs.map((w, i) => (
+                  <option key={i} value={w.address}>
+                    {w.address.slice(0, 8)}...{w.address.slice(-6)} {w.is_preferred ? "⭐" : ""}
+                  </option>
+                ))}
+              </select>
+              <button onClick={() => setManualDepositor(true)} className="text-xs text-primary hover:underline">
+                Enter manually
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              <input
+                type="text"
+                value={depositorAddress}
+                onChange={(e) => setDepositorAddress(e.target.value)}
+                placeholder="Your wallet address"
+                className="w-full text-sm border rounded-md px-2 py-1.5 bg-background"
+              />
+              {filteredPosterAddrs.length > 0 && (
+                <button onClick={() => setManualDepositor(false)} className="text-xs text-primary hover:underline">
+                  Choose from saved
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Beneficiary (worker) address */}
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+            <Wallet className="h-3 w-3" /> Worker wallet (beneficiary)
+          </label>
+          {filteredWorkerAddrs.length > 0 && !manualBeneficiary ? (
+            <div className="space-y-1">
+              <select
+                value={beneficiaryAddress}
+                onChange={(e) => setBeneficiaryAddress(e.target.value)}
+                className="w-full text-sm border rounded-md px-2 py-1.5 bg-background"
+              >
+                <option value="">Select address...</option>
+                {filteredWorkerAddrs.map((w, i) => (
+                  <option key={i} value={w.address}>
+                    {w.address.slice(0, 8)}...{w.address.slice(-6)} {w.is_preferred ? "⭐" : ""}
+                  </option>
+                ))}
+              </select>
+              <button onClick={() => setManualBeneficiary(true)} className="text-xs text-primary hover:underline">
+                Enter manually
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              <input
+                type="text"
+                value={beneficiaryAddress}
+                onChange={(e) => setBeneficiaryAddress(e.target.value)}
+                placeholder="Worker wallet address"
+                className="w-full text-sm border rounded-md px-2 py-1.5 bg-background"
+              />
+              {filteredWorkerAddrs.length > 0 && (
+                <button onClick={() => setManualBeneficiary(false)} className="text-xs text-primary hover:underline">
+                  Choose from saved
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
         {error && <p className="text-sm text-destructive">{error}</p>}
 
         <div className="flex gap-2">
-          <Button onClick={handleCreateEscrow} disabled={isCreating} className="flex-1" size="sm">
+          <Button
+            onClick={handleCreateEscrow}
+            disabled={isCreating || !depositorAddress || !beneficiaryAddress}
+            className="flex-1"
+            size="sm"
+          >
             {isCreating ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (

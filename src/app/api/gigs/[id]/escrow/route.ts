@@ -6,6 +6,8 @@ import { z } from "zod";
 const createEscrowSchema = z.object({
   application_id: z.string().uuid(),
   currency: z.enum(["usdc_pol", "usdc_sol", "pol", "sol", "btc", "eth", "usdc_eth", "usdt"]),
+  depositor_address: z.string().min(10, "Depositor wallet address is required"),
+  beneficiary_address: z.string().min(10, "Beneficiary wallet address is required"),
 });
 
 // GET /api/gigs/[id]/escrow - Get escrow status for a gig
@@ -68,7 +70,7 @@ export async function POST(
       );
     }
 
-    const { application_id, currency } = validationResult.data;
+    const { application_id, currency, depositor_address, beneficiary_address } = validationResult.data;
 
     // Get gig — must be poster
     const { data: gig } = await supabase
@@ -157,6 +159,8 @@ export async function POST(
       currency: currency as SupportedCurrency,
       depositor_email: `${posterProfile?.username || user.id}@ugig.net`,
       beneficiary_email: `${workerProfile?.username || application.applicant_id}@ugig.net`,
+      depositor_address,
+      beneficiary_address,
       description: `Gig escrow: ${gig.title}`,
       metadata: {
         gig_id: gigId,
@@ -166,6 +170,9 @@ export async function POST(
         platform: "ugig.net",
       },
     });
+
+    // Extract payment address from response (coinpayportal uses escrow_address)
+    const paymentAddress = escrowResult.escrow.escrow_address || escrowResult.escrow.payment_address;
 
     // Create local escrow record
     const { data: escrow, error } = await (supabase as any)
@@ -182,8 +189,7 @@ export async function POST(
         platform_fee_rate: platformFeeRate,
         status: "pending_payment",
         metadata: {
-          checkout_url: escrowResult.escrow.checkout_url,
-          payment_address: escrowResult.escrow.payment_address,
+          payment_address: paymentAddress,
           expires_at: escrowResult.escrow.expires_at,
         },
       })
@@ -214,8 +220,7 @@ export async function POST(
       data: {
         escrow_id: escrow.id,
         coinpay_escrow_id: escrowResult.escrow.id,
-        checkout_url: escrowResult.escrow.checkout_url,
-        payment_address: escrowResult.escrow.payment_address,
+        payment_address: paymentAddress,
         amount_usd: amount,
         platform_fee_usd: platformFee,
         currency,

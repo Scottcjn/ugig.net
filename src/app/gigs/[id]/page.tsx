@@ -482,6 +482,7 @@ export default async function GigPage({ params }: GigPageProps) {
                         isWorker={false}
                         budgetAmount={acceptedApplication.proposed_rate || gig.budget_min || gig.budget_max}
                         existingEscrow={gigEscrow as any}
+                        workerId={acceptedApplication.applicant_id}
                       />
                     )}
                   </div>
