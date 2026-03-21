@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Check, X, Star, Eye, Loader2, RotateCcw } from "lucide-react";
+import { Check, X, Star, Eye, Loader2, RotateCcw, DollarSign, CheckCircle2 } from "lucide-react";
 
 interface ApplicationActionsProps {
   applicationId: string;
@@ -85,6 +85,27 @@ export function ApplicationActions({
       icon: Check,
       variant: "default" as const,
       show: currentStatus === "rejected",
+    },
+    {
+      status: "in_progress",
+      label: "Mark In Progress",
+      icon: Eye,
+      variant: "outline" as const,
+      show: currentStatus === "accepted",
+    },
+    {
+      status: "completed",
+      label: "Mark Completed",
+      icon: CheckCircle2,
+      variant: "outline" as const,
+      show: ["accepted", "in_progress"].includes(currentStatus),
+    },
+    {
+      status: "paid",
+      label: "Mark Paid",
+      icon: DollarSign,
+      variant: "default" as const,
+      show: ["accepted", "in_progress", "completed"].includes(currentStatus),
     },
   ];
 

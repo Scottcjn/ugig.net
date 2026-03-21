@@ -176,6 +176,9 @@ export const applicationStatusSchema = z.object({
     "rejected",
     "accepted",
     "withdrawn",
+    "in_progress",
+    "completed",
+    "paid",
   ]),
 });
 

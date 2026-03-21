@@ -76,7 +76,7 @@ export async function PUT(
     const { data: updatedApplication, error } = await supabase
       .from("applications")
       .update({
-        status,
+        status: status as any,
         updated_at: new Date().toISOString(),
       })
       .eq("id", id)
