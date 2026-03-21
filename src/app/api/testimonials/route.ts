@@ -3,6 +3,65 @@ import { getAuthContext } from "@/lib/auth/get-user";
 import { createServiceClient } from "@/lib/supabase/service";
 import { sendEmail } from "@/lib/email";
 
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const gigId = searchParams.get("gig_id");
+
+    if (!gigId) {
+      return NextResponse.json(
+        { error: "gig_id query parameter is required" },
+        { status: 400 }
+      );
+    }
+
+    const serviceClient = createServiceClient();
+
+    const { data, error } = await serviceClient
+      .from("testimonials")
+      .select("id, rating, content, status, created_at, author_id")
+      .eq("gig_id", gigId)
+      .eq("status", "approved")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
+    // Fetch author profiles
+    const authorIds = [...new Set((data || []).map((t) => t.author_id))];
+    let authorMap: Record<string, { username: string; full_name: string | null; avatar_url: string | null }> = {};
+
+    if (authorIds.length > 0) {
+      const { data: authors } = await serviceClient
+        .from("profiles")
+        .select("id, username, full_name, avatar_url")
+        .in("id", authorIds);
+
+      if (authors) {
+        authorMap = Object.fromEntries(
+          authors.map((a) => [a.id, { username: a.username, full_name: a.full_name, avatar_url: a.avatar_url }])
+        );
+      }
+    }
+
+    const testimonials = (data || []).map((t) => ({
+      id: t.id,
+      rating: t.rating,
+      content: t.content,
+      created_at: t.created_at,
+      author: authorMap[t.author_id] || { username: "unknown", full_name: null, avatar_url: null },
+    }));
+
+    return NextResponse.json({ testimonials });
+  } catch {
+    return NextResponse.json(
+      { error: "An unexpected error occurred" },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const auth = await getAuthContext(request);
@@ -12,11 +71,26 @@ export async function POST(request: NextRequest) {
     const { user, supabase } = auth;
 
     const body = await request.json();
-    const { profile_id, rating, content } = body;
+    const { profile_id, gig_id, rating, content } = body;
 
-    if (!profile_id || !rating || !content) {
+    // Must provide exactly one target
+    if (!profile_id && !gig_id) {
       return NextResponse.json(
-        { error: "profile_id, rating, and content are required" },
+        { error: "Either profile_id or gig_id is required" },
+        { status: 400 }
+      );
+    }
+
+    if (profile_id && gig_id) {
+      return NextResponse.json(
+        { error: "Provide either profile_id or gig_id, not both" },
+        { status: 400 }
+      );
+    }
+
+    if (!rating || !content) {
+      return NextResponse.json(
+        { error: "rating and content are required" },
         { status: 400 }
       );
     }
@@ -35,19 +109,57 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Can't leave a testimonial for yourself
-    if (profile_id === user.id) {
-      return NextResponse.json(
-        { error: "You cannot leave a testimonial for yourself" },
-        { status: 400 }
-      );
+    const serviceClient = createServiceClient();
+
+    // Determine the notification recipient and validate ownership
+    let notifyUserId: string;
+    let targetLabel: string;
+    let notificationLink: string;
+
+    if (gig_id) {
+      // Gig testimonial - look up the gig poster
+      const { data: gig, error: gigError } = await serviceClient
+        .from("gigs")
+        .select("poster_id, title")
+        .eq("id", gig_id)
+        .single();
+
+      if (gigError || !gig) {
+        return NextResponse.json(
+          { error: "Gig not found" },
+          { status: 404 }
+        );
+      }
+
+      if (gig.poster_id === user.id) {
+        return NextResponse.json(
+          { error: "You cannot leave a testimonial for your own gig" },
+          { status: 400 }
+        );
+      }
+
+      notifyUserId = gig.poster_id;
+      targetLabel = `your gig "${gig.title}"`;
+      notificationLink = "/dashboard/testimonials";
+    } else {
+      // Profile testimonial
+      if (profile_id === user.id) {
+        return NextResponse.json(
+          { error: "You cannot leave a testimonial for yourself" },
+          { status: 400 }
+        );
+      }
+
+      notifyUserId = profile_id;
+      targetLabel = "your profile";
+      notificationLink = "/dashboard/testimonials";
     }
 
-    const serviceClient = createServiceClient();
     const { data, error } = await serviceClient
       .from("testimonials")
       .insert({
-        profile_id,
+        profile_id: profile_id || null,
+        gig_id: gig_id || null,
         author_id: user.id,
         rating,
         content: content.trim(),
@@ -57,17 +169,17 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       if (error.code === "23505") {
+        const target = gig_id ? "gig" : "profile";
         return NextResponse.json(
-          { error: "You have already left a testimonial for this profile" },
+          { error: `You have already left a testimonial for this ${target}` },
           { status: 409 }
         );
       }
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    // Send notification + email to profile owner
+    // Send notification + email
     try {
-      // Get author profile
       const { data: authorProfile } = await serviceClient
         .from("profiles")
         .select("full_name, username")
@@ -79,44 +191,43 @@ export async function POST(request: NextRequest) {
 
       // In-app notification
       await serviceClient.from("notifications").insert({
-        user_id: profile_id,
+        user_id: notifyUserId,
         type: "review_received",
-        title: `${authorName} left you a ${rating}-star testimonial`,
+        title: `${authorName} left a ${rating}-star testimonial on ${targetLabel}`,
         message: content.trim().slice(0, 200),
-        link: "/dashboard/testimonials",
+        link: notificationLink,
       });
 
       // Email notification
-      const { data: profileOwnerAuth } = await serviceClient.auth.admin.getUserById(profile_id);
+      const { data: profileOwnerAuth } = await serviceClient.auth.admin.getUserById(notifyUserId);
       const ownerEmail = profileOwnerAuth?.user?.email;
 
       if (ownerEmail) {
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ugig.net";
         await sendEmail({
           to: ownerEmail,
-          subject: `${authorName} left you a ${rating}-star testimonial on ugig.net`,
+          subject: `${authorName} left a ${rating}-star testimonial on ${targetLabel} — ugig.net`,
           html: `
             <div style="font-family: sans-serif; max-width: 500px;">
               <h2>New Testimonial ${stars}</h2>
-              <p><strong>${authorName}</strong> left you a ${rating}-star testimonial:</p>
+              <p><strong>${authorName}</strong> left a ${rating}-star testimonial on ${targetLabel}:</p>
               <blockquote style="border-left: 3px solid #6366f1; padding-left: 12px; color: #555; margin: 16px 0;">
                 "${content.trim()}"
               </blockquote>
               <p>
-                <a href="${baseUrl}/dashboard/testimonials" style="display: inline-block; padding: 10px 20px; background: #6366f1; color: white; text-decoration: none; border-radius: 6px;">
+                <a href="${baseUrl}${notificationLink}" style="display: inline-block; padding: 10px 20px; background: #6366f1; color: white; text-decoration: none; border-radius: 6px;">
                   Review & Approve
                 </a>
               </p>
               <p style="color: #888; font-size: 13px;">
-                Testimonials appear on your profile after you approve them.
+                Testimonials appear after you approve them.
               </p>
             </div>
           `,
-          text: `${authorName} left you a ${rating}-star testimonial: "${content.trim()}"\n\nReview it at ${baseUrl}/dashboard/testimonials`,
+          text: `${authorName} left a ${rating}-star testimonial on ${targetLabel}: "${content.trim()}"\n\nReview it at ${baseUrl}${notificationLink}`,
         });
       }
     } catch (notifyErr) {
-      // Don't fail the request if notification fails
       console.error("Failed to send testimonial notification:", notifyErr);
     }
 

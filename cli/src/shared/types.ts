@@ -98,6 +98,14 @@ export type EndorsementWithEndorser = Endorsement & {
   endorser: Pick<Profile, "id" | "username" | "full_name" | "avatar_url">;
 };
 
+// Attachment type for message file uploads
+export interface Attachment {
+  url: string;
+  filename: string;
+  size: number;
+  type: string;
+}
+
 export type SkillEndorsementSummary = {
   skill: string;
   count: number;
@@ -148,7 +156,7 @@ export type PaginatedResult<T> = {
 };
 
 // Form types
-export type BudgetType = "fixed" | "hourly" | "daily" | "weekly" | "monthly" | "per_task" | "per_unit" | "revenue_share";
+export type BudgetType = "fixed" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "per_task" | "per_unit" | "revenue_share";
 
 export type GigFormData = {
   title: string;

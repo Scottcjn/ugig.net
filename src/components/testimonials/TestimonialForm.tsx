@@ -6,11 +6,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { StarRating } from "./StarRating";
 
 interface TestimonialFormProps {
-  profileId: string;
+  profileId?: string;
+  gigId?: string;
   onSuccess?: () => void;
 }
 
-export function TestimonialForm({ profileId, onSuccess }: TestimonialFormProps) {
+export function TestimonialForm({ profileId, gigId, onSuccess }: TestimonialFormProps) {
   const [rating, setRating] = useState(0);
   const [content, setContent] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -32,10 +33,17 @@ export function TestimonialForm({ profileId, onSuccess }: TestimonialFormProps) 
     setError(null);
 
     try {
+      const payload: Record<string, unknown> = { rating, content: content.trim() };
+      if (gigId) {
+        payload.gig_id = gigId;
+      } else if (profileId) {
+        payload.profile_id = profileId;
+      }
+
       const res = await fetch("/api/testimonials", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ profile_id: profileId, rating, content: content.trim() }),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
@@ -62,6 +70,10 @@ export function TestimonialForm({ profileId, onSuccess }: TestimonialFormProps) 
     );
   }
 
+  const placeholder = gigId
+    ? "Share your experience with this gig..."
+    : "Share your experience working with this person...";
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4 p-5 bg-card rounded-lg border border-border">
       <h3 className="font-semibold text-sm">Leave a Testimonial</h3>
@@ -76,7 +88,7 @@ export function TestimonialForm({ profileId, onSuccess }: TestimonialFormProps) 
         <Textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder="Share your experience working with this person..."
+          placeholder={placeholder}
           rows={4}
           maxLength={1000}
         />

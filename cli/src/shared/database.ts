@@ -80,7 +80,7 @@ export type Database = {
           agent_operator_url: string | null;
           agent_source_url: string | null;
           did: string | null;
-          rate_type: "fixed" | "hourly" | "daily" | "weekly" | "monthly" | "per_task" | "per_unit" | "revenue_share" | null;
+          rate_type: "fixed" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "per_task" | "per_unit" | "revenue_share" | null;
           rate_amount: number | null;
           rate_unit: string | null;
           preferred_coin: string | null;
@@ -123,7 +123,7 @@ export type Database = {
           agent_operator_url?: string | null;
           agent_source_url?: string | null;
           did?: string | null;
-          rate_type?: "fixed" | "hourly" | "daily" | "weekly" | "monthly" | "per_task" | "per_unit" | "revenue_share" | null;
+          rate_type?: "fixed" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "per_task" | "per_unit" | "revenue_share" | null;
           rate_amount?: number | null;
           rate_unit?: string | null;
           preferred_coin?: string | null;
@@ -166,7 +166,7 @@ export type Database = {
           agent_operator_url?: string | null;
           agent_source_url?: string | null;
           did?: string | null;
-          rate_type?: "fixed" | "hourly" | "daily" | "weekly" | "monthly" | "per_task" | "per_unit" | "revenue_share" | null;
+          rate_type?: "fixed" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "per_task" | "per_unit" | "revenue_share" | null;
           rate_amount?: number | null;
           rate_unit?: string | null;
           preferred_coin?: string | null;
@@ -191,7 +191,7 @@ export type Database = {
           category: string;
           skills_required: string[];
           ai_tools_preferred: string[];
-          budget_type: "fixed" | "hourly" | "daily" | "weekly" | "monthly" | "per_task" | "per_unit" | "revenue_share";
+          budget_type: "fixed" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "per_task" | "per_unit" | "revenue_share";
           budget_min: number | null;
           budget_max: number | null;
           budget_unit: string | null;
@@ -214,7 +214,7 @@ export type Database = {
           category: string;
           skills_required?: string[];
           ai_tools_preferred?: string[];
-          budget_type: "fixed" | "hourly" | "daily" | "weekly" | "monthly" | "per_task" | "per_unit" | "revenue_share";
+          budget_type: "fixed" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "per_task" | "per_unit" | "revenue_share";
           budget_min?: number | null;
           budget_max?: number | null;
           budget_unit?: string | null;
@@ -237,7 +237,7 @@ export type Database = {
           category?: string;
           skills_required?: string[];
           ai_tools_preferred?: string[];
-          budget_type?: "fixed" | "hourly" | "daily" | "weekly" | "monthly" | "per_task" | "per_unit" | "revenue_share";
+          budget_type?: "fixed" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "per_task" | "per_unit" | "revenue_share";
           budget_min?: number | null;
           budget_max?: number | null;
           budget_unit?: string | null;
@@ -345,6 +345,7 @@ export type Database = {
           last_message_at: string;
           created_at: string;
           updated_at: string;
+          archived_at: string | null;
         };
         Insert: {
           id?: string;
@@ -353,6 +354,7 @@ export type Database = {
           last_message_at?: string;
           created_at?: string;
           updated_at?: string;
+          archived_at?: string | null;
         };
         Update: {
           id?: string;
@@ -361,6 +363,7 @@ export type Database = {
           last_message_at?: string;
           created_at?: string;
           updated_at?: string;
+          archived_at?: string | null;
         };
         Relationships: [
           {
@@ -606,6 +609,61 @@ export type Database = {
             columns: ["reviewee_id"];
             isOneToOne: false;
             referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      testimonials: {
+        Row: {
+          id: string;
+          profile_id: string | null;
+          gig_id: string | null;
+          author_id: string;
+          rating: number;
+          content: string;
+          status: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          profile_id?: string | null;
+          gig_id?: string | null;
+          author_id: string;
+          rating: number;
+          content: string;
+          status?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          profile_id?: string | null;
+          gig_id?: string | null;
+          author_id?: string;
+          rating?: number;
+          content?: string;
+          status?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "testimonials_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "testimonials_author_id_fkey";
+            columns: ["author_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "testimonials_gig_id_fkey";
+            columns: ["gig_id"];
+            isOneToOne: false;
+            referencedRelation: "gigs";
             referencedColumns: ["id"];
           }
         ];
@@ -1500,7 +1558,7 @@ export type Database = {
     Enums: {
       account_type: "human" | "agent";
       gig_status: "draft" | "active" | "paused" | "closed" | "filled";
-      budget_type: "fixed" | "hourly" | "daily" | "weekly" | "monthly" | "per_task" | "per_unit" | "revenue_share";
+      budget_type: "fixed" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "per_task" | "per_unit" | "revenue_share";
       location_type: "remote" | "onsite" | "hybrid";
       application_status:
         | "pending"

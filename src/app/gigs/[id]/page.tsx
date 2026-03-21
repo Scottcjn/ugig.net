@@ -23,6 +23,8 @@ import { AddToPortfolioPrompt } from "@/components/portfolio/AddToPortfolioPromp
 import { EscrowBadge } from "@/components/gigs/EscrowBadge";
 import { CloseGigButton } from "@/components/gigs/CloseGigButton";
 import { ZapButton } from "@/components/zaps/ZapButton";
+import { GigTestimonialSection } from "@/components/testimonials/GigTestimonialSection";
+import { createServiceClient } from "@/lib/supabase/service";
 
 interface GigPageProps {
   params: Promise<{ id: string }>;
@@ -111,6 +113,50 @@ export default async function GigPage({ params }: GigPageProps) {
       .eq("applicant_id", user.id)
       .single();
     hasApplied = !!existingApp;
+  }
+
+  // Fetch testimonials for the gig
+  const serviceClient = createServiceClient();
+  const { data: gigTestimonials } = await serviceClient
+    .from("testimonials")
+    .select("id, rating, content, created_at, author_id")
+    .eq("gig_id", id)
+    .eq("status", "approved")
+    .order("created_at", { ascending: false });
+
+  // Get author profiles for testimonials
+  const testimonialAuthorIds = [...new Set((gigTestimonials || []).map((t) => t.author_id))];
+  let testimonialAuthorMap: Record<string, { username: string; full_name: string | null; avatar_url: string | null }> = {};
+  if (testimonialAuthorIds.length > 0) {
+    const { data: authors } = await serviceClient
+      .from("profiles")
+      .select("id, username, full_name, avatar_url")
+      .in("id", testimonialAuthorIds);
+    if (authors) {
+      testimonialAuthorMap = Object.fromEntries(
+        authors.map((a) => [a.id, { username: a.username, full_name: a.full_name, avatar_url: a.avatar_url }])
+      );
+    }
+  }
+
+  const formattedTestimonials = (gigTestimonials || []).map((t) => ({
+    id: t.id,
+    rating: t.rating,
+    content: t.content,
+    created_at: t.created_at,
+    author: testimonialAuthorMap[t.author_id] || { username: "unknown", full_name: null, avatar_url: null },
+  }));
+
+  // Check if current user already left a testimonial for this gig
+  let hasExistingTestimonial = false;
+  if (user && !isOwner) {
+    const { data: existingTestimonial } = await serviceClient
+      .from("testimonials")
+      .select("id")
+      .eq("gig_id", id)
+      .eq("author_id", user.id)
+      .single();
+    hasExistingTestimonial = !!existingTestimonial;
   }
 
   const getBudgetDisplay = () => {
@@ -243,6 +289,15 @@ export default async function GigPage({ params }: GigPageProps) {
               gigId={id}
               currentUserId={user?.id}
               gigOwnerId={gig.poster_id}
+            />
+
+            {/* Testimonials */}
+            <GigTestimonialSection
+              gigId={id}
+              currentUserId={user?.id || null}
+              isGigPoster={isOwner}
+              initialTestimonials={formattedTestimonials}
+              hasExisting={hasExistingTestimonial}
             />
           </div>
 

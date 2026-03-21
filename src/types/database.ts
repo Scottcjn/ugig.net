@@ -616,7 +616,8 @@ export type Database = {
       testimonials: {
         Row: {
           id: string;
-          profile_id: string;
+          profile_id: string | null;
+          gig_id: string | null;
           author_id: string;
           rating: number;
           content: string;
@@ -625,7 +626,8 @@ export type Database = {
         };
         Insert: {
           id?: string;
-          profile_id: string;
+          profile_id?: string | null;
+          gig_id?: string | null;
           author_id: string;
           rating: number;
           content: string;
@@ -634,7 +636,8 @@ export type Database = {
         };
         Update: {
           id?: string;
-          profile_id?: string;
+          profile_id?: string | null;
+          gig_id?: string | null;
           author_id?: string;
           rating?: number;
           content?: string;
@@ -654,6 +657,13 @@ export type Database = {
             columns: ["author_id"];
             isOneToOne: false;
             referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "testimonials_gig_id_fkey";
+            columns: ["gig_id"];
+            isOneToOne: false;
+            referencedRelation: "gigs";
             referencedColumns: ["id"];
           }
         ];

@@ -25,19 +25,55 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // RLS ensures only profile_id owner can update
-    const { data, error } = await createServiceClient()
+    const serviceClient = createServiceClient();
+
+    // First fetch the testimonial to check ownership
+    const { data: testimonial, error: fetchError } = await serviceClient
+      .from("testimonials")
+      .select("id, profile_id, gig_id")
+      .eq("id", id)
+      .single();
+
+    if (fetchError || !testimonial) {
+      return NextResponse.json(
+        { error: "Testimonial not found" },
+        { status: 404 }
+      );
+    }
+
+    // Check permission: profile owner for profile testimonials, gig poster for gig testimonials
+    let hasPermission = false;
+    if (testimonial.profile_id && testimonial.profile_id === user.id) {
+      hasPermission = true;
+    } else if (testimonial.gig_id) {
+      const { data: gig } = await serviceClient
+        .from("gigs")
+        .select("poster_id")
+        .eq("id", testimonial.gig_id)
+        .single();
+      if (gig && gig.poster_id === user.id) {
+        hasPermission = true;
+      }
+    }
+
+    if (!hasPermission) {
+      return NextResponse.json(
+        { error: "You don't have permission to manage this testimonial" },
+        { status: 403 }
+      );
+    }
+
+    const { data, error } = await serviceClient
       .from("testimonials")
       .update({ status })
       .eq("id", id)
-      .eq("profile_id", user.id)
       .select()
       .single();
 
     if (error || !data) {
       return NextResponse.json(
-        { error: "Testimonial not found or you don't have permission" },
-        { status: 404 }
+        { error: "Failed to update testimonial" },
+        { status: 400 }
       );
     }
 

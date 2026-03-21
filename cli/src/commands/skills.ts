@@ -430,7 +430,7 @@ export function registerSkillsCommands(program: Command): void {
           return;
         }
 
-        spinner?.text = `Publishing ${drafts.length} draft skill(s)...`;
+        if (spinner) spinner.text = `Publishing ${drafts.length} draft skill(s)...`;
 
         let published = 0;
         let failed = 0;
