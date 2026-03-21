@@ -23,7 +23,7 @@ describe("MessageInput", () => {
     expect(screen.getByPlaceholderText("Type a message...")).toBeInTheDocument();
     expect(screen.getByLabelText("Attach files")).toBeInTheDocument();
     // Send button + Attach button
-    expect(screen.getAllByRole("button")).toHaveLength(2);
+    expect(screen.getAllByRole("button")).toHaveLength(3) // attach, emoji, send;
   });
 
   it("calls onSend when send button is clicked", async () => {

@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Send, Loader2, Paperclip, X, FileIcon } from "lucide-react";
+import { EmojiPicker } from "./EmojiPicker";
 
 export const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
 export const MAX_FILES = 5;
@@ -213,6 +214,14 @@ export function MessageInput({
           onChange={handleFileSelect}
           className="hidden"
           data-testid="file-input"
+        />
+
+        <EmojiPicker
+          onSelect={(emoji) => {
+            setContent((prev) => prev + emoji);
+            textareaRef.current?.focus();
+          }}
+          disabled={disabled || isSending}
         />
 
         <Textarea
