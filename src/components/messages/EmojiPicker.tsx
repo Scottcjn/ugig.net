@@ -50,7 +50,7 @@ export function EmojiPicker({ onSelect, disabled }: EmojiPickerProps) {
       {open && (
         <div
           className="absolute bottom-full mb-2 left-0 border border-border rounded-lg shadow-xl z-50 w-[300px]"
-          style={{ backgroundColor: "hsl(var(--card))" }}
+          style={{ backgroundColor: "var(--color-card, #141414)" }}
           onMouseDown={(e) => e.stopPropagation()}
         >
           {/* Category tabs */}
