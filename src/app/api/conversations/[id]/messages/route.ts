@@ -171,6 +171,12 @@ export async function POST(
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
+    // Update conversation last_message_at so it sorts to top of inbox
+    await supabase
+      .from("conversations")
+      .update({ last_message_at: new Date().toISOString() })
+      .eq("id", conversationId);
+
     // Create notification for recipient(s)
     const recipientIds = conversation.participant_ids.filter(
       (id: string) => id !== user.id
