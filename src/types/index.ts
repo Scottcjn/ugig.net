@@ -319,13 +319,39 @@ export type WalletAddress = {
 
 // Common payment coins for gigs and profiles
 export const PAYMENT_COINS = [
+  "BTC",
+  "SATS",
+  "LN",
   "SOL",
   "ETH",
   "USDC",
   "USDT",
-  "BTC",
   "POL",
 ] as const;
+
+/** Coins where amounts are denominated in sats instead of USD */
+export const SATS_COINS = new Set(["SATS", "LN", "BTC"]);
+
+/** Format a budget amount based on payment coin */
+export function formatBudgetAmount(amount: number, paymentCoin?: string | null): string {
+  if (paymentCoin && SATS_COINS.has(paymentCoin)) {
+    // For BTC: if amount looks like sats (>= 1000 or is an integer), show as sats
+    // Otherwise show as BTC
+    if (paymentCoin === "BTC" && amount < 1) {
+      return `₿${amount}`;
+    }
+    return `${amount.toLocaleString()} sats`;
+  }
+  // Default: USD
+  return `$${amount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+}
+
+/** Get the currency label for display */
+export function getBudgetCurrencyLabel(paymentCoin?: string | null): string {
+  if (!paymentCoin) return "USD";
+  if (paymentCoin === "SATS" || paymentCoin === "LN") return "sats";
+  return paymentCoin;
+}
 
 // Supported wallet currencies (matches CoinPayPortal)
 export const WALLET_CURRENCIES = [

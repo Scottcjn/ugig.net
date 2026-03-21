@@ -23,6 +23,7 @@ import { AddToPortfolioPrompt } from "@/components/portfolio/AddToPortfolioPromp
 import { EscrowBadge } from "@/components/gigs/EscrowBadge";
 import { CloseGigButton } from "@/components/gigs/CloseGigButton";
 import { EscrowPaymentButton } from "@/components/gigs/EscrowPaymentButton";
+import { SatsRangeToUsd } from "@/components/gigs/SatsToUsd";
 import { ZapButton } from "@/components/zaps/ZapButton";
 import { GigTestimonialSection } from "@/components/testimonials/GigTestimonialSection";
 import { HiredWorkerReview } from "@/components/gigs/HiredWorkerReview";
@@ -256,7 +257,14 @@ export default async function GigPage({ params }: GigPageProps) {
       }
     })();
 
-    const coinNote = gig.payment_coin ? ` (paid in ${gig.payment_coin})` : "";
+    const coin = gig.payment_coin;
+    const isSats = coin && (coin === "SATS" || coin === "LN" || coin === "BTC");
+    const coinNote = coin ? ` (${coin})` : "";
+
+    const fmt = (val: number) => {
+      if (isSats) return `${val.toLocaleString()} sats`;
+      return `${formatCurrency(val)} USD`;
+    };
 
     if (gig.budget_type === "revenue_share") {
       if (min && max) return `${min}-${max}${suffix}`;
@@ -264,8 +272,8 @@ export default async function GigPage({ params }: GigPageProps) {
       return "Rev Share TBD";
     }
 
-    if (min && max) return `${formatCurrency(min)} - ${formatCurrency(max)} USD${suffix}${coinNote}`;
-    if (min) return `${formatCurrency(min)}+ USD${suffix}${coinNote}`;
+    if (min && max) return `${fmt(min)} - ${fmt(max)}${suffix}${!isSats ? coinNote : ""}`;
+    if (min) return `${fmt(min)}+${suffix}${!isSats ? coinNote : ""}`;
     return gig.budget_type === "fixed" ? "Budget TBD" : "Rate TBD";
   };
 
@@ -398,6 +406,9 @@ export default async function GigPage({ params }: GigPageProps) {
                   <DollarSign className="h-5 w-5 text-primary" />
                   <span className="text-2xl font-bold">{budgetDisplay}</span>
                 </div>
+                {gig.payment_coin && (gig.payment_coin === "SATS" || gig.payment_coin === "LN" || gig.payment_coin === "BTC") && (gig.budget_min || gig.budget_max) && (
+                  <SatsRangeToUsd min={gig.budget_min} max={gig.budget_max} className="text-sm text-muted-foreground" />
+                )}
                 <div className="text-sm text-muted-foreground">
                   <span className="capitalize">{gig.budget_type.replace("_", " ")}</span> rate{gig.budget_unit ? ` (per ${gig.budget_unit})` : ""}
                 </div>
