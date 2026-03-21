@@ -25,6 +25,7 @@ import { CloseGigButton } from "@/components/gigs/CloseGigButton";
 import { EscrowPaymentButton } from "@/components/gigs/EscrowPaymentButton";
 import { ZapButton } from "@/components/zaps/ZapButton";
 import { GigTestimonialSection } from "@/components/testimonials/GigTestimonialSection";
+import { HiredWorkerReview } from "@/components/gigs/HiredWorkerReview";
 import { createServiceClient } from "@/lib/supabase/service";
 
 interface GigPageProps {
@@ -153,8 +154,47 @@ export default async function GigPage({ params }: GigPageProps) {
     }
   }
 
-  // Fetch testimonials for the gig
   const serviceClient = createServiceClient();
+
+  // Fetch hired workers for poster review section
+  let hiredWorkers: { id: string; username: string; full_name: string | null; avatar_url: string | null; application_status: string }[] = [];
+  let existingWorkerReviews = new Set<string>();
+
+  if (user && isOwner) {
+    const { data: acceptedApps } = await supabase
+      .from("applications")
+      .select("applicant_id, status")
+      .eq("gig_id", id)
+      .eq("status", "accepted");
+
+    if (acceptedApps && acceptedApps.length > 0) {
+      const workerIds = acceptedApps.map((a) => a.applicant_id);
+      const { data: workerProfiles } = await supabase
+        .from("profiles")
+        .select("id, username, full_name, avatar_url")
+        .in("id", workerIds);
+
+      hiredWorkers = (workerProfiles || []).map((p) => ({
+        ...p,
+        application_status: acceptedApps.find((a) => a.applicant_id === p.id)?.status || "accepted",
+      }));
+
+      // Check which workers the poster already reviewed
+      if (workerIds.length > 0) {
+        const { data: existingTestimonials } = await serviceClient
+          .from("testimonials")
+          .select("profile_id")
+          .eq("author_id", user.id)
+          .in("profile_id", workerIds);
+
+        existingWorkerReviews = new Set(
+          (existingTestimonials || []).map((t) => t.profile_id).filter(Boolean) as string[]
+        );
+      }
+    }
+  }
+
+  // Fetch testimonials for the gig
   const { data: gigTestimonials } = await serviceClient
     .from("testimonials")
     .select("id, rating, content, created_at, author_id")
@@ -328,6 +368,16 @@ export default async function GigPage({ params }: GigPageProps) {
               currentUserId={user?.id}
               gigOwnerId={gig.poster_id}
             />
+
+            {/* Hired Workers + Review */}
+            {isOwner && hiredWorkers.length > 0 && user && (
+              <HiredWorkerReview
+                gigId={id}
+                workers={hiredWorkers}
+                currentUserId={user.id}
+                existingReviews={existingWorkerReviews}
+              />
+            )}
 
             {/* Testimonials */}
             <GigTestimonialSection
