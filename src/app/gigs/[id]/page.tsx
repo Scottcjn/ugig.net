@@ -12,6 +12,7 @@ import {
   ArrowLeft,
   Users,
   Eye,
+  Shield,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/button";
@@ -120,25 +121,40 @@ export default async function GigPage({ params }: GigPageProps) {
     userApplicationId = existingApp?.id || null;
   }
 
-  // Fetch accepted application + escrow for this gig
-  let acceptedApplication: { id: string; applicant_id: string; proposed_rate: number | null } | null = null;
+  // Fetch user's accepted application + escrow for this gig
+  let userAcceptedApplication: { id: string; applicant_id: string; proposed_rate: number | null } | null = null;
   let gigEscrow: Record<string, unknown> | null = null;
+  let acceptedCount = 0;
 
   if (user) {
-    // Get accepted application (poster sees the one they accepted, worker sees their own)
-    const { data: acceptedApps } = await supabase
-      .from("applications")
-      .select("id, applicant_id, proposed_rate")
-      .eq("gig_id", id)
-      .eq("status", "accepted")
-      .limit(1);
+    // Worker: find their own accepted application
+    // Poster: find any accepted application (for display purposes)
+    const isPoster = gig.poster_id === user.id;
 
-    if (acceptedApps && acceptedApps.length > 0) {
-      acceptedApplication = acceptedApps[0];
+    if (!isPoster) {
+      // Worker — find their own accepted application
+      const { data: myApp } = await supabase
+        .from("applications")
+        .select("id, applicant_id, proposed_rate")
+        .eq("gig_id", id)
+        .eq("applicant_id", user.id)
+        .eq("status", "accepted")
+        .limit(1);
+      if (myApp && myApp.length > 0) {
+        userAcceptedApplication = myApp[0];
+      }
+    } else {
+      // Poster — count accepted applications
+      const { data: acceptedApps } = await supabase
+        .from("applications")
+        .select("id")
+        .eq("gig_id", id)
+        .eq("status", "accepted");
+      acceptedCount = acceptedApps?.length || 0;
     }
 
-    // Get escrow if exists
-    if (acceptedApplication) {
+    // Get escrow for worker's application
+    if (userAcceptedApplication) {
       const { data: escrows } = await (supabase as any)
         .from("gig_escrows")
         .select(`
@@ -147,7 +163,7 @@ export default async function GigPage({ params }: GigPageProps) {
           poster:profiles!poster_id(id, username, full_name, avatar_url)
         `)
         .eq("gig_id", id)
-        .eq("application_id", acceptedApplication.id)
+        .eq("application_id", userAcceptedApplication.id)
         .order("created_at", { ascending: false })
         .limit(1);
 
@@ -473,17 +489,13 @@ export default async function GigPage({ params }: GigPageProps) {
                       </Button>
                     </Link>
                     <CloseGigButton gigId={id} status={gig.status} />
-                    {acceptedApplication && (
-                      <EscrowPaymentButton
-                        gigId={id}
-                        applicationId={acceptedApplication.id}
-                        currentUserId={user!.id}
-                        isPoster={true}
-                        isWorker={false}
-                        budgetAmount={acceptedApplication.proposed_rate || gig.budget_min || gig.budget_max}
-                        existingEscrow={gigEscrow as any}
-                        workerId={acceptedApplication.applicant_id}
-                      />
+                    {acceptedCount > 0 && (
+                      <Link href={`/gigs/${id}/applications`} className="block">
+                        <Button variant="outline" className="w-full gap-2">
+                          <Shield className="h-4 w-4" />
+                          Manage Escrow ({acceptedCount} hired)
+                        </Button>
+                      </Link>
                     )}
                   </div>
                 )}
