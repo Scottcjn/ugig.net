@@ -24,6 +24,7 @@ import { AddToPortfolioPrompt } from "@/components/portfolio/AddToPortfolioPromp
 import { EscrowBadge } from "@/components/gigs/EscrowBadge";
 import { CloseGigButton } from "@/components/gigs/CloseGigButton";
 import { EscrowPaymentButton } from "@/components/gigs/EscrowPaymentButton";
+import { InvoiceButton } from "@/components/gigs/InvoiceButton";
 import { SatsRangeToUsd } from "@/components/gigs/SatsToUsd";
 import { ZapButton } from "@/components/zaps/ZapButton";
 import { GigTestimonialSection } from "@/components/testimonials/GigTestimonialSection";
@@ -460,6 +461,16 @@ export default async function GigPage({ params }: GigPageProps) {
                               isWorker={true}
                               budgetAmount={null}
                               existingEscrow={gigEscrow as any}
+                            />
+                          )}
+                          {userAcceptedApplication && (
+                            <InvoiceButton
+                              gigId={id}
+                              applicationId={userAcceptedApplication.id}
+                              currentUserId={user!.id}
+                              isPoster={false}
+                              isWorker={true}
+                              budgetAmount={userAcceptedApplication.proposed_rate}
                             />
                           )}
                         </>

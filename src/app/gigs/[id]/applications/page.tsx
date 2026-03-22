@@ -13,6 +13,7 @@ import { ExpandableApplicationCard } from "@/components/applications/ExpandableA
 import { StartConversationButton } from "@/components/messages/StartConversationButton";
 import { MarkdownContent } from "@/components/ui/MarkdownContent";
 import { EscrowPaymentButton } from "@/components/gigs/EscrowPaymentButton";
+import { InvoiceButton } from "@/components/gigs/InvoiceButton";
 
 interface ApplicationsPageProps {
   params: Promise<{ id: string }>;
@@ -458,9 +459,9 @@ export default async function ApplicationsPage({ params }: ApplicationsPageProps
                         </div>
                       )}
 
-                      {/* Escrow — only for accepted applications */}
+                      {/* Escrow & Invoice — only for accepted applications */}
                       {app.status === "accepted" && (
-                        <div className="mb-4">
+                        <div className="mb-4 space-y-3">
                           <EscrowPaymentButton
                             gigId={id}
                             applicationId={app.id}
@@ -470,6 +471,14 @@ export default async function ApplicationsPage({ params }: ApplicationsPageProps
                             budgetAmount={app.proposed_rate || gig.budget_min || gig.budget_max}
                             existingEscrow={escrowMap[app.id] || null}
                             workerId={applicant?.id}
+                          />
+                          <InvoiceButton
+                            gigId={id}
+                            applicationId={app.id}
+                            currentUserId={user.id}
+                            isPoster={true}
+                            isWorker={false}
+                            budgetAmount={app.proposed_rate || gig.budget_min || gig.budget_max}
                           />
                         </div>
                       )}
