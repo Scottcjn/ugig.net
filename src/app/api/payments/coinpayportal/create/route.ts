@@ -5,7 +5,7 @@ import { z } from "zod";
 
 const createPaymentSchema = z.object({
   type: z.enum(["subscription", "gig_payment", "tip"]),
-  plan: z.enum(["monthly", "annual"]).optional(),
+  plan: z.enum(["monthly", "annual", "lifetime"]).optional(),
   currency: z.enum(["usdc_pol", "usdc_sol", "pol", "sol", "btc", "eth", "usdc_eth", "usdt"]),
   amount_usd: z.number().min(1).optional(),
   gig_id: z.string().uuid().optional(),
@@ -43,7 +43,10 @@ export async function POST(request: NextRequest) {
 
     switch (type) {
       case "subscription":
-        if (plan === "annual") {
+        if (plan === "lifetime") {
+          amount = 100; // one-time lifetime membership
+          description = "ugig.net Lifetime Membership (One-time)";
+        } else if (plan === "annual") {
           amount = 108; // $108/year ($9/month)
           description = "ugig.net Pro Subscription (Annual - $9/mo)";
         } else {
@@ -78,15 +81,21 @@ export async function POST(request: NextRequest) {
         );
     }
 
-    // Create payment with CoinPayPortal
+    const regularBusinessId =
+      process.env.COINPAYPORTAL_UGIG_BUSINESS_ID ||
+      process.env.COINPAYPORTAL_MERCHANT_ID;
+
+    // Create payment with CoinPayPortal (regular ugig business)
     const paymentResult = await createPayment({
       amount_usd: amount,
       currency: currency as SupportedCurrency,
       description,
+      business_id: regularBusinessId,
       redirect_url: `${process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "https://ugig.net"}/settings/billing?payment=success`,
       metadata: {
         user_id: user.id,
         type,
+        plan,
         gig_id,
       },
     });

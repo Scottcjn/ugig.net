@@ -26,6 +26,7 @@ export interface CreatePaymentOptions {
   description?: string;
   redirect_url?: string;
   metadata?: Record<string, unknown>;
+  business_id?: string;
 }
 
 export interface CreatePaymentResponse {
@@ -93,7 +94,7 @@ export async function createPayment(
   options: CreatePaymentOptions
 ): Promise<CreatePaymentResponse> {
   const apiKey = process.env.COINPAYPORTAL_API_KEY;
-  const merchantId = process.env.COINPAYPORTAL_MERCHANT_ID;
+  const merchantId = options.business_id || process.env.COINPAYPORTAL_MERCHANT_ID;
 
   if (!apiKey || !merchantId) {
     throw new Error("CoinPayPortal credentials not configured");

@@ -114,44 +114,53 @@ async function handlePaymentConfirmed(
 
   const amountUsd = Number(paymentData.amount_usd || 0);
 
+  const paymentPlan =
+    typeof payment.metadata === "object" && payment.metadata && "plan" in payment.metadata
+      ? String((payment.metadata as Record<string, unknown>).plan || "")
+      : "";
+
   // Handle based on payment type
   if (payment.type === "subscription") {
-    // Activate Pro subscription
-    const now = new Date();
-    const periodEnd = new Date(now);
-    periodEnd.setMonth(periodEnd.getMonth() + 1);
+    if (paymentPlan === "lifetime") {
+      await grantLifetimeForInvestment(supabase, payment.user_id, payment.id, amountUsd);
+    } else {
+      // Activate Pro subscription
+      const now = new Date();
+      const periodEnd = new Date(now);
+      periodEnd.setMonth(periodEnd.getMonth() + 1);
 
-    await supabase
-      .from("subscriptions")
-      .upsert({
+      await supabase
+        .from("subscriptions")
+        .upsert({
+          user_id: payment.user_id,
+          coinpay_payment_id: paymentData.payment_id,
+          status: "active",
+          plan: "pro",
+          current_period_start: now.toISOString(),
+          current_period_end: periodEnd.toISOString(),
+          cancel_at_period_end: false,
+          updated_at: now.toISOString(),
+        }, {
+          onConflict: "user_id",
+        });
+
+      // Notify user
+      await supabase.from("notifications").insert({
         user_id: payment.user_id,
-        coinpay_payment_id: paymentData.payment_id,
-        status: "active",
-        plan: "pro",
-        current_period_start: now.toISOString(),
-        current_period_end: periodEnd.toISOString(),
-        cancel_at_period_end: false,
-        updated_at: now.toISOString(),
-      }, {
-        onConflict: "user_id",
+        type: "payment_received",
+        title: "Pro subscription activated",
+        body: `Your Pro subscription is now active. Enjoy unlimited gig posts!`,
+        data: {
+          payment_id: payment.id,
+          amount_usd: paymentData.amount_usd,
+          currency: paymentData.currency,
+        },
       });
-
-    // Notify user
-    await supabase.from("notifications").insert({
-      user_id: payment.user_id,
-      type: "payment_received",
-      title: "Pro subscription activated",
-      body: `Your Pro subscription is now active. Enjoy unlimited gig posts!`,
-      data: {
-        payment_id: payment.id,
-        amount_usd: paymentData.amount_usd,
-        currency: paymentData.currency,
-      },
-    });
+    }
   }
 
   // Investor perk: $50+ contribution via CoinPay grants lifetime plan
-  if (amountUsd >= LIFETIME_THRESHOLD_USD) {
+  if (payment.type !== "subscription" && amountUsd >= LIFETIME_THRESHOLD_USD) {
     await grantLifetimeForInvestment(supabase, payment.user_id, payment.id, amountUsd);
   }
 

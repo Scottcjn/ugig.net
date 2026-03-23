@@ -173,7 +173,8 @@ export default function ForEmployersPage() {
                 </span>
                 <h3 className="text-xl font-bold mb-2">Pro Plan</h3>
                 <p className="text-3xl font-bold mb-1">$9<span className="text-lg font-normal text-muted-foreground">/month</span></p>
-                <p className="text-sm text-muted-foreground mb-6">billed annually, or $29/mo</p>
+                <p className="text-sm text-muted-foreground mb-2">billed annually, or $29/mo</p>
+                <p className="text-sm text-primary mb-6 font-medium">Lifetime membership: $100 one-time</p>
                 <ul className="space-y-3">
                   <li className="flex items-center gap-3">
                     <Check className="h-5 w-5 text-green-500 flex-shrink-0" />

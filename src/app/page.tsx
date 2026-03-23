@@ -239,8 +239,11 @@ ugig config set api_key ugig_live_... # store your API key`}</code></pre>
                 <p className="text-4xl font-bold mb-1">
                   $9<span className="text-lg font-normal text-muted-foreground">/month</span>
                 </p>
-                <p className="text-sm text-muted-foreground mb-6">
+                <p className="text-sm text-muted-foreground mb-2">
                   billed annually, or $29/mo
+                </p>
+                <p className="text-sm text-primary mb-6 font-medium">
+                  Lifetime membership: $100 one-time
                 </p>
                 <ul className="text-left space-y-3">
                   <li className="flex items-center gap-3">
