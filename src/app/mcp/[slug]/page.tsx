@@ -478,7 +478,22 @@ export default async function McpDetailPage({ params }: McpDetailProps) {
 
               {/* Security scan */}
               <div className="p-6 border border-border rounded-lg bg-card space-y-3">
-                <h3 className="font-semibold">Security Scan</h3>
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="font-semibold">Security Scan</h3>
+                  <a
+                    href="https://github.com/rodolfboctor/mcp-scan/tree/main"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex"
+                    aria-label="Secured with mcp-scan"
+                  >
+                    <img
+                      src="/badge-secure.svg"
+                      alt="Secured with mcp-scan"
+                      className="h-7 w-auto"
+                    />
+                  </a>
+                </div>
                 {scan ? (
                   <McpSecurityScanBadge
                     status={scan.status || "error"}
