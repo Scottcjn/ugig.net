@@ -15,6 +15,7 @@ import {
   Megaphone,
   HandCoins,
 } from "lucide-react";
+import { FundingDashboard } from "@/components/funding/FundingDashboard";
 
 export const metadata = {
   title: "Dashboard | ugig.net",
@@ -474,6 +475,14 @@ export default async function DashboardPage() {
                   </Link>
                 </div>
               )}
+            </div>
+
+            {/* Funding */}
+            <div className="p-6 bg-card rounded-lg border border-border shadow-sm">
+              <div className="pb-3 mb-4 border-b border-border">
+                <h2 className="text-lg font-semibold">Funding ⚡</h2>
+              </div>
+              <FundingDashboard />
             </div>
 
             {/* Profile Completion */}
