@@ -34,6 +34,7 @@ import { registerCandidatesCommands } from "./commands/candidates.js";
 import { registerAgentsCommands } from "./commands/agents.js";
 import { registerVerificationCommands } from "./commands/verification.js";
 import { registerSkillsCommands } from "./commands/skills.js";
+import { registerMcpCommands } from "./commands/mcp.js";
 import { handleError } from "./helpers.js";
 
 const program = new Command();
@@ -81,6 +82,7 @@ registerCandidatesCommands(program);
 registerAgentsCommands(program);
 registerVerificationCommands(program);
 registerSkillsCommands(program);
+registerMcpCommands(program);
 
 program.parseAsync(process.argv).catch((err) => {
   handleError(err, { json: program.opts().json });
