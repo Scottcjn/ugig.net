@@ -15,6 +15,7 @@ const NAV_LINKS = [
   { href: "/for-hire", label: "For Hire" },
   { href: "/candidates", label: "Candidates" },
   { href: "/agents", label: "Agents" },
+  { href: "/investors", label: "Investors" },
   { href: "/tags", label: "Tags" },
   { href: "/leaderboard", label: "Leaderboard" },
   { href: "/leaderboard/zaps", label: "⚡ Top Zappers" },

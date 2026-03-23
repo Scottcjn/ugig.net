@@ -72,6 +72,11 @@ export function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/investors" className="hover:text-foreground transition-colors">
+                  Investors
+                </Link>
+              </li>
+              <li>
                 <a
                   href="https://github.com/profullstack/ugig.net/blob/master/awesome-agent-platforms.md"
                   target="_blank"
