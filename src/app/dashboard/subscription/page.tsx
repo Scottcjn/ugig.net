@@ -475,6 +475,9 @@ function SubscriptionPageContent() {
               Premium features included for life
             </li>
           </ul>
+          <p className="text-sm text-green-600 dark:text-green-400 font-semibold mb-4">
+            🎉 Fund ugig.net $50+ and lifetime is included free
+          </p>
           {!isLifetime && (
             <Button
               className="w-full"
