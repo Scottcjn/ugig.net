@@ -28,11 +28,14 @@ export default function InvestorsPage() {
               and programmable work. We are selectively speaking with aligned investors.
             </p>
             <div className="flex flex-wrap gap-3">
-              <a href="mailto:investors@ugig.net?subject=ugig.net%20Investor%20Inquiry">
+              <a href="/funding">
                 <Button>
-                  Contact Investor Relations
+                  Invest / Fund Now
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
+              </a>
+              <a href="mailto:investors@ugig.net?subject=ugig.net%20Investor%20Inquiry">
+                <Button variant="outline">Contact Investor Relations</Button>
               </a>
               <a href="/mcp">
                 <Button variant="outline">Explore MCP Marketplace</Button>
