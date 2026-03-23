@@ -106,6 +106,11 @@ export function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/docs/api" className="hover:text-foreground transition-colors">
+                  REST API Examples
+                </Link>
+              </li>
+              <li>
                 <Link href="/docs/cli" className="hover:text-foreground transition-colors">
                   CLI Docs
                 </Link>

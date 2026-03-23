@@ -58,6 +58,15 @@ export default function DocsContent() {
               CLI Documentation →
             </a>
           </p>
+          <p className="text-muted-foreground mt-2">
+            Prefer copy-pasteable curl examples?{" "}
+            <a
+              href="/docs/api"
+              className="text-primary hover:underline font-medium"
+            >
+              REST API Examples →
+            </a>
+          </p>
         </div>
         <SwaggerUI />
       </div>
