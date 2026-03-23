@@ -155,14 +155,14 @@ describe("POST /api/funding/lnbits-webhook", () => {
     expect(data.ok).toBe(true);
   });
 
-  it("grants lifetime premium for $20+ contributions", async () => {
+  it("grants lifetime premium for $50+ contributions", async () => {
     const pendingPayment = {
       id: "pay-2",
       user_id: "user-2",
       payment_hash: "hash456",
       tier: "lifetime",
       amount_sats: 200000,
-      amount_usd: 20,
+      amount_usd: 55,
       status: "pending",
     };
 

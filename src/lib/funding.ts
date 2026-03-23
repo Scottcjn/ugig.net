@@ -50,7 +50,7 @@ export type FundingTierId = keyof typeof FUNDING_TIERS;
 export const VALID_FUNDING_TIERS: FundingTierId[] = Object.keys(FUNDING_TIERS) as FundingTierId[];
 
 /** The USD threshold for automatic lifetime premium */
-export const LIFETIME_THRESHOLD_USD = 20;
+export const LIFETIME_THRESHOLD_USD = 50;
 
 /** Invoice expiry in seconds (10 minutes) */
 export const INVOICE_EXPIRY_SECONDS = 600;
@@ -73,3 +73,64 @@ export const FUNDING_ADDRESSES = {
   USDT_SOL: "FX8QhU1TPUHGs2X8PibbHikd4YvdQMPfVuFd6mqk9qJw",
   USDT_POL: "0xEf993488b444b75585A5CCe171e65F4dD9D99add",
 } as const;
+
+export type FundingAddressMap = Record<string, string>;
+
+const COINPAY_API = "https://coinpayportal.com/api";
+
+/**
+ * Pull deposit addresses from CoinPay business API.
+ * Fails hard when CoinPay data is unavailable or invalid.
+ */
+export async function getFundingAddresses(): Promise<FundingAddressMap> {
+  const apiKey = process.env.COINPAYPORTAL_API_KEY;
+  const businessId = process.env.COINPAYPORTAL_MERCHANT_ID;
+
+  if (!apiKey || !businessId) {
+    throw new Error("CoinPay credentials are required for funding addresses");
+  }
+
+  const res = await fetch(`${COINPAY_API}/businesses`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    throw new Error(`CoinPay businesses API failed: ${res.status}`);
+  }
+
+  const data = (await res.json()) as {
+    businesses?: Array<Record<string, unknown>>;
+  };
+
+  const business = data?.businesses?.find((b) => b?.id === businessId);
+  if (!business) {
+    throw new Error(`CoinPay business not found: ${businessId}`);
+  }
+
+  const candidates = [
+    business.deposit_addresses,
+    business.depositAddresses,
+    business.wallet_addresses,
+    business.walletAddresses,
+    business.addresses,
+    business.wallets,
+    business.coins,
+  ] as unknown[];
+
+  const parsed: Record<string, string> = {};
+
+  for (const candidate of candidates) {
+    if (!candidate || typeof candidate !== "object") continue;
+    for (const [k, v] of Object.entries(candidate as Record<string, unknown>)) {
+      if (typeof v !== "string" || !v.trim()) continue;
+      parsed[k.toUpperCase()] = v;
+    }
+  }
+
+  if (Object.keys(parsed).length === 0) {
+    throw new Error("CoinPay returned no deposit addresses for funding business");
+  }
+
+  return parsed;
+}
