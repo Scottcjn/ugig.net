@@ -37,6 +37,7 @@ const TIERS: Array<{
   label: string;
   sats: string;
   usd: string;
+  usdAmount: number;
   description: string;
   highlight?: boolean;
   icon: typeof Zap;
@@ -46,6 +47,7 @@ const TIERS: Array<{
     label: "Supporter",
     sats: "10,000",
     usd: "~$1",
+    usdAmount: 1,
     description: "Supporter badge on your profile",
     icon: Zap,
   },
@@ -54,6 +56,7 @@ const TIERS: Array<{
     label: "100k Credits",
     sats: "100,000",
     usd: "$100",
+    usdAmount: 100,
     description: "100,000 sats → $100 in platform credits",
     icon: CreditCard,
   },
@@ -62,6 +65,7 @@ const TIERS: Array<{
     label: "500k Credits",
     sats: "500,000",
     usd: "$600",
+    usdAmount: 600,
     description: "500,000 sats → $600 in credits (20% bonus)",
     highlight: true,
     icon: CreditCard,
@@ -71,6 +75,7 @@ const TIERS: Array<{
     label: "1M Credits",
     sats: "1,000,000",
     usd: "$1,500",
+    usdAmount: 1500,
     description: "1,000,000 sats → $1,500 in credits (50% bonus)",
     icon: CreditCard,
   },
@@ -78,7 +83,8 @@ const TIERS: Array<{
     id: "lifetime",
     label: "Lifetime Premium",
     sats: "200,000",
-    usd: "$20+",
+    usd: "$50+",
+    usdAmount: 50,
     description:
       "Unlimited job postings, premium placement, API access, Founder badge",
     highlight: true,
@@ -91,6 +97,7 @@ export function FundingClient() {
   const [invoice, setInvoice] = useState<InvoiceState>(null);
   const [status, setStatus] = useState<PaymentStatus>("idle");
   const [loading, setLoading] = useState(false);
+  const [cardLoadingTier, setCardLoadingTier] = useState<TierId | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -126,6 +133,46 @@ export function FundingClient() {
       setError("Network error. Please try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCardCheckout = async (tier: TierId, amountUsd: number) => {
+    setSelectedTier(tier);
+    setError(null);
+    setCardLoadingTier(tier);
+
+    try {
+      const res = await fetch("/api/payments/coinpayportal/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "tip",
+          amount_usd: amountUsd,
+          currency: "usdc_pol",
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        if (res.status === 401) {
+          setError("Please log in to fund ugig.net");
+        } else {
+          setError(data.error || "Failed to start checkout");
+        }
+        return;
+      }
+
+      if (!data.checkout_url) {
+        setError("Checkout URL missing from CoinPay response");
+        return;
+      }
+
+      window.location.href = data.checkout_url as string;
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setCardLoadingTier(null);
     }
   };
 
@@ -268,15 +315,13 @@ export function FundingClient() {
         {TIERS.map((tier) => {
           const Icon = tier.icon;
           return (
-            <button
+            <div
               key={tier.id}
-              onClick={() => handleSelectTier(tier.id)}
-              disabled={loading}
               className={`text-left border rounded-lg p-6 space-y-3 transition-colors hover:border-primary hover:bg-accent/50 ${
                 tier.highlight ? "border-primary/50 bg-primary/5" : ""
               } ${
-                loading && selectedTier === tier.id
-                  ? "opacity-50 cursor-wait"
+                (loading && selectedTier === tier.id) || cardLoadingTier === tier.id
+                  ? "opacity-70"
                   : ""
               }`}
             >
@@ -294,10 +339,33 @@ export function FundingClient() {
               <p className="text-sm text-muted-foreground">
                 {tier.description}
               </p>
-              {loading && selectedTier === tier.id && (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              )}
-            </button>
+
+              <div className="flex gap-2 pt-1">
+                <Button
+                  size="sm"
+                  onClick={() => handleSelectTier(tier.id)}
+                  disabled={loading || cardLoadingTier !== null}
+                >
+                  {loading && selectedTier === tier.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Lightning"
+                  )}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleCardCheckout(tier.id, tier.usdAmount)}
+                  disabled={cardLoadingTier !== null || loading}
+                >
+                  {cardLoadingTier === tier.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Card"
+                  )}
+                </Button>
+              </div>
+            </div>
           );
         })}
       </div>
