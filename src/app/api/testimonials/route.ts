@@ -162,6 +162,10 @@ export async function POST(request: NextRequest) {
       notificationLink = "/dashboard/testimonials";
     }
 
+    // Gig testimonials auto-approve (candidates shouldn't gate public feedback)
+    // Profile testimonials remain pending for the profile owner to approve
+    const autoApprove = !!gig_id && !profile_id;
+
     const { data, error } = await serviceClient
       .from("testimonials")
       .insert({
@@ -170,6 +174,7 @@ export async function POST(request: NextRequest) {
         author_id: user.id,
         rating,
         content: content.trim(),
+        ...(autoApprove ? { status: "approved" } : {}),
       })
       .select()
       .single();
@@ -223,12 +228,12 @@ export async function POST(request: NextRequest) {
               </blockquote>
               <p>
                 <a href="${baseUrl}${notificationLink}" style="display: inline-block; padding: 10px 20px; background: #6366f1; color: white; text-decoration: none; border-radius: 6px;">
-                  Review & Approve
+                  ${autoApprove ? "View Testimonial" : "Review & Approve"}
                 </a>
               </p>
-              <p style="color: #888; font-size: 13px;">
+              ${!autoApprove ? `<p style="color: #888; font-size: 13px;">
                 Testimonials appear after you approve them.
-              </p>
+              </p>` : ""}
             </div>
           `,
           text: `${authorName} left a ${rating}-star testimonial on ${targetLabel}: "${content.trim()}"\n\nReview it at ${baseUrl}${notificationLink}`,

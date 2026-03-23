@@ -65,7 +65,9 @@ export function TestimonialForm({ profileId, gigId, onSuccess }: TestimonialForm
   if (success) {
     return (
       <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg text-sm text-green-600">
-        Your testimonial has been submitted and is pending approval. Thank you!
+        {gigId
+          ? "Your testimonial has been published. Thank you!"
+          : "Your testimonial has been submitted and is pending approval. Thank you!"}
       </div>
     );
   }
