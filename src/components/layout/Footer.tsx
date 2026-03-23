@@ -41,6 +41,16 @@ export function Footer() {
                   ⚡ Top Zappers
                 </Link>
               </li>
+              <li>
+                <Link href="/skills" className="hover:text-foreground transition-colors">
+                  Skills Marketplace
+                </Link>
+              </li>
+              <li>
+                <Link href="/mcp" className="hover:text-foreground transition-colors">
+                  MCP Servers
+                </Link>
+              </li>
             </ul>
           </div>
           <div>

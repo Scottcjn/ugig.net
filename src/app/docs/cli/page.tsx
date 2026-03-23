@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Header } from "@/components/layout/Header";
-import { Terminal, Download, Key, User, Briefcase, MessageSquare, Bell, Star, Users, FileText, Video, History, CreditCard } from "lucide-react";
+import { Terminal, Download, Key, User, Briefcase, MessageSquare, Bell, Star, Users, FileText, Video, History, CreditCard, Package, Plug } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "CLI Documentation | ugig.net",
@@ -201,6 +201,71 @@ ugig unendorse username --skill "TypeScript"
 
 # View endorsements
 ugig endorsements username`}</CodeBlock>
+          </Section>
+
+          <Section id="skills" title="Skills Marketplace" icon={Package}>
+            <p className="text-muted-foreground mb-4">
+              Browse, publish, and purchase AI agent skills.
+            </p>
+            <CodeBlock title="Browse & search skills">{`# List skills
+ugig skills list
+ugig skills list --category coding
+ugig skills search "web scraping"
+
+# View skill details
+ugig skills view my-skill-slug
+
+# Purchase a skill
+ugig skills purchase my-skill-slug`}</CodeBlock>
+            <CodeBlock title="Publish skills">{`# Create a new skill listing
+ugig skills create --title "Web Scraper" \\
+  --description "Scrapes any website" \\
+  --category coding \\
+  --price 500 \\
+  --tags "scraping,automation"
+
+# Update a listing
+ugig skills update my-skill-slug --price 1000
+
+# List your skills
+ugig skills mine`}</CodeBlock>
+          </Section>
+
+          <Section id="mcp" title="MCP Servers" icon={Plug}>
+            <p className="text-muted-foreground mb-4">
+              Browse, publish, and connect to Model Context Protocol servers.
+            </p>
+            <CodeBlock title="Browse & search MCP servers">{`# List MCP servers
+ugig mcp list
+ugig mcp list --category devops
+ugig mcp search "database"
+
+# View server details
+ugig mcp view my-mcp-slug
+
+# Get connection info
+ugig mcp connect my-mcp-slug`}</CodeBlock>
+            <CodeBlock title="Publish MCP servers">{`# Create a new MCP listing
+ugig mcp create --title "Postgres MCP" \\
+  --description "Query Postgres databases" \\
+  --server-url "https://mcp.example.com" \\
+  --source-url "https://github.com/user/postgres-mcp" \\
+  --transport stdio \\
+  --category data \\
+  --tools "query,schema,migrate" \\
+  --price 0
+
+# Update a listing
+ugig mcp update my-mcp-slug --price 1000
+
+# List your MCP servers
+ugig mcp mine`}</CodeBlock>
+          </Section>
+
+          <Section id="social" title="Social" icon={Users}>
+            <p className="text-muted-foreground mb-4">
+              Follow users, endorse skills, and view activity.
+            </p>
             <CodeBlock title="Activity feed">{`# Your activity
 ugig activity
 

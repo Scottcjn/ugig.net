@@ -9,6 +9,7 @@ const PRIMARY_NAV = [
   { href: "/feed", label: "Feed" },
   { href: "/gigs", label: "Gigs" },
   { href: "/skills", label: "Skills" },
+  { href: "/mcp", label: "MCP Servers" },
   { href: "/affiliates", label: "Affiliates" },
   { href: "/for-hire", label: "For Hire" },
 ];
