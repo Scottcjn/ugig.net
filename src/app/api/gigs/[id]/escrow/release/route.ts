@@ -3,6 +3,8 @@ import { getAuthContext } from "@/lib/auth/get-user";
 import { releaseEscrow } from "@/lib/coinpayportal";
 import { getUserDid, onGigCompleted } from "@/lib/reputation-hooks";
 import { z } from "zod";
+import { sendEmail } from "@/lib/email";
+import { createServiceClient } from "@/lib/supabase/service";
 
 const releaseSchema = z.object({
   escrow_id: z.string().uuid(),
@@ -116,6 +118,70 @@ export async function POST(
         platform_fee_usd: escrow.platform_fee_usd,
       },
     });
+
+    // Email reminders to both parties to leave gig-specific testimonials
+    try {
+      const serviceClient = createServiceClient();
+
+      const { data: participants } = await supabase
+        .from("profiles")
+        .select("id, username, full_name")
+        .in("id", [escrow.poster_id, escrow.worker_id]);
+
+      const poster = participants?.find((p) => p.id === escrow.poster_id) as
+        | { id: string; username: string | null; full_name: string | null }
+        | undefined;
+      const worker = participants?.find((p) => p.id === escrow.worker_id) as
+        | { id: string; username: string | null; full_name: string | null }
+        | undefined;
+
+      const [{ data: posterAuth }, { data: workerAuth }] = await Promise.all([
+        serviceClient.auth.admin.getUserById(escrow.poster_id),
+        serviceClient.auth.admin.getUserById(escrow.worker_id),
+      ]);
+
+      const posterEmail = posterAuth?.user?.email || null;
+      const workerEmail = workerAuth?.user?.email || null;
+
+      const baseUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "https://ugig.net";
+
+      const posterName = poster?.full_name || poster?.username || "there";
+      const workerName = worker?.full_name || worker?.username || "there";
+      const posterProfileUrl = poster?.username ? `${baseUrl}/u/${poster.username}` : `${baseUrl}/profile`;
+      const workerProfileUrl = worker?.username ? `${baseUrl}/u/${worker.username}` : `${baseUrl}/profile`;
+
+      if (posterEmail) {
+        await sendEmail({
+          to: posterEmail,
+          subject: `Leave a testimonial for ${workerName} on ${gig?.title || "your completed gig"}`,
+          html: `
+            <p>Hi ${posterName},</p>
+            <p>Your gig <strong>${gig?.title || "(untitled gig)"}</strong> was completed.</p>
+            <p>Please leave a gig-specific testimonial for <strong>${workerName}</strong>.</p>
+            <p><a href="${workerProfileUrl}">Leave testimonial on ${workerName}'s profile</a></p>
+            <p>You can also view your profile here: <a href="${posterProfileUrl}">${posterProfileUrl}</a></p>
+          `,
+          text: `Hi ${posterName},\n\nYour gig "${gig?.title || "(untitled gig)"}" was completed.\nPlease leave a gig-specific testimonial for ${workerName}: ${workerProfileUrl}\n\nYour profile: ${posterProfileUrl}`,
+        });
+      }
+
+      if (workerEmail) {
+        await sendEmail({
+          to: workerEmail,
+          subject: `Leave a testimonial for ${posterName} on ${gig?.title || "your completed gig"}`,
+          html: `
+            <p>Hi ${workerName},</p>
+            <p>You completed <strong>${gig?.title || "a gig"}</strong>.</p>
+            <p>Please leave a gig-specific testimonial for <strong>${posterName}</strong>.</p>
+            <p><a href="${posterProfileUrl}">Leave testimonial on ${posterName}'s profile</a></p>
+            <p>You can also view your profile here: <a href="${workerProfileUrl}">${workerProfileUrl}</a></p>
+          `,
+          text: `Hi ${workerName},\n\nYou completed "${gig?.title || "a gig"}".\nPlease leave a gig-specific testimonial for ${posterName}: ${posterProfileUrl}\n\nYour profile: ${workerProfileUrl}`,
+        });
+      }
+    } catch (emailErr) {
+      console.error("Failed to send testimonial reminder emails:", emailErr);
+    }
 
     // Submit reputation receipt for completed work
     try {
