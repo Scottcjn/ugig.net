@@ -73,3 +73,64 @@ export const FUNDING_ADDRESSES = {
   USDT_SOL: "FX8QhU1TPUHGs2X8PibbHikd4YvdQMPfVuFd6mqk9qJw",
   USDT_POL: "0xEf993488b444b75585A5CCe171e65F4dD9D99add",
 } as const;
+
+export type FundingAddressMap = Record<string, string>;
+
+const COINPAY_API = "https://coinpayportal.com/api";
+
+/**
+ * Pull deposit addresses from CoinPay business API.
+ * Falls back to static addresses when unavailable.
+ */
+export async function getFundingAddresses(): Promise<FundingAddressMap> {
+  const apiKey = process.env.COINPAYPORTAL_API_KEY;
+  const businessId = process.env.COINPAYPORTAL_MERCHANT_ID;
+
+  if (!apiKey || !businessId) {
+    return FUNDING_ADDRESSES;
+  }
+
+  try {
+    const res = await fetch(`${COINPAY_API}/businesses`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      cache: "no-store",
+    });
+
+    if (!res.ok) {
+      return FUNDING_ADDRESSES;
+    }
+
+    const data = await res.json().catch(() => null) as {
+      businesses?: Array<Record<string, unknown>>;
+    } | null;
+
+    const business = data?.businesses?.find((b) => b?.id === businessId);
+    if (!business) {
+      return FUNDING_ADDRESSES;
+    }
+
+    const candidates = [
+      business.deposit_addresses,
+      business.depositAddresses,
+      business.wallet_addresses,
+      business.walletAddresses,
+      business.addresses,
+      business.wallets,
+      business.coins,
+    ] as unknown[];
+
+    const parsed: Record<string, string> = {};
+
+    for (const candidate of candidates) {
+      if (!candidate || typeof candidate !== "object") continue;
+      for (const [k, v] of Object.entries(candidate as Record<string, unknown>)) {
+        if (typeof v !== "string" || !v.trim()) continue;
+        parsed[k.toUpperCase()] = v;
+      }
+    }
+
+    return Object.keys(parsed).length > 0 ? parsed : FUNDING_ADDRESSES;
+  } catch {
+    return FUNDING_ADDRESSES;
+  }
+}
