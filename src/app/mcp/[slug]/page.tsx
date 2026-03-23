@@ -22,6 +22,8 @@ import { McpVoteButton } from "@/components/mcp/McpVoteButton";
 import { ZapButton } from "@/components/zaps/ZapButton";
 import { McpComments } from "@/components/mcp/McpComments";
 import { McpDownloadButton } from "@/components/mcp/McpDownloadButton";
+import { McpSecurityScanBadge } from "@/components/mcp/McpSecurityScanBadge";
+import { McpScanButton } from "@/components/mcp/McpScanButton";
 import { MarkdownContent } from "@/components/ui/MarkdownContent";
 
 interface McpDetailProps {
@@ -148,6 +150,17 @@ export default async function McpDetailPage({ params }: McpDetailProps) {
     (sum: number, z: any) => sum + (z.amount_sats || 0),
     0
   );
+
+  // Fetch latest security scan
+  const { data: latestScan } = await admin
+    .from("mcp_security_scans" as any)
+    .select("status, rating, security_score, findings, scanner_version, created_at, spidershield_report, mcp_scan_report")
+    .eq("listing_id", l.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  const scan = latestScan as any;
 
   const hasServerUrl = !!l.mcp_server_url;
   const canAccess = isOwner || purchased;
@@ -461,6 +474,28 @@ export default async function McpDetailPage({ params }: McpDetailProps) {
                     )}
                   </div>
                 )}
+              </div>
+
+              {/* Security scan */}
+              <div className="p-6 border border-border rounded-lg bg-card space-y-3">
+                <h3 className="font-semibold">Security Scan</h3>
+                {scan ? (
+                  <McpSecurityScanBadge
+                    status={scan.status || "error"}
+                    rating={scan.rating ?? null}
+                    securityScore={scan.security_score ?? null}
+                    findingsCount={Array.isArray(scan.findings) ? scan.findings.length : 0}
+                    findings={Array.isArray(scan.findings) ? scan.findings : []}
+                    scannedAt={scan.created_at}
+                    scannerVersion={scan.scanner_version}
+                    spidershieldAvailable={!!scan.spidershield_report?.available}
+                    mcpScanAvailable={!!scan.mcp_scan_report?.available}
+                  />
+                ) : (
+                  <p className="text-sm text-muted-foreground">No scan yet.</p>
+                )}
+
+                {isOwner && <McpScanButton slug={slug} currentStatus={l.scan_status} />}
               </div>
 
               {/* Seller card */}

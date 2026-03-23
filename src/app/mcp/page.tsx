@@ -167,6 +167,17 @@ async function McpList({ searchParams }: { searchParams: McpPageProps["searchPar
               </p>
             )}
 
+            {listing.scan_status && listing.scan_status !== "unscanned" && (
+              <div className="mb-3">
+                <Badge
+                  variant={listing.scan_status === "critical" ? "destructive" : listing.scan_status === "clean" ? "default" : "secondary"}
+                  className="text-[11px]"
+                >
+                  Security {listing.scan_rating ? `(${listing.scan_rating})` : ""}: {listing.scan_status}
+                </Badge>
+              </div>
+            )}
+
             {/* Transport type badge */}
             {listing.transport_type && (
               <div className="mb-3">
