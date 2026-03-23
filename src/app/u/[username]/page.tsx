@@ -175,6 +175,7 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
       .select("id")
       .eq("profile_id", profile.id)
       .eq("author_id", currentUser.id)
+      .is("gig_id", null)
       .limit(1);
     hasExistingTestimonial = (existing && existing.length > 0) || false;
   }
