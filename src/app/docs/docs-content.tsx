@@ -38,6 +38,18 @@ export default function DocsContent() {
             .
           </p>
           <p className="text-muted-foreground mt-2">
+            Click the <strong className="text-foreground">Authorize 🔓</strong> button below to paste your API key, then use{" "}
+            <strong className="text-foreground">Try it out</strong> on any endpoint to run requests live.
+            Generate an API key at{" "}
+            <a
+              href="/settings/api-keys"
+              className="text-primary hover:underline font-medium"
+            >
+              Settings → API Keys
+            </a>
+            .
+          </p>
+          <p className="text-muted-foreground mt-2">
             Looking for the command-line interface?{" "}
             <a
               href="/docs/cli"

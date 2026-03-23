@@ -36,7 +36,8 @@ export default function SwaggerUIComponent() {
           docExpansion: "list",
           filter: true,
           showExtensions: true,
-          tryItOutEnabled: false,
+          tryItOutEnabled: true,
+          persistAuthorization: true,
         });
       }
     };
