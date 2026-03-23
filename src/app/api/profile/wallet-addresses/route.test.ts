@@ -6,6 +6,7 @@ vi.mock("@/lib/auth/get-user", () => ({
 
 import { GET } from "./route";
 import { getAuthContext } from "@/lib/auth/get-user";
+import * as serviceModule from "@/lib/supabase/service";
 
 const USER_ID = "u1u1u1u1-a2a2-b3b3-c4c4-d5d5d5d5d5d5";
 const WORKER_ID = "w1w1w1w1-e2e2-f3f3-a4a4-b5b5b5b5b5b5";
@@ -50,7 +51,7 @@ describe("GET /api/profile/wallet-addresses", () => {
     expect(body.worker_addresses).toHaveLength(0);
   });
 
-  it("returns both poster and worker addresses when worker_id provided", async () => {
+  it("returns both poster and worker addresses when worker_id + gig_id provided", async () => {
     const posterAddrs = [
       { currency: "sol", address: "PosterAddr12345678901234567890", is_preferred: true },
     ];
@@ -62,19 +63,39 @@ describe("GET /api/profile/wallet-addresses", () => {
     const sb = {
       from: vi.fn().mockReturnValue({
         select: vi.fn().mockReturnThis(),
-        eq: vi.fn((field: string, value: string) => ({
-          single: vi.fn().mockResolvedValue({
-            data: {
-              wallet_addresses: value === USER_ID ? posterAddrs : workerAddrs,
-            },
-            error: null,
-          }),
-        })),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: { wallet_addresses: posterAddrs }, error: null }),
       }),
     };
+
+    const service = {
+      from: vi.fn((table: string) => {
+        if (table === "gigs") {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({ data: { id: "g1", poster_id: USER_ID }, error: null }),
+          };
+        }
+        if (table === "applications") {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            maybeSingle: vi.fn().mockResolvedValue({ data: { id: "a1" }, error: null }),
+          };
+        }
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: { wallet_addresses: workerAddrs }, error: null }),
+        };
+      }),
+    };
+
+    vi.spyOn(serviceModule, "createServiceClient").mockReturnValue(service as any);
     (getAuthContext as any).mockResolvedValue({ user: { id: USER_ID }, supabase: sb });
 
-    const res = await GET(req({ worker_id: WORKER_ID }));
+    const res = await GET(req({ worker_id: WORKER_ID, gig_id: "g1" }));
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.poster_addresses).toHaveLength(1);

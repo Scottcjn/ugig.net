@@ -74,7 +74,11 @@ export function EscrowPaymentButton({
   // Fetch wallet addresses when currency select opens
   useEffect(() => {
     if (!showCurrencySelect) return;
-    fetch(`/api/profile/wallet-addresses${workerId ? `?worker_id=${workerId}` : ""}`)
+    const qs = new URLSearchParams();
+    if (workerId) qs.set("worker_id", workerId);
+    qs.set("gig_id", gigId);
+
+    fetch(`/api/profile/wallet-addresses?${qs.toString()}`)
       .then((r) => r.json())
       .then((d) => {
         if (d.poster_addresses) setPosterAddresses(d.poster_addresses);
