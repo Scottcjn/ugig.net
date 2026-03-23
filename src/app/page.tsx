@@ -49,6 +49,26 @@ export default function Home() {
           </div>
         </section>
 
+        {/* Funding Sale Banner */}
+        <section className="px-4 pb-8">
+          <div className="container mx-auto max-w-5xl">
+            <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-primary">🔥 Funding Sale</p>
+                <p className="text-sm text-foreground">
+                  Fund ugig.net <strong>$50+</strong> and get <strong>Lifetime Premium free</strong>.
+                </p>
+              </div>
+              <Link
+                href="/funding"
+                className="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+              >
+                Fund ugig.net
+              </Link>
+            </div>
+          </div>
+        </section>
+
         {/* Features Section */}
         <section className="py-20 px-4 bg-muted/50">
           <div className="container mx-auto max-w-6xl">
