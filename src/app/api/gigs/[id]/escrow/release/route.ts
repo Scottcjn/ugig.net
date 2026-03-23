@@ -3,7 +3,7 @@ import { getAuthContext } from "@/lib/auth/get-user";
 import { releaseEscrow } from "@/lib/coinpayportal";
 import { getUserDid, onGigCompleted } from "@/lib/reputation-hooks";
 import { z } from "zod";
-import { sendEmail } from "@/lib/email";
+import { sendEmail, testimonialReminderEmail } from "@/lib/email";
 import { createServiceClient } from "@/lib/supabase/service";
 
 const releaseSchema = z.object({
@@ -151,33 +151,25 @@ export async function POST(
       const workerProfileUrl = worker?.username ? `${baseUrl}/u/${worker.username}` : `${baseUrl}/profile`;
 
       if (posterEmail) {
-        await sendEmail({
-          to: posterEmail,
-          subject: `Leave a testimonial for ${workerName} on ${gig?.title || "your completed gig"}`,
-          html: `
-            <p>Hi ${posterName},</p>
-            <p>Your gig <strong>${gig?.title || "(untitled gig)"}</strong> was completed.</p>
-            <p>Please leave a gig-specific testimonial for <strong>${workerName}</strong>.</p>
-            <p><a href="${workerProfileUrl}">Leave testimonial on ${workerName}'s profile</a></p>
-            <p>You can also view your profile here: <a href="${posterProfileUrl}">${posterProfileUrl}</a></p>
-          `,
-          text: `Hi ${posterName},\n\nYour gig "${gig?.title || "(untitled gig)"}" was completed.\nPlease leave a gig-specific testimonial for ${workerName}: ${workerProfileUrl}\n\nYour profile: ${posterProfileUrl}`,
+        const email = testimonialReminderEmail({
+          recipientName: posterName,
+          otherPartyName: workerName,
+          gigTitle: gig?.title || "your completed gig",
+          targetProfileUrl: workerProfileUrl,
+          ownProfileUrl: posterProfileUrl,
         });
+        await sendEmail({ to: posterEmail, ...email });
       }
 
       if (workerEmail) {
-        await sendEmail({
-          to: workerEmail,
-          subject: `Leave a testimonial for ${posterName} on ${gig?.title || "your completed gig"}`,
-          html: `
-            <p>Hi ${workerName},</p>
-            <p>You completed <strong>${gig?.title || "a gig"}</strong>.</p>
-            <p>Please leave a gig-specific testimonial for <strong>${posterName}</strong>.</p>
-            <p><a href="${posterProfileUrl}">Leave testimonial on ${posterName}'s profile</a></p>
-            <p>You can also view your profile here: <a href="${workerProfileUrl}">${workerProfileUrl}</a></p>
-          `,
-          text: `Hi ${workerName},\n\nYou completed "${gig?.title || "a gig"}".\nPlease leave a gig-specific testimonial for ${posterName}: ${posterProfileUrl}\n\nYour profile: ${workerProfileUrl}`,
+        const email = testimonialReminderEmail({
+          recipientName: workerName,
+          otherPartyName: posterName,
+          gigTitle: gig?.title || "your completed gig",
+          targetProfileUrl: posterProfileUrl,
+          ownProfileUrl: workerProfileUrl,
         });
+        await sendEmail({ to: workerEmail, ...email });
       }
     } catch (emailErr) {
       console.error("Failed to send testimonial reminder emails:", emailErr);
