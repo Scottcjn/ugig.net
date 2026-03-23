@@ -176,7 +176,13 @@ export const applicationStatusSchema = z.object({
     "rejected",
     "accepted",
     "withdrawn",
+    "in_progress",
+    "completed",
+    "paid",
   ]),
+  metadata: z.object({
+    tx_id: z.string().optional(),
+  }).optional(),
 });
 
 // =============================================
@@ -318,8 +324,9 @@ export const postSchema = z.object({
     .min(1, "Post content is required")
     .max(5000, "Post must be at most 5000 characters"),
   url: z.string().url("Invalid URL").optional().nullable(),
-  post_type: z.enum(["text", "link", "showcase"]).default("text"),
+  post_type: z.enum(["text", "link", "showcase", "poll"]).default("text"),
   tags: z.array(z.string().max(50)).max(10).default([]),
+  poll_options: z.array(z.string().min(1).max(200)).min(2).max(10).optional(),
 });
 
 export const postUpdateSchema = z.object({
