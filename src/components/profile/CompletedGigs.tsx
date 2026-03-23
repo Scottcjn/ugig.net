@@ -26,6 +26,7 @@ interface CompletedGigsProps {
   currentUserId: string | null;
   isOwnProfile: boolean;
   existingTestimonialGigIds: Set<string>;
+  existingTestimonialsByGigId?: Record<string, { rating: number; content: string; created_at: string }>;
 }
 
 export function CompletedGigs({
@@ -35,6 +36,7 @@ export function CompletedGigs({
   currentUserId,
   isOwnProfile,
   existingTestimonialGigIds,
+  existingTestimonialsByGigId = {},
 }: CompletedGigsProps) {
   const [reviewingGigId, setReviewingGigId] = useState<string | null>(null);
   const [rating, setRating] = useState(0);
@@ -42,6 +44,7 @@ export function CompletedGigs({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState<Set<string>>(new Set(existingTestimonialGigIds));
+  const [testimonialByGig, setTestimonialByGig] = useState(existingTestimonialsByGigId);
 
   if (gigs.length === 0) return null;
 
@@ -76,6 +79,14 @@ export function CompletedGigs({
       }
 
       setSubmitted((prev) => new Set([...prev, gigId]));
+      setTestimonialByGig((prev) => ({
+        ...prev,
+        [gigId]: {
+          rating,
+          content: content.trim(),
+          created_at: new Date().toISOString(),
+        },
+      }));
       setReviewingGigId(null);
       setRating(0);
       setContent("");
@@ -131,9 +142,22 @@ export function CompletedGigs({
             {currentUserId && !isOwnProfile && (
               <>
                 {submitted.has(gig.gig_id) ? (
-                  <p className="text-sm text-green-600 mt-3 flex items-center gap-1">
-                    <Star className="h-3 w-3" /> Testimonial submitted
-                  </p>
+                  <div className="mt-3 p-3 bg-muted/30 rounded-lg space-y-2">
+                    <p className="text-sm text-green-600 flex items-center gap-1">
+                      <Star className="h-3 w-3" /> Testimonial submitted
+                    </p>
+                    {testimonialByGig[gig.gig_id] && (
+                      <>
+                        <StarRating rating={testimonialByGig[gig.gig_id].rating} size="sm" />
+                        <p className="text-sm text-foreground whitespace-pre-wrap">
+                          {testimonialByGig[gig.gig_id].content}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(testimonialByGig[gig.gig_id].created_at).toLocaleDateString()}
+                        </p>
+                      </>
+                    )}
+                  </div>
                 ) : reviewingGigId === gig.gig_id ? (
                   <div className="mt-3 space-y-3 p-3 bg-muted/30 rounded-lg">
                     <div>
