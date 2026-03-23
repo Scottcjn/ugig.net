@@ -50,7 +50,7 @@ export type FundingTierId = keyof typeof FUNDING_TIERS;
 export const VALID_FUNDING_TIERS: FundingTierId[] = Object.keys(FUNDING_TIERS) as FundingTierId[];
 
 /** The USD threshold for automatic lifetime premium */
-export const LIFETIME_THRESHOLD_USD = 20;
+export const LIFETIME_THRESHOLD_USD = 50;
 
 /** Invoice expiry in seconds (10 minutes) */
 export const INVOICE_EXPIRY_SECONDS = 600;
