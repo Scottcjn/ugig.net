@@ -222,7 +222,9 @@ export async function createEscrow(
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: "Unknown error" }));
-    throw new Error(error.message || `Escrow creation failed: ${response.status}`);
+    const msg = error.message || error.error || error.detail || JSON.stringify(error);
+    console.error("[CoinPayPortal] Escrow creation failed:", response.status, error);
+    throw new Error(msg || `Escrow creation failed: ${response.status}`);
   }
 
   return response.json();
