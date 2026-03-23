@@ -162,9 +162,10 @@ export async function POST(request: NextRequest) {
       notificationLink = "/dashboard/testimonials";
     }
 
-    // Gig testimonials auto-approve (candidates shouldn't gate public feedback)
-    // Profile testimonials remain pending for the profile owner to approve
-    const autoApprove = !!gig_id && !profile_id;
+    // Any testimonial tied to a gig auto-approves (including gig+profile worker reviews)
+    // to avoid manual gatekeeping of gig feedback.
+    // Profile-only testimonials remain pending for profile owner approval.
+    const autoApprove = !!gig_id;
 
     const { data, error } = await serviceClient
       .from("testimonials")
