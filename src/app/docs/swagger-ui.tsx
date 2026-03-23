@@ -38,6 +38,22 @@ export default function SwaggerUIComponent() {
           showExtensions: true,
           tryItOutEnabled: true,
           persistAuthorization: true,
+          displayRequestDuration: true,
+          requestSnippetsEnabled: true,
+          requestSnippets: {
+            generators: {
+              "curl_bash": {
+                title: "cURL (bash)",
+                syntax: "bash",
+              },
+              "curl_cmd": {
+                title: "cURL (cmd)",
+                syntax: "bash",
+              },
+            },
+            defaultExpanded: true,
+            languages: ["curl_bash"],
+          },
         });
       }
     };
