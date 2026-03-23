@@ -127,14 +127,26 @@ export async function POST(request: NextRequest) {
       }
 
       if (gig.poster_id === user.id) {
-        return NextResponse.json(
-          { error: "You cannot leave a testimonial for your own gig" },
-          { status: 400 }
-        );
+        // Gig poster is leaving a testimonial (e.g. reviewing the worker)
+        if (profile_id && profile_id !== user.id) {
+          notifyUserId = profile_id;
+          targetLabel = `the gig "${gig.title}"`;
+        } else if (profile_id === user.id) {
+          return NextResponse.json(
+            { error: "You cannot leave a testimonial for yourself" },
+            { status: 400 }
+          );
+        } else {
+          return NextResponse.json(
+            { error: "profile_id is required when the gig poster leaves a testimonial" },
+            { status: 400 }
+          );
+        }
+      } else {
+        // Someone else leaving a testimonial on this gig — notify the poster
+        notifyUserId = gig.poster_id;
+        targetLabel = `your gig "${gig.title}"`;
       }
-
-      notifyUserId = gig.poster_id;
-      targetLabel = `your gig "${gig.title}"`;
       notificationLink = "/dashboard/testimonials";
     } else {
       // Profile testimonial
