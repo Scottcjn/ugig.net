@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { FundingClient } from "@/components/funding/FundingClient";
+import { FUNDING_ADDRESSES } from "@/lib/funding";
 
 export const metadata: Metadata = {
   title: "Fund ugig.net | Bitcoin Lightning",
@@ -33,6 +34,21 @@ export default function FundingPage() {
           </section>
 
           <FundingClient />
+
+          <section className="space-y-3">
+            <h2 className="text-xl font-semibold">Direct Funding Addresses</h2>
+            <p className="text-sm text-muted-foreground">
+              You can also contribute directly using these addresses.
+            </p>
+            <div className="border rounded-lg divide-y">
+              {Object.entries(FUNDING_ADDRESSES).map(([asset, address]) => (
+                <div key={asset} className="p-3 sm:p-4">
+                  <div className="text-xs font-medium text-muted-foreground mb-1">{asset}</div>
+                  <code className="text-xs sm:text-sm break-all">{address}</code>
+                </div>
+              ))}
+            </div>
+          </section>
         </div>
       </main>
 

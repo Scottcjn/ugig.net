@@ -54,3 +54,22 @@ export const LIFETIME_THRESHOLD_USD = 20;
 
 /** Invoice expiry in seconds (10 minutes) */
 export const INVOICE_EXPIRY_SECONDS = 600;
+
+/** Public funding wallet addresses */
+export const FUNDING_ADDRESSES = {
+  BTC: "165y3LYwtbPythyYDKU1DzReT7E74tZGMh",
+  ETH: "0xEf993488b444b75585A5CCe171e65F4dD9D99add",
+  SOL: "FX8QhU1TPUHGs2X8PibbHikd4YvdQMPfVuFd6mqk9qJw",
+  POL: "0xEf993488b444b75585A5CCe171e65F4dD9D99add",
+  BCH: "bitcoincash:qr06y3frs7qq9lfn0w0dkfuvcrclmsvgnvwdu203k0",
+  USDC_ETH: "0xEf993488b444b75585A5CCe171e65F4dD9D99add",
+  USDC_SOL: "FX8QhU1TPUHGs2X8PibbHikd4YvdQMPfVuFd6mqk9qJw",
+  USDC_POL: "0xEf993488b444b75585A5CCe171e65F4dD9D99add",
+  ADA: "addr1vyg2h3pzgmy7lpcz7xltep32wa9qn4rdzgaf356h7fnydjcsyr6kw",
+  BNB: "0xEf993488b444b75585A5CCe171e65F4dD9D99add",
+  USDT_ETH: "0xEf993488b444b75585A5CCe171e65F4dD9D99add",
+  DOGE: "D8VUXEz2UBDQcbjZ4fDZU9J8XrdXEjow8P",
+  XRP: "rUn3s5Tjh81bTMz7LtaRes1KFuRhaZxn6Z",
+  USDT_SOL: "FX8QhU1TPUHGs2X8PibbHikd4YvdQMPfVuFd6mqk9qJw",
+  USDT_POL: "0xEf993488b444b75585A5CCe171e65F4dD9D99add",
+} as const;
