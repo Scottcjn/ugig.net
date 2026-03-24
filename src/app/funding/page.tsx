@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { FundingClient } from "@/components/funding/FundingClient";
-import { getFundingAddresses } from "@/lib/funding";
+import { FUNDING_ADDRESSES } from "@/lib/funding";
 
 export const metadata: Metadata = {
   title: "Fund ugig.net | Bitcoin Lightning",
@@ -11,15 +11,7 @@ export const metadata: Metadata = {
 };
 
 export default async function FundingPage() {
-  let fundingAddresses: Record<string, string>;
-  try {
-    fundingAddresses = await getFundingAddresses();
-  } catch (err) {
-    console.error("[Funding] Failed to fetch addresses, using fallback:", err);
-    // Fallback to hardcoded addresses from lib/funding.ts
-    const { FUNDING_ADDRESSES } = await import("@/lib/funding");
-    fundingAddresses = { ...FUNDING_ADDRESSES };
-  }
+  const fundingAddresses: Record<string, string> = { ...FUNDING_ADDRESSES };
 
   return (
     <div className="flex flex-col min-h-screen">
