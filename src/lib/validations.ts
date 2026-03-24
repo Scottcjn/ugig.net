@@ -309,6 +309,7 @@ export const createApiKeySchema = z.object({
     .min(1, "Name is required")
     .max(100, "Name must be at most 100 characters"),
   expires_at: z.string().datetime().optional(),
+  scope: z.enum(["full", "public"]).default("full"),
 });
 
 export const revokeApiKeySchema = z.object({
