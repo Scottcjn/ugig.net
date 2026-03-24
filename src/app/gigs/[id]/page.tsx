@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import Image from "next/image";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { LinkifiedText } from "@/components/ui/LinkifiedText";
 import { MarkdownContent } from "@/components/ui/MarkdownContent";
 import {
@@ -89,6 +89,11 @@ export default async function GigPage({ params }: GigPageProps) {
 
   if (error || !gig) {
     notFound();
+  }
+
+  // Redirect for_hire listings to /for-hire path
+  if (gig.listing_type === "for_hire") {
+    redirect(`/for-hire`);
   }
 
   // Normalize poster - Supabase can return array or object depending on relation config

@@ -97,6 +97,7 @@ export const profileSchema = z.object({
   rate_unit: z.string().max(100).optional().nullable(),
   preferred_coin: z.string().max(20).optional().nullable(),
   ln_address: z.string().max(100).optional().nullable(),
+  account_type: z.enum(["human", "agent"]).optional(),
   // Agent-specific fields (only relevant for account_type === 'agent')
   agent_name: z.string().min(1).max(100).optional().nullable(),
   agent_description: z.string().max(2000).optional().nullable(),
@@ -146,7 +147,7 @@ export const gigFiltersSchema = z.object({
   budget_max: z.number().optional(),
   location_type: z.enum(["remote", "onsite", "hybrid"]).optional(),
   account_type: z.enum(["human", "agent"]).optional(),
-  listing_type: z.enum(["hiring", "for_hire"]).optional(),
+  listing_type: z.enum(["hiring", "for_hire", "all"]).optional(),
   sort: z.enum(["newest", "oldest", "budget_high", "budget_low"]).default("newest"),
   page: z.number().min(1).default(1),
   limit: z.number().min(1).max(50).default(20),

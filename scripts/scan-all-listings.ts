@@ -171,11 +171,12 @@ async function scanSkillListings() {
   console.log(`\n📦 Skill Security Scanner (${SCANNER_VERSION})`);
   console.log(`   Mode: ${scanAllStatuses ? "rescan all" : "unscanned only"}${dryRun ? " [DRY RUN]" : ""}\n`);
 
+  // Fetch listings that have either a URL or an uploaded file
   let query = supabase
     .from("skill_listings")
-    .select("id, slug, title, seller_id, skill_file_url, scan_status")
+    .select("id, slug, title, seller_id, skill_file_url, skill_file_path, scan_status")
     .eq("status", "active")
-    .not("skill_file_url", "is", null)
+    .or("skill_file_url.not.is.null,skill_file_path.not.is.null")
     .order("created_at", { ascending: true });
 
   if (!scanAllStatuses) {
@@ -203,36 +204,54 @@ async function scanSkillListings() {
     const l = listing as any;
     results.processed++;
     console.log(`  [${results.processed}/${listings.length}] ${l.title} (${l.slug})`);
-    console.log(`    URL: ${l.skill_file_url}`);
+
+    const source = l.skill_file_url ? `URL: ${l.skill_file_url}` : `Storage: ${l.skill_file_path}`;
+    console.log(`    ${source}`);
 
     if (dryRun) {
       console.log(`    → would fetch and scan\n`);
       continue;
     }
 
-    // Fetch
+    // Fetch from URL or Supabase Storage
     process.stdout.write(`    Fetching... `);
     let buffer: Buffer;
     let fileName = "skill-file";
     try {
-      const res = await fetch(l.skill_file_url, {
-        signal: AbortSignal.timeout(15_000),
-        headers: { "User-Agent": "SkillScanner/0.1 (ugig.net)" },
-        redirect: "follow",
-      });
-      if (!res.ok) {
-        console.log(`❌ HTTP ${res.status}\n`);
-        results.fetchFailed++;
-        continue;
+      if (l.skill_file_url) {
+        // Fetch from remote URL
+        const res = await fetch(l.skill_file_url, {
+          signal: AbortSignal.timeout(15_000),
+          headers: { "User-Agent": "SkillScanner/0.1 (ugig.net)" },
+          redirect: "follow",
+        });
+        if (!res.ok) {
+          console.log(`❌ HTTP ${res.status}\n`);
+          results.fetchFailed++;
+          continue;
+        }
+        const ab = await res.arrayBuffer();
+        if (ab.byteLength > 50 * 1024 * 1024) {
+          console.log(`❌ too large (${ab.byteLength} bytes)\n`);
+          results.fetchFailed++;
+          continue;
+        }
+        buffer = Buffer.from(ab);
+        try { fileName = new URL(l.skill_file_url).pathname.split("/").pop() || fileName; } catch {}
+      } else {
+        // Download from Supabase Storage
+        const { data, error: dlError } = await supabase.storage
+          .from("skill-files")
+          .download(l.skill_file_path);
+        if (dlError || !data) {
+          console.log(`❌ storage download failed: ${dlError?.message || "no data"}\n`);
+          results.fetchFailed++;
+          continue;
+        }
+        const ab = await data.arrayBuffer();
+        buffer = Buffer.from(ab);
+        fileName = l.skill_file_path.split("/").pop() || fileName;
       }
-      const ab = await res.arrayBuffer();
-      if (ab.byteLength > 50 * 1024 * 1024) {
-        console.log(`❌ too large (${ab.byteLength} bytes)\n`);
-        results.fetchFailed++;
-        continue;
-      }
-      buffer = Buffer.from(ab);
-      try { fileName = new URL(l.skill_file_url).pathname.split("/").pop() || fileName; } catch {}
       console.log(`✅ ${buffer.length} bytes`);
     } catch (err) {
       console.log(`❌ ${err instanceof Error ? err.message : String(err)}\n`);
