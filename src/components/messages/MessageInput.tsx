@@ -134,6 +134,8 @@ export function MessageInput({
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
       }
+      // Refocus input after sending
+      requestAnimationFrame(() => textareaRef.current?.focus());
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to send message");
     } finally {
