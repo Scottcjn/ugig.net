@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getAuthContext } from "@/lib/auth/get-user";
 import { createServiceClient } from "@/lib/supabase/service";
 import { mcpListingSchema, slugify } from "@/lib/mcp/validation";
+import { combinedScan, MCP_SCANNER_VERSION } from "@/lib/mcp/security-scan";
 
 /**
  * GET /api/mcp - Public listing of active MCP servers
@@ -142,6 +143,47 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    // Auto-scan in background (non-blocking) if server URL or source URL is provided
+    const listingId = (listing as any).id;
+    const scanTarget = mcp_server_url || source_url;
+    if (scanTarget && listingId) {
+      const sourceContext = mcp_server_url ? (source_url || undefined) : undefined;
+      combinedScan(scanTarget, sourceContext)
+        .then(async (scanResult) => {
+          try {
+            // Store scan record
+            await admin
+              .from("mcp_security_scans" as any)
+              .insert({
+                listing_id: listingId,
+                scanner_version: scanResult.scannerVersion,
+                status: scanResult.status,
+                rating: scanResult.rating,
+                security_score: scanResult.securityScore,
+                findings: scanResult.findings,
+                spidershield_report: scanResult.spidershieldReport,
+                mcp_scan_report: scanResult.mcpScanReport,
+              });
+
+            // Update listing cached scan fields
+            await admin
+              .from("mcp_listings" as any)
+              .update({
+                scan_status: scanResult.status,
+                scan_rating: scanResult.rating,
+              })
+              .eq("id", listingId);
+
+            console.log(`[MCP Auto-Scan] ${slug}: ${scanResult.status} (${scanResult.rating || "unrated"})`);
+          } catch (scanStoreErr) {
+            console.error("[MCP Auto-Scan] Failed to store scan result:", scanStoreErr);
+          }
+        })
+        .catch((scanErr) => {
+          console.error("[MCP Auto-Scan] Scan failed for", slug, scanErr);
+        });
     }
 
     return NextResponse.json({ listing }, { status: 201 });

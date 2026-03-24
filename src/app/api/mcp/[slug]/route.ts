@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getAuthContext } from "@/lib/auth/get-user";
 import { createServiceClient } from "@/lib/supabase/service";
 import { mcpListingSchema } from "@/lib/mcp/validation";
+import { combinedScan } from "@/lib/mcp/security-scan";
 
 /**
  * GET /api/mcp/[slug] - Get a single MCP listing by slug
@@ -150,6 +151,39 @@ export async function PATCH(
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    // Auto-rescan if mcp_server_url or source_url changed
+    const urlChanged = parsed.data.mcp_server_url !== undefined || parsed.data.source_url !== undefined;
+    if (urlChanged && listing) {
+      const l = listing as any;
+      const scanTarget = l.mcp_server_url || l.source_url;
+      if (scanTarget) {
+        const sourceContext = l.mcp_server_url ? (l.source_url || undefined) : undefined;
+        combinedScan(scanTarget, sourceContext)
+          .then(async (scanResult) => {
+            try {
+              await admin.from("mcp_security_scans" as any).insert({
+                listing_id: l.id,
+                scanner_version: scanResult.scannerVersion,
+                status: scanResult.status,
+                rating: scanResult.rating,
+                security_score: scanResult.securityScore,
+                findings: scanResult.findings,
+                spidershield_report: scanResult.spidershieldReport,
+                mcp_scan_report: scanResult.mcpScanReport,
+              });
+              await admin.from("mcp_listings" as any).update({
+                scan_status: scanResult.status,
+                scan_rating: scanResult.rating,
+              }).eq("id", l.id);
+              console.log(`[MCP Auto-Scan] ${slug} updated: ${scanResult.status}`);
+            } catch (err) {
+              console.error("[MCP Auto-Scan] Store failed:", err);
+            }
+          })
+          .catch((err) => console.error("[MCP Auto-Scan] Scan failed:", err));
+      }
     }
 
     return NextResponse.json({ listing });
