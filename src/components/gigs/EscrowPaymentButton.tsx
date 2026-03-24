@@ -85,7 +85,7 @@ export function EscrowPaymentButton({
         if (d.worker_addresses) setWorkerAddresses(d.worker_addresses);
       })
       .catch(() => {});
-  }, [showCurrencySelect]);
+  }, [showCurrencySelect, workerId, gigId]);
 
   // Map currency to chain for address filtering
   const currencyToChain = (c: string): string => {
@@ -105,20 +105,28 @@ export function EscrowPaymentButton({
     (w) => w.currency.toLowerCase() === chain || w.currency.toLowerCase() === selectedCurrency
   );
 
-  // Auto-select preferred/first address when currency changes
+  // Auto-select preferred/first address when currency or addresses change
   useEffect(() => {
-    const preferred = filteredPosterAddrs.find((w) => w.is_preferred);
+    const chainKey = currencyToChain(selectedCurrency);
+    const filtered = posterAddresses.filter(
+      (w) => w.currency.toLowerCase() === chainKey || w.currency.toLowerCase() === selectedCurrency
+    );
+    const preferred = filtered.find((w) => w.is_preferred);
     if (preferred) setDepositorAddress(preferred.address);
-    else if (filteredPosterAddrs.length === 1) setDepositorAddress(filteredPosterAddrs[0].address);
+    else if (filtered.length === 1) setDepositorAddress(filtered[0].address);
     else if (!manualDepositor) setDepositorAddress("");
-  }, [selectedCurrency, posterAddresses.length]);
+  }, [selectedCurrency, posterAddresses, manualDepositor]);
 
   useEffect(() => {
-    const preferred = filteredWorkerAddrs.find((w) => w.is_preferred);
+    const chainKey = currencyToChain(selectedCurrency);
+    const filtered = workerAddresses.filter(
+      (w) => w.currency.toLowerCase() === chainKey || w.currency.toLowerCase() === selectedCurrency
+    );
+    const preferred = filtered.find((w) => w.is_preferred);
     if (preferred) setBeneficiaryAddress(preferred.address);
-    else if (filteredWorkerAddrs.length === 1) setBeneficiaryAddress(filteredWorkerAddrs[0].address);
+    else if (filtered.length === 1) setBeneficiaryAddress(filtered[0].address);
     else if (!manualBeneficiary) setBeneficiaryAddress("");
-  }, [selectedCurrency, workerAddresses.length]);
+  }, [selectedCurrency, workerAddresses, manualBeneficiary]);
 
   const handleCreateEscrow = async () => {
     if (!depositorAddress || !beneficiaryAddress) {

@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
         .from("applications")
         .select("id")
         .eq("gig_id", gigId)
-        .eq("user_id", workerId)
+        .eq("applicant_id", workerId)
         .maybeSingle();
 
       if (!app) {
