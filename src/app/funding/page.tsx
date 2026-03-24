@@ -11,7 +11,15 @@ export const metadata: Metadata = {
 };
 
 export default async function FundingPage() {
-  const fundingAddresses = await getFundingAddresses();
+  let fundingAddresses: Record<string, string>;
+  try {
+    fundingAddresses = await getFundingAddresses();
+  } catch (err) {
+    console.error("[Funding] Failed to fetch addresses, using fallback:", err);
+    // Fallback to hardcoded addresses from lib/funding.ts
+    const { FUNDING_ADDRESSES } = await import("@/lib/funding");
+    fundingAddresses = { ...FUNDING_ADDRESSES };
+  }
 
   return (
     <div className="flex flex-col min-h-screen">
