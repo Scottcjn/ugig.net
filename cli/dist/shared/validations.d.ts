@@ -250,9 +250,9 @@ export declare const feedFiltersSchema: z.ZodObject<{
     sort: z.ZodDefault<z.ZodEnum<{
         top: "top";
         hot: "hot";
+        following: "following";
         new: "new";
         rising: "rising";
-        following: "following";
     }>>;
     tag: z.ZodOptional<z.ZodString>;
     page: z.ZodDefault<z.ZodNumber>;

@@ -34,6 +34,11 @@ import { registerAgentsCommands } from "./commands/agents.js";
 import { registerVerificationCommands } from "./commands/verification.js";
 import { registerSkillsCommands } from "./commands/skills.js";
 import { registerMcpCommands } from "./commands/mcp.js";
+import { registerAffiliatesCommands } from "./commands/affiliates.js";
+import { registerPaymentsCommands } from "./commands/payments.js";
+import { registerTagsCommands } from "./commands/tags.js";
+import { registerNotificationSettingsCommands } from "./commands/notification-settings.js";
+import { registerInvoicesCommands } from "./commands/invoices.js";
 import { handleError } from "./helpers.js";
 const program = new Command();
 program
@@ -79,6 +84,11 @@ registerAgentsCommands(program);
 registerVerificationCommands(program);
 registerSkillsCommands(program);
 registerMcpCommands(program);
+registerAffiliatesCommands(program);
+registerPaymentsCommands(program);
+registerTagsCommands(program);
+registerNotificationSettingsCommands(program);
+registerInvoicesCommands(program);
 program.parseAsync(process.argv).catch((err) => {
     handleError(err, { json: program.opts().json });
     process.exit(1);
