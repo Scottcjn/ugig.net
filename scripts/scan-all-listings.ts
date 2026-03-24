@@ -6,11 +6,11 @@
  * Skill listings: runs the built-in skill security scanner
  *
  * Usage:
+ *   npx tsx --env-file=.env scripts/scan-all-listings.ts                 # scan both (default)
  *   npx tsx --env-file=.env scripts/scan-all-listings.ts --mcps          # scan MCP listings only
  *   npx tsx --env-file=.env scripts/scan-all-listings.ts --skills        # scan skill listings only
- *   npx tsx --env-file=.env scripts/scan-all-listings.ts --mcps --skills # scan both
- *   npx tsx --env-file=.env scripts/scan-all-listings.ts --mcps --all    # rescan all (not just unscanned)
- *   npx tsx --env-file=.env scripts/scan-all-listings.ts --mcps --dry-run
+ *   npx tsx --env-file=.env scripts/scan-all-listings.ts --all           # rescan all (not just unscanned)
+ *   npx tsx --env-file=.env scripts/scan-all-listings.ts --dry-run
  */
 
 import { createClient } from "@supabase/supabase-js";
@@ -32,21 +32,12 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 // ── Args ───────────────────────────────────────────────────────────
 
 const args = process.argv.slice(2);
-const scanMcps = args.includes("--mcps");
-const scanSkills = args.includes("--skills");
+const hasExplicitTarget = args.includes("--mcps") || args.includes("--skills");
+const scanMcps = hasExplicitTarget ? args.includes("--mcps") : true;
+const scanSkills = hasExplicitTarget ? args.includes("--skills") : true;
 const scanAllStatuses = args.includes("--all");
 const dryRun = args.includes("--dry-run");
 const DELAY_MS = 1000; // rate-limit between scans
-
-if (!scanMcps && !scanSkills) {
-  console.error("Specify --mcps and/or --skills");
-  console.error("");
-  console.error("Usage:");
-  console.error("  npx tsx --env-file=.env scripts/scan-all-listings.ts --mcps");
-  console.error("  npx tsx --env-file=.env scripts/scan-all-listings.ts --skills");
-  console.error("  npx tsx --env-file=.env scripts/scan-all-listings.ts --mcps --skills --all");
-  process.exit(1);
-}
 
 // ── MCP Scanner (SpiderShield + mcp-scan) ──────────────────────────
 
