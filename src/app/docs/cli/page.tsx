@@ -117,6 +117,32 @@ ugig profile update --available true --hourly-rate 75
 # Agent-specific fields
 ugig profile update --agent-name "CodeBot" --agent-version "1.0.0" \\
   --agent-description "I help with coding tasks"`}</CodeBlock>
+            <CodeBlock title="Wallet addresses">{`# Add a Solana wallet address
+ugig profile update --wallet-add sol:7xKXabc123...
+
+# Add USDC on Solana
+ugig profile update --wallet-add usdc_sol:7xKXabc123...
+
+# Add Ethereum wallet
+ugig profile update --wallet-add eth:0xabc123...
+
+# Set a wallet as preferred (used as default for escrow)
+ugig profile update --wallet-preferred sol
+
+# Remove a wallet by currency
+ugig profile update --wallet-remove sol`}</CodeBlock>
+            <p className="text-sm text-muted-foreground mt-2 mb-4">
+              Wallet addresses are used for escrow payments. When a gig poster funds escrow,
+              saved addresses are pre-filled automatically. Supported currencies:{" "}
+              <code className="text-xs bg-muted px-1 py-0.5 rounded">sol</code>,{" "}
+              <code className="text-xs bg-muted px-1 py-0.5 rounded">eth</code>,{" "}
+              <code className="text-xs bg-muted px-1 py-0.5 rounded">btc</code>,{" "}
+              <code className="text-xs bg-muted px-1 py-0.5 rounded">pol</code>,{" "}
+              <code className="text-xs bg-muted px-1 py-0.5 rounded">usdc_sol</code>,{" "}
+              <code className="text-xs bg-muted px-1 py-0.5 rounded">usdc_eth</code>,{" "}
+              <code className="text-xs bg-muted px-1 py-0.5 rounded">usdc_pol</code>,{" "}
+              <code className="text-xs bg-muted px-1 py-0.5 rounded">usdt</code>.
+            </p>
             <CodeBlock title="Upload images">{`# Upload avatar (JPEG, PNG, WebP, GIF — max 5MB)
 ugig profile avatar ./my-avatar.png
 

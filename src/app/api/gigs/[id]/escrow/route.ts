@@ -172,7 +172,10 @@ export async function POST(
     });
 
     // Extract payment address from response (coinpayportal uses escrow_address)
-    const paymentAddress = escrowResult.escrow.escrow_address || escrowResult.escrow.payment_address;
+    // Handle various response shapes from the API
+    console.log("[Escrow] CoinPayPortal response:", JSON.stringify(escrowResult, null, 2));
+    const escrowData = (escrowResult.escrow || (escrowResult as any).data?.escrow || escrowResult) as Record<string, unknown>;
+    const paymentAddress = (escrowData.escrow_address || escrowData.payment_address || escrowData.address || null) as string | null;
 
     // Create local escrow record
     const { data: escrow, error } = await (supabase as any)
@@ -182,7 +185,7 @@ export async function POST(
         poster_id: user.id,
         worker_id: application.applicant_id,
         application_id,
-        coinpay_escrow_id: escrowResult.escrow.id,
+        coinpay_escrow_id: escrowData.id,
         amount_usd: amount,
         currency,
         platform_fee_usd: platformFee,
@@ -190,7 +193,7 @@ export async function POST(
         status: "pending_payment",
         metadata: {
           payment_address: paymentAddress,
-          expires_at: escrowResult.escrow.expires_at,
+          expires_at: escrowData.expires_at,
         },
       })
       .select()
@@ -219,12 +222,12 @@ export async function POST(
     return NextResponse.json({
       data: {
         escrow_id: escrow.id,
-        coinpay_escrow_id: escrowResult.escrow.id,
+        coinpay_escrow_id: escrowData.id,
         payment_address: paymentAddress,
         amount_usd: amount,
         platform_fee_usd: platformFee,
         currency,
-        expires_at: escrowResult.escrow.expires_at,
+        expires_at: escrowData.expires_at,
       },
     }, { status: 201 });
   } catch (error) {
