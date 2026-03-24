@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
       .from("payments")
       .insert({
         user_id: user.id,
-        coinpay_payment_id: paymentResult.payment_id,
+        coinpay_payment_id: paymentResult.payment_id || (paymentResult.payment as any)?.id,
         amount_usd: amount,
         currency,
         status: "pending",
@@ -127,13 +127,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Extract fields from CoinPayPortal response (may be at root or nested in .payment)
+    const cpPayment = paymentResult.payment || paymentResult;
+    const paymentAddress = (cpPayment as any).payment_address || paymentResult.address || null;
+    const checkoutUrl = paymentResult.checkout_url || (cpPayment as any).checkout_url || null;
+    const amountCrypto = paymentResult.amount_crypto || (cpPayment as any).amount_crypto || (cpPayment as any).crypto_amount;
+    const expiresAt = paymentResult.expires_at || (cpPayment as any).expires_at;
+
     return NextResponse.json({
       payment_id: payment.id,
-      checkout_url: paymentResult.checkout_url,
-      address: paymentResult.address,
-      amount_crypto: paymentResult.amount_crypto,
-      currency: paymentResult.currency,
-      expires_at: paymentResult.expires_at,
+      checkout_url: checkoutUrl,
+      address: paymentAddress,
+      amount_crypto: amountCrypto,
+      currency: paymentResult.currency || (cpPayment as any).currency,
+      expires_at: expiresAt,
     });
   } catch (error) {
     console.error("Payment creation error:", error);

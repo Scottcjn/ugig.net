@@ -36,7 +36,17 @@ export interface CreatePaymentResponse {
   amount_crypto: number;
   currency: string;
   expires_at: string;
-  checkout_url: string;
+  checkout_url?: string;
+  payment: {
+    id: string;
+    payment_address?: string;
+    amount_crypto?: number;
+    crypto_amount?: number;
+    currency?: string;
+    status?: string;
+    expires_at?: string;
+    [key: string]: unknown;
+  };
 }
 
 /**
