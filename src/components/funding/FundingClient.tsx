@@ -13,6 +13,7 @@ import {
   Clock,
   AlertCircle,
   Crown,
+  CreditCard,
   Heart,
   ArrowLeft,
   LogIn,
@@ -186,6 +187,45 @@ export function FundingClient() {
         setStatus("pending");
       } else {
         setError("No payment address returned");
+      }
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCard = async () => {
+    if (!selectedTier) return;
+    setError(null);
+    setNeedsLogin(false);
+    setLoading(true);
+
+    const amount = tierAmount(selectedTier, customAmount);
+
+    try {
+      const res = await fetch("/api/funding/stripe-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount_usd: amount }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        if (res.status === 401) {
+          setNeedsLogin(true);
+        } else {
+          setError(data.error || "Failed to create checkout");
+        }
+        setLoading(false);
+        return;
+      }
+
+      if (data.checkout_url) {
+        window.location.href = data.checkout_url;
+      } else {
+        setError("No checkout URL returned");
       }
     } catch {
       setError("Network error. Please try again.");
@@ -547,6 +587,21 @@ export function FundingClient() {
             <Zap className="h-5 w-5 text-yellow-500" />
           )}
           Pay with Lightning ⚡
+        </Button>
+
+        {/* Credit card button */}
+        <Button
+          variant="outline"
+          className="w-full justify-start gap-3 h-14 text-base"
+          onClick={handleCard}
+          disabled={loading}
+        >
+          {loading && !selectedCurrency ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : (
+            <CreditCard className="h-5 w-5 text-blue-500" />
+          )}
+          Pay with Card 💳
         </Button>
 
         {/* Crypto currencies grid */}
