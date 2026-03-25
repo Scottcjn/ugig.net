@@ -34,6 +34,7 @@ type LightningInvoice = {
 };
 
 type CryptoPayment = {
+  payment_id: string;
   address: string;
   amount_crypto: number;
   currency: string;
@@ -109,7 +110,7 @@ export function FundingClient() {
 
   const [status, setStatus] = useState<PaymentStatus>("idle");
   const [loading, setLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [needsLogin, setNeedsLogin] = useState(false);
 
@@ -124,6 +125,7 @@ export function FundingClient() {
     setStatus("idle");
     setError(null);
     setNeedsLogin(false);
+    setCopiedField(null);
   };
 
   const handleSelectTier = (tier: TierId) => {
@@ -174,6 +176,7 @@ export function FundingClient() {
       // Otherwise show address inline
       if (data.address) {
         setCryptoPayment({
+          payment_id: data.payment_id,
           address: data.address,
           amount_crypto: data.amount_crypto,
           currency: data.currency,
@@ -260,12 +263,41 @@ export function FundingClient() {
     return () => clearInterval(interval);
   }, [status, lnInvoice, pollLnStatus]);
 
+  // ─── Crypto payment poll ───────────────────────────────────────────────
+
+  const pollCryptoStatus = useCallback(async () => {
+    if (!cryptoPayment?.payment_id) return;
+    try {
+      const res = await fetch(
+        `/api/payments/coinpayportal/status?payment_id=${cryptoPayment.payment_id}`
+      );
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.status === "confirmed" || data.status === "forwarded") {
+        setStatus("paid");
+      } else if (data.status === "expired") {
+        setStatus("expired");
+      } else if (data.status === "failed") {
+        setStatus("error");
+        setError("Payment failed. Please try again.");
+      }
+    } catch {
+      // ignore poll errors
+    }
+  }, [cryptoPayment]);
+
+  useEffect(() => {
+    if (status !== "pending" || !cryptoPayment) return;
+    const interval = setInterval(pollCryptoStatus, 5000);
+    return () => clearInterval(interval);
+  }, [status, cryptoPayment, pollCryptoStatus]);
+
   // ─── Copy helper ──────────────────────────────────────────────────────
 
-  const handleCopy = async (text: string) => {
+  const handleCopy = async (text: string, field: string = "default") => {
     await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setCopiedField(field);
+    setTimeout(() => setCopiedField(null), 2000);
   };
 
   // ─── Render: Paid ─────────────────────────────────────────────────────
@@ -330,9 +362,9 @@ export function FundingClient() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleCopy(lnInvoice.paymentRequest)}
+                  onClick={() => handleCopy(lnInvoice.paymentRequest, "ln-invoice")}
                 >
-                  {copied ? (
+                  {copiedField === "ln-invoice" ? (
                     <Check className="h-4 w-4" />
                   ) : (
                     <Copy className="h-4 w-4" />
@@ -383,29 +415,44 @@ export function FundingClient() {
               <QRCodeCanvas value={cryptoPayment.address} size={256} />
             </div>
 
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">
-                Send exactly{" "}
-                <strong>
-                  {cryptoPayment.amount_crypto} {currencyInfo?.symbol}
-                </strong>{" "}
-                to:
-              </p>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 text-xs bg-muted p-3 rounded-md break-all">
-                  {cryptoPayment.address}
-                </code>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleCopy(cryptoPayment.address)}
-                >
-                  {copied ? (
-                    <Check className="h-4 w-4" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
-                </Button>
+            <div className="space-y-3">
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Amount</p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 text-sm font-semibold bg-muted p-3 rounded-md">
+                    {cryptoPayment.amount_crypto} {currencyInfo?.symbol}
+                  </code>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleCopy(String(cryptoPayment.amount_crypto), "crypto-amount")}
+                  >
+                    {copiedField === "crypto-amount" ? (
+                      <Check className="h-4 w-4" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Send to address</p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 text-xs bg-muted p-3 rounded-md break-all">
+                    {cryptoPayment.address}
+                  </code>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleCopy(cryptoPayment.address, "crypto-address")}
+                  >
+                    {copiedField === "crypto-address" ? (
+                      <Check className="h-4 w-4" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
               </div>
             </div>
 
@@ -421,7 +468,7 @@ export function FundingClient() {
 
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Payment will be confirmed automatically via webhook.</span>
+              <span>Listening for payment confirmation...</span>
             </div>
           </div>
 
