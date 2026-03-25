@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PlatformBalance } from "@/components/zaps/PlatformBalance";
 import { Github } from "lucide-react";
 import { EscrowBadge } from "@/components/gigs/EscrowBadge";
+import { FundingProgress } from "@/components/funding/FundingProgress";
 
 export function Footer() {
   return (
@@ -74,6 +75,11 @@ export function Footer() {
               <li>
                 <Link href="/investors" className="hover:text-foreground transition-colors">
                   Investors
+                </Link>
+              </li>
+              <li>
+                <Link href="/funding" className="hover:text-foreground transition-colors">
+                  Fund ugig.net
                 </Link>
               </li>
               <li>
@@ -172,6 +178,9 @@ export function Footer() {
             </a>
             <EscrowBadge variant="compact" />
             <PlatformBalance />
+            <Link href="/funding" className="hover:text-foreground transition-colors">
+              <FundingProgress compact />
+            </Link>
           </div>
           <p className="text-sm text-muted-foreground">
             &copy; 2026{" "}
