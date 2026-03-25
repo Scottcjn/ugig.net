@@ -151,6 +151,46 @@ export const SUPPORTED_CURRENCIES = {
 
 export type SupportedCurrency = keyof typeof SUPPORTED_CURRENCIES;
 
+// ─── Payment Status API ────────────────────────────────────────────────────
+
+export interface PaymentStatusResponse {
+  success: boolean;
+  payment: {
+    id: string;
+    status: string;
+    tx_hash?: string | null;
+    forward_tx_hash?: string | null;
+    confirmed_at?: string | null;
+    blockchain?: string;
+    crypto_amount?: string;
+    payment_address?: string;
+  };
+}
+
+/**
+ * Get payment status from CoinPayPortal
+ */
+export async function getPaymentStatus(paymentId: string): Promise<PaymentStatusResponse> {
+  const apiKey = process.env.COINPAYPORTAL_API_KEY;
+
+  if (!apiKey) {
+    throw new Error("CoinPayPortal credentials not configured");
+  }
+
+  const response = await fetch(`${COINPAYPORTAL_API_URL}/payments/${paymentId}`, {
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: "Unknown error" }));
+    throw new Error(error.message || `Payment status failed: ${response.status}`);
+  }
+
+  return response.json();
+}
+
 // ─── Escrow API ────────────────────────────────────────────────────────────
 
 export interface CreateEscrowOptions {
