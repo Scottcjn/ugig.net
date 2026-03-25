@@ -273,13 +273,20 @@ export function FundingClient() {
       );
       if (!res.ok) return;
       const data = await res.json();
-      if (data.status === "confirmed" || data.status === "forwarded") {
+      if (data.status === "forwarded") {
+        // Funds fully forwarded to merchant — payment complete
         setStatus("paid");
+      } else if (data.status === "confirmed" || data.status === "forwarding") {
+        // Payment received on-chain, waiting for forwarding to merchant
+        // Don't mark as paid yet — keep polling
       } else if (data.status === "expired") {
         setStatus("expired");
       } else if (data.status === "failed") {
         setStatus("error");
         setError("Payment failed. Please try again.");
+      } else if (data.status === "forwarding_failed") {
+        setStatus("error");
+        setError("Payment was received but processing failed. Please contact support.");
       }
     } catch {
       // ignore poll errors

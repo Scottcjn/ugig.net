@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     }
 
     // If already in terminal state locally, return it
-    const terminalStatuses = ["confirmed", "forwarded", "failed", "expired"];
+    const terminalStatuses = ["forwarded", "failed", "expired", "forwarding_failed"];
     if (terminalStatuses.includes(payment.status)) {
       return NextResponse.json({
         status: payment.status,
