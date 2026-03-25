@@ -245,6 +245,7 @@ export default async function GigPage({ params }: GigPageProps) {
     rating: t.rating,
     content: t.content,
     created_at: t.created_at,
+    author_id: t.author_id,
     author: testimonialAuthorMap[t.author_id] || { username: "unknown", full_name: null, avatar_url: null },
   }));
 

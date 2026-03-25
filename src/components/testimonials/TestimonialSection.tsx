@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { TestimonialCard } from "./TestimonialCard";
 import { TestimonialForm } from "./TestimonialForm";
-import { Star } from "lucide-react";
+import { Star, Trash2, Loader2 } from "lucide-react";
 
 interface Testimonial {
   id: string;
   rating: number;
   content: string;
   created_at: string;
+  author_id: string;
   author: {
     username: string;
     full_name: string | null;
@@ -34,10 +35,27 @@ export function TestimonialSection({
 }: TestimonialSectionProps) {
   const [testimonials, setTestimonials] = useState(initialTestimonials);
   const [submitted, setSubmitted] = useState(hasExisting);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const handleSuccess = () => {
     setSubmitted(true);
     // Testimonial is pending so won't show in approved list yet
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Remove your testimonial?")) return;
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/testimonials/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setTestimonials((prev) => prev.filter((t) => t.id !== id));
+        setSubmitted(false);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   return (
@@ -62,6 +80,22 @@ export function TestimonialSection({
               content={t.content}
               createdAt={t.created_at}
               author={t.author}
+              actions={
+                currentUserId && t.author_id === currentUserId ? (
+                  <button
+                    onClick={() => handleDelete(t.id)}
+                    disabled={deletingId === t.id}
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors"
+                  >
+                    {deletingId === t.id ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-3 w-3" />
+                    )}
+                    Remove
+                  </button>
+                ) : undefined
+              }
             />
           ))}
         </div>

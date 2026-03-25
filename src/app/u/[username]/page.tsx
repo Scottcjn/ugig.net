@@ -164,6 +164,7 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
     rating: t.rating,
     content: t.content,
     created_at: t.created_at,
+    author_id: t.author_id,
     author: testimonialAuthors[t.author_id] || { username: "unknown", full_name: null, avatar_url: null },
   }));
 
