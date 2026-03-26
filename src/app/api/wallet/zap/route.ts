@@ -73,18 +73,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Zap transfer failed" }, { status: 502 });
     }
 
-    // Transfer platform fee: sender → platform wallet
+    // Transfer platform fee: sender → platform wallet (retry up to 3 times)
     if (fee_sats > 0) {
-      try {
-        await internalTransfer(
-          senderWallet.admin_key,
-          LNBITS_INVOICE_KEY,
-          fee_sats,
-          `ugig.net zap fee`,
-        );
-      } catch (err) {
-        // Fee transfer failed but recipient got paid — log it, don't fail the zap
-        console.error("[Zap] Platform fee transfer failed:", err);
+      let feeTransferred = false;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          await internalTransfer(
+            senderWallet.admin_key,
+            LNBITS_INVOICE_KEY,
+            fee_sats,
+            `ugig.net zap fee`,
+          );
+          feeTransferred = true;
+          break;
+        } catch (err) {
+          console.error(`[Zap] Platform fee transfer attempt ${attempt}/3 failed:`, err);
+          if (attempt < 3) await new Promise((r) => setTimeout(r, 500 * attempt));
+        }
+      }
+      if (!feeTransferred) {
+        console.error(`[Zap] Platform fee transfer failed after 3 attempts (${fee_sats} sats lost)`);
       }
     }
 
