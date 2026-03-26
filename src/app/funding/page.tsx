@@ -4,6 +4,7 @@ import { Footer } from "@/components/layout/Footer";
 import { FundingClient } from "@/components/funding/FundingClient";
 import { FundingProgress } from "@/components/funding/FundingProgress";
 import { PaymentStatus } from "@/components/funding/PaymentStatus";
+import { TopContributors } from "@/components/funding/TopContributors";
 
 export const metadata: Metadata = {
   title: "Fund ugig.net | Support Development",
@@ -32,6 +33,13 @@ export default async function FundingPage() {
           <FundingProgress />
 
           <FundingClient />
+
+          <section className="space-y-4">
+            <h2 className="text-2xl font-bold tracking-tight">
+              Recent Contributions 💳⚡
+            </h2>
+            <TopContributors />
+          </section>
         </div>
       </main>
 
