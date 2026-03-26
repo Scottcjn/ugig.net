@@ -161,10 +161,13 @@ export function FundingClient() {
       if (!res.ok) {
         if (res.status === 401) {
           setNeedsLogin(true);
+          setStep("currency");
+          window.scrollTo({ top: 0, behavior: "smooth" });
         } else {
           setError(data.error || "Failed to create payment");
         }
         setLoading(false);
+        window.scrollTo({ top: 0, behavior: "smooth" });
         return;
       }
 
@@ -215,6 +218,8 @@ export function FundingClient() {
       if (!res.ok) {
         if (res.status === 401) {
           setNeedsLogin(true);
+          setStep("currency");
+          window.scrollTo({ top: 0, behavior: "smooth" });
         } else {
           setError(data.error || "Failed to create checkout");
         }
@@ -257,6 +262,8 @@ export function FundingClient() {
       if (!res.ok) {
         if (res.status === 401) {
           setNeedsLogin(true);
+          setStep("currency");
+          window.scrollTo({ top: 0, behavior: "smooth" });
         } else {
           setError(data.error || "Failed to create invoice");
         }
