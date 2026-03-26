@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { authenticateApiKey } from "./api-key";
+import { authenticateAgentPass } from "./agentpass";
 import {
   createServiceClient as createServiceRoleClient,
   authenticateWithToken,
@@ -12,7 +13,8 @@ import type { ApiKeyScope } from "@/lib/api-keys";
 export type AuthenticatedUser = {
   id: string;
   email?: string;
-  authMethod: "session" | "api_key";
+  authMethod: "session" | "api_key" | "agentpass";
+  passportId?: string;
   scope?: ApiKeyScope;
 };
 
@@ -59,6 +61,25 @@ export async function getAuthContext(
       },
       supabase: tokenAuth.supabase,
     };
+  }
+
+  // Try AgentPass auth (Authorization: AgentPass <passport_id>:<sig>:<ts>)
+  if (authHeader && /^AgentPass\s/i.test(authHeader)) {
+    const agentPassResult = await authenticateAgentPass(authHeader);
+    if (agentPassResult) {
+      const serviceClient = createServiceRoleClient();
+      return {
+        user: {
+          id: agentPassResult.userId,
+          email: agentPassResult.email,
+          authMethod: "agentpass",
+          passportId: agentPassResult.passportId,
+        },
+        supabase: serviceClient,
+      };
+    }
+    // If AgentPass header was provided but invalid, don't fall through
+    return null;
   }
 
   // Fall back to API key auth
