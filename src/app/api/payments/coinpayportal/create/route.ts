@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
         amount_usd: amount,
         currency,
         status: "pending",
-        type,
+        type: type as any,
         metadata: {
           gig_id,
           checkout_url: paymentResult.checkout_url,

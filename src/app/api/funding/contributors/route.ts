@@ -20,7 +20,7 @@ export async function GET() {
     const { data: cryptoPayments } = await (supabase
       .from("payments") as any)
       .select("id, user_id, amount_usd, amount_crypto, currency, status, created_at, updated_at")
-      .in("type", ["tip", "funding"])
+      .in("type", ["tip", "funding"] as any)
       .in("status", ["confirmed", "forwarded"])
       .order("created_at", { ascending: false })
       .limit(10);
