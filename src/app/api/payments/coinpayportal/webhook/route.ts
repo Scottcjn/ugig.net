@@ -228,7 +228,7 @@ async function handlePaymentForwarded(
     .from("payments") as any)
     .update({
       status: "forwarded",
-      amount_crypto: paymentData.crypto_amount || paymentData.amount_crypto || null,
+      amount_crypto: paymentData.amount_crypto || (paymentData as any).crypto_amount || null,
       metadata: {
         tx_hash: paymentData.tx_hash,
         merchant_tx_hash: paymentData.merchant_tx_hash,
