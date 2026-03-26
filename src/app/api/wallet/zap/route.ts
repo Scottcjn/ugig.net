@@ -96,9 +96,20 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Get updated balances from LNbits
-    const newSenderBalance = await getLnBalance(senderWallet.invoice_key);
-    const newRecipientBalance = await getLnBalance(recipientWallet.invoice_key);
+    // Wait for LNbits internal transfers to settle before querying balances
+    await new Promise((r) => setTimeout(r, 500));
+
+    // Get updated balances from LNbits (retry once if balance looks stale)
+    let newSenderBalance = await getLnBalance(senderWallet.invoice_key);
+    let newRecipientBalance = await getLnBalance(recipientWallet.invoice_key);
+
+    // Sanity check: recipient balance should have increased
+    // If LNbits is still stale, wait and retry once
+    if (newRecipientBalance === 0 || newRecipientBalance < recipient_amount) {
+      await new Promise((r) => setTimeout(r, 1000));
+      newSenderBalance = await getLnBalance(senderWallet.invoice_key);
+      newRecipientBalance = await getLnBalance(recipientWallet.invoice_key);
+    }
 
     // Sync Supabase caches (sender, recipient, AND platform wallet)
     await syncBalanceCache(admin, senderId, newSenderBalance);
@@ -108,8 +119,9 @@ export async function POST(request: NextRequest) {
     let platformBalanceAfter = 0;
     if (fee_sats > 0) {
       try {
-        platformBalanceAfter = await getLnBalance(LNBITS_INVOICE_KEY);
-        await syncBalanceCache(admin, PLATFORM_WALLET_USER_ID, platformBalanceAfter);
+        const platformBalance = await getLnBalance(LNBITS_INVOICE_KEY);
+        platformBalanceAfter = platformBalance;
+        await syncBalanceCache(admin, PLATFORM_WALLET_USER_ID, platformBalance);
       } catch (err) {
         console.error("[Zap] Platform balance sync failed:", err);
       }
