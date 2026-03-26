@@ -17,11 +17,11 @@ export async function GET() {
       .order("paid_at", { ascending: false })
       .limit(10);
 
-    const { data: cryptoPayments } = await supabase
-      .from("payments")
+    const { data: cryptoPayments } = await (supabase
+      .from("payments") as any)
       .select("id, user_id, amount_usd, blockchain, crypto_amount, status, confirmed_at, forwarded_at, created_at")
       .eq("type", "tip")
-      .in("status", ["confirmed", "forwarded"] as any)
+      .in("status", ["confirmed", "forwarded"])
       .order("created_at", { ascending: false })
       .limit(10);
 
@@ -36,7 +36,7 @@ export async function GET() {
         method: (p.payment_hash?.startsWith("stripe_") ? "card" : "lightning") as "card" | "lightning" | "crypto",
         paid_at: p.paid_at || p.created_at,
       })),
-      ...(cryptoPayments || []).map((p) => ({
+      ...(cryptoPayments || []).map((p: any) => ({
         id: p.id,
         user_id: p.user_id,
         amount_usd: p.amount_usd || 0,
