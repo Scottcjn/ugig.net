@@ -43,9 +43,12 @@ export async function POST(request: NextRequest) {
 
     switch (event.type) {
       case "checkout.session.completed":
+        await handlePaymentSucceeded(event.data.object as any);
+        break;
       case "payment_intent.succeeded":
       case "charge.succeeded":
-        await handlePaymentSucceeded(event.data.object as any);
+        // These don't have user_id in metadata — handled via checkout.session.completed
+        console.log(`[CoinPay Stripe Webhook] Skipping ${event.type} (handled via checkout.session.completed)`);
         break;
       case "charge.refunded":
         await handleRefund(event.data.object as any);
@@ -75,9 +78,8 @@ async function handlePaymentSucceeded(paymentObject: any) {
   // Extract metadata — could be on payment_intent or charge
   const metadata = paymentObject.metadata || {};
   const userId = metadata.user_id;
-  const amountUsd = paymentObject.amount
-    ? paymentObject.amount / 100
-    : parseFloat(metadata.amount_usd || "0");
+  const rawAmount = paymentObject.amount_total || paymentObject.amount || 0;
+  const amountUsd = rawAmount ? rawAmount / 100 : parseFloat(metadata.amount_usd || "0");
   const paymentId = paymentObject.id;
 
   console.log(
@@ -90,10 +92,11 @@ async function handlePaymentSucceeded(paymentObject: any) {
   }
 
   // Check if we already have a funding_payment for this Stripe payment
+  const paymentHash = `stripe_${paymentId}`;
   const { data: existing } = await supabase
     .from("funding_payments")
     .select("id, status")
-    .eq("stripe_payment_id", paymentId)
+    .eq("payment_hash", paymentHash)
     .single();
 
   if (existing?.status === "paid") {
@@ -108,15 +111,16 @@ async function handlePaymentSucceeded(paymentObject: any) {
       .update({ status: "paid", paid_at: new Date().toISOString() })
       .eq("id", existing.id);
   } else {
-    // Create a new funding_payment record for card payments
     const { error: insertError } = await (supabase.from("funding_payments") as any).insert({
       user_id: userId,
       amount_usd: amountUsd,
-      amount_sats: 0, // Card payment, no sats
-      stripe_payment_id: paymentId,
+      amount_sats: 1, // Card payment placeholder
+      payment_hash: paymentHash,
+      bolt11: "card_payment",
       tier: metadata.tier || determineTier(amountUsd),
       status: "paid",
       paid_at: new Date().toISOString(),
+      expires_at: new Date(Date.now() + 365 * 86400000).toISOString(),
     });
 
     if (insertError) {
@@ -170,7 +174,7 @@ async function handleRefund(chargeObject: any) {
   const { data: payment } = await supabase
     .from("funding_payments")
     .select("id, user_id, amount_usd")
-    .eq("stripe_payment_id", paymentId)
+    .eq("payment_hash", `stripe_${paymentId}`)
     .single();
 
   if (payment) {
