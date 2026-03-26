@@ -19,7 +19,7 @@ export async function GET() {
 
     const { data: cryptoPayments } = await (supabase
       .from("payments") as any)
-      .select("id, user_id, amount_usd, blockchain, crypto_amount, status, confirmed_at, forwarded_at, created_at")
+      .select("id, user_id, amount_usd, amount_crypto, currency, status, created_at, updated_at")
       .eq("type", "tip")
       .in("status", ["confirmed", "forwarded"])
       .order("created_at", { ascending: false })
@@ -43,9 +43,9 @@ export async function GET() {
         amount_sats: 0,
         tier: "crypto",
         method: "crypto" as "card" | "lightning" | "crypto",
-        paid_at: p.forwarded_at || p.confirmed_at || p.created_at,
-        blockchain: p.blockchain,
-        crypto_amount: p.crypto_amount,
+        paid_at: p.updated_at || p.created_at,
+        blockchain: p.currency,
+        crypto_amount: p.amount_crypto,
       })),
     ]
       .sort((a, b) => new Date(b.paid_at).getTime() - new Date(a.paid_at).getTime())
