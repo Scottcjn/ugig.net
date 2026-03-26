@@ -93,11 +93,11 @@ export function TopContributors() {
               {tx.method === "lightning" && tx.amount_sats > 0
                 ? `${tx.amount_sats.toLocaleString()} sats`
                 : tx.method === "crypto" && tx.crypto_amount
-                ? `${tx.crypto_amount} ${tx.blockchain?.toUpperCase() || ""}`
-                : `$${tx.amount_usd.toFixed(2)}`}
+                ? `${Number(tx.crypto_amount).toFixed(6)} ${tx.blockchain?.toUpperCase() || ""}`
+                : `$${Number(tx.amount_usd).toFixed(2)}`}
             </span>
             {tx.method === "crypto" && (
-              <span className="text-xs text-muted-foreground">≈ ${tx.amount_usd.toFixed(2)}</span>
+              <span className="text-xs text-muted-foreground ml-1">≈ ${Number(tx.amount_usd).toFixed(2)}</span>
             )}
           </div>
         </div>

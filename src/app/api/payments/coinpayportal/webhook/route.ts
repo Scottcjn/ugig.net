@@ -223,11 +223,12 @@ async function handlePaymentForwarded(
 ) {
   const { data: paymentData } = payload;
 
-  // Update payment with forwarding info
-  await supabase
-    .from("payments")
+  // Update payment with forwarding info + crypto amount
+  await (supabase
+    .from("payments") as any)
     .update({
       status: "forwarded",
+      amount_crypto: paymentData.crypto_amount || paymentData.amount_crypto || null,
       metadata: {
         tx_hash: paymentData.tx_hash,
         merchant_tx_hash: paymentData.merchant_tx_hash,
