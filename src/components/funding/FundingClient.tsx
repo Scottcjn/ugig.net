@@ -150,7 +150,7 @@ export function FundingClient() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          type: "tip",
+          type: "funding",
           amount_usd: amount,
           currency,
         }),
