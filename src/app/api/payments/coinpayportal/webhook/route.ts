@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import {
   verifyWebhookSignature,
   type CoinPayWebhookPayload,
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     }
 
     const payload: CoinPayWebhookPayload = JSON.parse(rawBody);
-    const supabase = await createClient();
+    const supabase = createServiceClient();
 
     console.log(`CoinPayPortal webhook: ${payload.type}`, {
       payment_id: payload.data.payment_id,
