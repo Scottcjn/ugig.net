@@ -92,9 +92,20 @@ export async function POST(request: NextRequest) {
     const newSenderBalance = await getLnBalance(senderWallet.invoice_key);
     const newRecipientBalance = await getLnBalance(recipientWallet.invoice_key);
 
-    // Sync Supabase caches
+    // Sync Supabase caches (sender, recipient, AND platform wallet)
     await syncBalanceCache(admin, senderId, newSenderBalance);
     await syncBalanceCache(admin, recipient_id, newRecipientBalance);
+
+    // Sync platform wallet balance so the footer commission display stays current
+    let platformBalanceAfter = 0;
+    if (fee_sats > 0) {
+      try {
+        platformBalanceAfter = await getLnBalance(LNBITS_INVOICE_KEY);
+        await syncBalanceCache(admin, PLATFORM_WALLET_USER_ID, platformBalanceAfter);
+      } catch (err) {
+        console.error("[Zap] Platform balance sync failed:", err);
+      }
+    }
 
     // Create zap record
     const { data: zap } = await admin
@@ -113,7 +124,6 @@ export async function POST(request: NextRequest) {
 
     const zapId = (zap as any)?.id;
 
-    // Create wallet transactions for audit trail
     const txns: any[] = [
       {
         user_id: senderId,
@@ -137,7 +147,7 @@ export async function POST(request: NextRequest) {
         user_id: PLATFORM_WALLET_USER_ID,
         type: "zap_fee",
         amount_sats: fee_sats,
-        balance_after: 0,
+        balance_after: platformBalanceAfter,
         reference_id: zapId,
         status: "completed",
       });
