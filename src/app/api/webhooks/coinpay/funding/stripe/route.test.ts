@@ -1,6 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
-import { createHmac } from "crypto";
+
+// Mock Stripe
+const mockConstructEvent = vi.fn();
+vi.mock("@/lib/stripe", () => ({
+  stripe: {
+    webhooks: {
+      constructEvent: (...args: unknown[]) => mockConstructEvent(...args),
+    },
+  },
+}));
 
 // Mock Supabase
 const mockFrom = vi.fn();
@@ -14,13 +23,6 @@ import { POST } from "./route";
 
 const TEST_SECRET = "whsec_test_secret_key_12345";
 
-function makeSignature(payload: string, secret: string, timestamp?: number): string {
-  const ts = timestamp ?? Math.floor(Date.now() / 1000);
-  const signedPayload = `${ts}.${payload}`;
-  const sig = createHmac("sha256", secret).update(signedPayload).digest("hex");
-  return `t=${ts},v1=${sig}`;
-}
-
 function makeEvent(type: string, data: Record<string, any> = {}) {
   return {
     id: "evt_test_123",
@@ -30,7 +32,7 @@ function makeEvent(type: string, data: Record<string, any> = {}) {
   };
 }
 
-function makeRequest(body: string, signature: string): NextRequest {
+function makeRequest(body: string, signature = "t=123,v1=sig"): NextRequest {
   return new NextRequest("http://localhost/api/webhooks/coinpay/funding/stripe", {
     method: "POST",
     headers: {
@@ -58,6 +60,7 @@ describe("POST /api/webhooks/coinpay/funding/stripe", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.COINPAY_STRIPE_WEBHOOK_SECRET = TEST_SECRET;
+    mockConstructEvent.mockReset();
   });
 
   it("returns 400 without stripe-signature header", async () => {
@@ -70,17 +73,17 @@ describe("POST /api/webhooks/coinpay/funding/stripe", () => {
   });
 
   it("returns 400 with invalid signature", async () => {
+    mockConstructEvent.mockImplementation(() => { throw new Error("Invalid signature"); });
     const body = JSON.stringify(makeEvent("payment_intent.succeeded"));
-    const req = makeRequest(body, "t=123,v1=invalidsig");
+    const req = makeRequest(body);
     const res = await POST(req);
     expect(res.status).toBe(400);
   });
 
-  it("returns 400 with expired timestamp", async () => {
+  it("returns 400 when constructEvent throws", async () => {
+    mockConstructEvent.mockImplementation(() => { throw new Error("Timestamp too old"); });
     const body = JSON.stringify(makeEvent("payment_intent.succeeded"));
-    const oldTimestamp = Math.floor(Date.now() / 1000) - 600; // 10 min ago
-    const sig = makeSignature(body, TEST_SECRET, oldTimestamp);
-    const req = makeRequest(body, sig);
+    const req = makeRequest(body);
     const res = await POST(req);
     expect(res.status).toBe(400);
   });
@@ -91,8 +94,8 @@ describe("POST /api/webhooks/coinpay/funding/stripe", () => {
       amount: 1000, // $10
       metadata: { user_id: "user-1", amount_usd: "10" },
     });
+    mockConstructEvent.mockReturnValue(event);
     const body = JSON.stringify(event);
-    const sig = makeSignature(body, TEST_SECRET);
 
     // Mock: no existing payment
     const fundingChain = chainResult({ data: null, error: { code: "PGRST116" } });
@@ -117,7 +120,7 @@ describe("POST /api/webhooks/coinpay/funding/stripe", () => {
       return chainResult({ data: null, error: null });
     });
 
-    const req = makeRequest(body, sig);
+    const req = makeRequest(body);
     const res = await POST(req);
     const json = await res.json();
 
@@ -132,13 +135,13 @@ describe("POST /api/webhooks/coinpay/funding/stripe", () => {
       payment_intent: "pi_test_456",
       metadata: { user_id: "user-2", amount_usd: "25" },
     });
+    mockConstructEvent.mockReturnValue(event);
     const body = JSON.stringify(event);
-    const sig = makeSignature(body, TEST_SECRET);
 
     const chain = chainResult({ data: null, error: { code: "PGRST116" } });
     mockFrom.mockReturnValue(chain);
 
-    const req = makeRequest(body, sig);
+    const req = makeRequest(body);
     const res = await POST(req);
     expect(res.status).toBe(200);
   });
@@ -148,8 +151,8 @@ describe("POST /api/webhooks/coinpay/funding/stripe", () => {
       id: "ch_test_789",
       payment_intent: "pi_test_789",
     });
+    mockConstructEvent.mockReturnValue(event);
     const body = JSON.stringify(event);
-    const sig = makeSignature(body, TEST_SECRET);
 
     const paymentChain = chainResult({
       data: { id: "fp-1", user_id: "user-3", amount_usd: "10" },
@@ -166,17 +169,17 @@ describe("POST /api/webhooks/coinpay/funding/stripe", () => {
       return updateChain;
     });
 
-    const req = makeRequest(body, sig);
+    const req = makeRequest(body);
     const res = await POST(req);
     expect(res.status).toBe(200);
   });
 
   it("ignores unhandled event types", async () => {
     const event = makeEvent("customer.created", { id: "cus_123" });
+    mockConstructEvent.mockReturnValue(event);
     const body = JSON.stringify(event);
-    const sig = makeSignature(body, TEST_SECRET);
 
-    const req = makeRequest(body, sig);
+    const req = makeRequest(body);
     const res = await POST(req);
     const json = await res.json();
 
@@ -187,7 +190,7 @@ describe("POST /api/webhooks/coinpay/funding/stripe", () => {
   it("returns 500 when webhook secret not configured", async () => {
     delete process.env.COINPAY_STRIPE_WEBHOOK_SECRET;
     const body = JSON.stringify(makeEvent("payment_intent.succeeded"));
-    const req = makeRequest(body, "t=123,v1=abc");
+    const req = makeRequest(body);
     const res = await POST(req);
     expect(res.status).toBe(500);
   });
@@ -198,14 +201,14 @@ describe("POST /api/webhooks/coinpay/funding/stripe", () => {
       amount: 500,
       metadata: { user_id: "user-1" },
     });
+    mockConstructEvent.mockReturnValue(event);
     const body = JSON.stringify(event);
-    const sig = makeSignature(body, TEST_SECRET);
 
     // Return existing paid payment
     const chain = chainResult({ data: { id: "fp-1", status: "paid" }, error: null });
     mockFrom.mockReturnValue(chain);
 
-    const req = makeRequest(body, sig);
+    const req = makeRequest(body);
     const res = await POST(req);
     expect(res.status).toBe(200);
   });

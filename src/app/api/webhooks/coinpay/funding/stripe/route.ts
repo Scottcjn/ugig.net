@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { createHmac, timingSafeEqual } from "crypto";
+import { stripe } from "@/lib/stripe";
+import type Stripe from "stripe";
 
 function getWebhookSecret(): string {
   return process.env.COINPAY_STRIPE_WEBHOOK_SECRET || "";
@@ -29,22 +30,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Webhook not configured" }, { status: 500 });
     }
 
-    // Verify Stripe signature
-    const event = verifyStripeSignature(body, sig, webhookSecret);
-    if (!event) {
-      console.error("[CoinPay Stripe Webhook] Signature verification failed");
+    // Verify Stripe signature using official SDK
+    let event: Stripe.Event;
+    try {
+      event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
+    } catch (err) {
+      console.error("[CoinPay Stripe Webhook] Signature verification failed:", (err as Error).message);
       return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
     }
 
     console.log(`[CoinPay Stripe Webhook] Received event: ${event.type}`);
 
     switch (event.type) {
+      case "checkout.session.completed":
       case "payment_intent.succeeded":
       case "charge.succeeded":
-        await handlePaymentSucceeded(event.data?.object);
+        await handlePaymentSucceeded(event.data.object as any);
         break;
       case "charge.refunded":
-        await handleRefund(event.data?.object);
+        await handleRefund(event.data.object as any);
         break;
       default:
         console.log(`[CoinPay Stripe Webhook] Unhandled event type: ${event.type}`);
@@ -57,56 +61,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/**
- * Verify Stripe webhook signature.
- * Format: t=timestamp,v1=signature[,v1=signature...]
- */
-function verifyStripeSignature(
-  payload: string,
-  sigHeader: string,
-  secret: string
-): Record<string, any> | null {
-  try {
-    const parts = sigHeader.split(",");
-    const timestampPart = parts.find((p) => p.startsWith("t="));
-    const signatureParts = parts.filter((p) => p.startsWith("v1="));
 
-    if (!timestampPart || signatureParts.length === 0) return null;
-
-    const timestamp = timestampPart.slice(2);
-    const signedPayload = `${timestamp}.${payload}`;
-
-    const expectedSig = createHmac("sha256", secret)
-      .update(signedPayload)
-      .digest("hex");
-
-    // Check if any provided signature matches
-    const isValid = signatureParts.some((sp) => {
-      const sig = sp.slice(3);
-      try {
-        return timingSafeEqual(
-          Buffer.from(expectedSig, "hex"),
-          Buffer.from(sig, "hex")
-        );
-      } catch {
-        return false;
-      }
-    });
-
-    if (!isValid) return null;
-
-    // Check timestamp isn't too old (5 minute tolerance)
-    const now = Math.floor(Date.now() / 1000);
-    if (Math.abs(now - parseInt(timestamp)) > 300) {
-      console.error("[CoinPay Stripe Webhook] Timestamp out of range");
-      return null;
-    }
-
-    return JSON.parse(payload);
-  } catch {
-    return null;
-  }
-}
 
 /**
  * Handle a successful payment (payment_intent.succeeded or charge.succeeded).
