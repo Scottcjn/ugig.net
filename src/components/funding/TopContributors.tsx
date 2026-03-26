@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { CreditCard, Zap } from "lucide-react";
+import { CreditCard, Zap, Coins } from "lucide-react";
 import Link from "next/link";
 
 interface Transaction {
@@ -12,7 +12,9 @@ interface Transaction {
   amount_usd: number;
   amount_sats: number;
   tier: string;
-  method: "card" | "lightning";
+  method: "card" | "lightning" | "crypto";
+  blockchain: string | null;
+  crypto_amount: number | null;
   paid_at: string;
 }
 
@@ -82,14 +84,21 @@ export function TopContributors() {
           <div className="flex items-center gap-1.5">
             {tx.method === "card" ? (
               <CreditCard className="h-3.5 w-3.5 text-blue-500" />
+            ) : tx.method === "crypto" ? (
+              <Coins className="h-3.5 w-3.5 text-purple-500" />
             ) : (
               <Zap className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
             )}
             <span className="text-sm font-semibold">
               {tx.method === "lightning" && tx.amount_sats > 0
                 ? `${tx.amount_sats.toLocaleString()} sats`
+                : tx.method === "crypto" && tx.crypto_amount
+                ? `${tx.crypto_amount} ${tx.blockchain?.toUpperCase() || ""}`
                 : `$${tx.amount_usd.toFixed(2)}`}
             </span>
+            {tx.method === "crypto" && (
+              <span className="text-xs text-muted-foreground">≈ ${tx.amount_usd.toFixed(2)}</span>
+            )}
           </div>
         </div>
       ))}
