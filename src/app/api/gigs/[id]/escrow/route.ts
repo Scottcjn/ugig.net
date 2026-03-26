@@ -6,6 +6,8 @@ import { z } from "zod";
 const createEscrowSchema = z.object({
   application_id: z.string().uuid(),
   currency: z.enum(["usdc_pol", "usdc_sol", "pol", "sol", "btc", "eth", "usdc_eth", "usdt"]),
+  depositor_address: z.string().min(10, "Depositor wallet address is required"),
+  beneficiary_address: z.string().min(10, "Beneficiary wallet address is required"),
 });
 
 // GET /api/gigs/[id]/escrow - Get escrow status for a gig
@@ -68,7 +70,7 @@ export async function POST(
       );
     }
 
-    const { application_id, currency } = validationResult.data;
+    const { application_id, currency, depositor_address, beneficiary_address } = validationResult.data;
 
     // Get gig — must be poster
     const { data: gig } = await supabase
@@ -157,6 +159,8 @@ export async function POST(
       currency: currency as SupportedCurrency,
       depositor_email: `${posterProfile?.username || user.id}@ugig.net`,
       beneficiary_email: `${workerProfile?.username || application.applicant_id}@ugig.net`,
+      depositor_address,
+      beneficiary_address,
       description: `Gig escrow: ${gig.title}`,
       metadata: {
         gig_id: gigId,
@@ -167,6 +171,12 @@ export async function POST(
       },
     });
 
+    // Extract payment address from response (coinpayportal uses escrow_address)
+    // Handle various response shapes from the API
+    console.log("[Escrow] CoinPayPortal response:", JSON.stringify(escrowResult, null, 2));
+    const escrowData = (escrowResult.escrow || (escrowResult as any).data?.escrow || escrowResult) as Record<string, unknown>;
+    const paymentAddress = (escrowData.escrow_address || escrowData.payment_address || escrowData.address || null) as string | null;
+
     // Create local escrow record
     const { data: escrow, error } = await (supabase as any)
       .from("gig_escrows")
@@ -175,16 +185,15 @@ export async function POST(
         poster_id: user.id,
         worker_id: application.applicant_id,
         application_id,
-        coinpay_escrow_id: escrowResult.escrow.id,
+        coinpay_escrow_id: escrowData.id,
         amount_usd: amount,
         currency,
         platform_fee_usd: platformFee,
         platform_fee_rate: platformFeeRate,
         status: "pending_payment",
         metadata: {
-          checkout_url: escrowResult.escrow.checkout_url,
-          payment_address: escrowResult.escrow.payment_address,
-          expires_at: escrowResult.escrow.expires_at,
+          payment_address: paymentAddress,
+          expires_at: escrowData.expires_at,
         },
       })
       .select()
@@ -213,13 +222,12 @@ export async function POST(
     return NextResponse.json({
       data: {
         escrow_id: escrow.id,
-        coinpay_escrow_id: escrowResult.escrow.id,
-        checkout_url: escrowResult.escrow.checkout_url,
-        payment_address: escrowResult.escrow.payment_address,
+        coinpay_escrow_id: escrowData.id,
+        payment_address: paymentAddress,
         amount_usd: amount,
         platform_fee_usd: platformFee,
         currency,
-        expires_at: escrowResult.escrow.expires_at,
+        expires_at: escrowData.expires_at,
       },
     }, { status: 201 });
   } catch (error) {

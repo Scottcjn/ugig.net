@@ -164,6 +164,7 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
     rating: t.rating,
     content: t.content,
     created_at: t.created_at,
+    author_id: t.author_id,
     author: testimonialAuthors[t.author_id] || { username: "unknown", full_name: null, avatar_url: null },
   }));
 
@@ -175,6 +176,7 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
       .select("id")
       .eq("profile_id", profile.id)
       .eq("author_id", currentUser.id)
+      .is("gig_id", null)
       .limit(1);
     hasExistingTestimonial = (existing && existing.length > 0) || false;
   }
@@ -200,17 +202,25 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
 
   // Check which gigs the current user already left testimonials for
   let existingTestimonialGigIds = new Set<string>();
+  let existingTestimonialsByGigId: Record<string, { rating: number; content: string; created_at: string }> = {};
   if (currentUser && completedGigsList.length > 0) {
     const gigIds = completedGigsList.map((g: any) => g.gig_id);
     const { data: existingGigTestimonials } = await supabase
       .from("testimonials")
-      .select("gig_id")
+      .select("gig_id, rating, content, created_at")
       .eq("author_id", currentUser.id)
       .eq("profile_id", profile.id)
-      .in("gig_id", gigIds);
+      .in("gig_id", gigIds)
+      .order("created_at", { ascending: false });
 
     existingTestimonialGigIds = new Set(
       (existingGigTestimonials || []).map((t: any) => t.gig_id).filter(Boolean)
+    );
+
+    existingTestimonialsByGigId = Object.fromEntries(
+      (existingGigTestimonials || [])
+        .filter((t: any) => t.gig_id)
+        .map((t: any) => [t.gig_id, { rating: t.rating, content: t.content, created_at: t.created_at }])
     );
   }
 
@@ -539,6 +549,7 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
                 currentUserId={currentUser?.id || null}
                 isOwnProfile={currentUser?.id === profile.id}
                 existingTestimonialGigIds={existingTestimonialGigIds}
+                existingTestimonialsByGigId={existingTestimonialsByGigId}
               />
             )}
 

@@ -189,6 +189,13 @@ export function SkillListingForm({ slug, listingId, initialData }: SkillListingF
         }
       }
 
+      // If server detected this as an MCP listing, redirect to /mcp/
+      if (data.redirect_to) {
+        router.push(data.redirect_to);
+        router.refresh();
+        return;
+      }
+
       const newSlug = data.listing?.slug || slug;
 
       // Generate ClawHub publish command if requested

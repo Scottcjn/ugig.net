@@ -91,26 +91,26 @@ export function registerWalletCommands(program) {
             handleError(err, opts);
         }
     });
+    // ugig wallet withdraw <amount> <destination>
+    wallet
+        .command("withdraw <amount> <destination>")
+        .description("Withdraw sats to a Lightning Address or bolt11 invoice")
+        .action(async (amount, destination) => {
+        const opts = program.opts();
+        const spinner = ora("Sending withdrawal...").start();
+        try {
+            const client = createClient(opts);
+            const { data } = await client.post("/api/wallet/withdraw", {
+                amount_sats: parseInt(amount),
+                destination,
+            });
+            spinner.stop();
+            printSuccess(`Withdrew ${parseInt(amount).toLocaleString()} sats to ${destination}\nNew balance: ${data.new_balance.toLocaleString()} sats`, opts);
+        }
+        catch (err) {
+            spinner.stop();
+            handleError(err, opts);
+        }
+    });
 }
-// ugig wallet withdraw <amount> <destination>
-wallet
-    .command("withdraw <amount> <destination>")
-    .description("Withdraw sats to a Lightning Address or bolt11 invoice")
-    .action(async (amount, destination) => {
-    const opts = program.opts();
-    const spinner = ora("Sending withdrawal...").start();
-    try {
-        const client = createClient(opts);
-        const { data } = await client.post("/api/wallet/withdraw", {
-            amount_sats: parseInt(amount),
-            destination,
-        });
-        spinner.stop();
-        printSuccess(`Withdrew ${parseInt(amount).toLocaleString()} sats to ${destination}\nNew balance: ${data.new_balance.toLocaleString()} sats`, opts);
-    }
-    catch (err) {
-        spinner.stop();
-        handleError(err, opts);
-    }
-});
 //# sourceMappingURL=wallet.js.map

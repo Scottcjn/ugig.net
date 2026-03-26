@@ -26,6 +26,7 @@ export interface CreatePaymentOptions {
   description?: string;
   redirect_url?: string;
   metadata?: Record<string, unknown>;
+  business_id?: string;
 }
 
 export interface CreatePaymentResponse {
@@ -35,7 +36,17 @@ export interface CreatePaymentResponse {
   amount_crypto: number;
   currency: string;
   expires_at: string;
-  checkout_url: string;
+  checkout_url?: string;
+  payment: {
+    id: string;
+    payment_address?: string;
+    amount_crypto?: number;
+    crypto_amount?: number;
+    currency?: string;
+    status?: string;
+    expires_at?: string;
+    [key: string]: unknown;
+  };
 }
 
 /**
@@ -93,7 +104,7 @@ export async function createPayment(
   options: CreatePaymentOptions
 ): Promise<CreatePaymentResponse> {
   const apiKey = process.env.COINPAYPORTAL_API_KEY;
-  const merchantId = process.env.COINPAYPORTAL_MERCHANT_ID;
+  const merchantId = options.business_id || process.env.COINPAYPORTAL_MERCHANT_ID;
 
   if (!apiKey || !merchantId) {
     throw new Error("CoinPayPortal credentials not configured");
@@ -140,6 +151,46 @@ export const SUPPORTED_CURRENCIES = {
 
 export type SupportedCurrency = keyof typeof SUPPORTED_CURRENCIES;
 
+// ─── Payment Status API ────────────────────────────────────────────────────
+
+export interface PaymentStatusResponse {
+  success: boolean;
+  payment: {
+    id: string;
+    status: string;
+    tx_hash?: string | null;
+    forward_tx_hash?: string | null;
+    confirmed_at?: string | null;
+    blockchain?: string;
+    crypto_amount?: string;
+    payment_address?: string;
+  };
+}
+
+/**
+ * Get payment status from CoinPayPortal
+ */
+export async function getPaymentStatus(paymentId: string): Promise<PaymentStatusResponse> {
+  const apiKey = process.env.COINPAYPORTAL_API_KEY;
+
+  if (!apiKey) {
+    throw new Error("CoinPayPortal credentials not configured");
+  }
+
+  const response = await fetch(`${COINPAYPORTAL_API_URL}/payments/${paymentId}`, {
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: "Unknown error" }));
+    throw new Error(error.message || `Payment status failed: ${response.status}`);
+  }
+
+  return response.json();
+}
+
 // ─── Escrow API ────────────────────────────────────────────────────────────
 
 export interface CreateEscrowOptions {
@@ -147,6 +198,8 @@ export interface CreateEscrowOptions {
   currency: SupportedCurrency;
   depositor_email: string;
   beneficiary_email: string;
+  depositor_address: string;
+  beneficiary_address: string;
   description?: string;
   auto_release_hours?: number;
   webhook_url?: string;
@@ -159,10 +212,12 @@ export interface EscrowResponse {
     id: string;
     status: string;
     amount: number;
-    currency: string;
+    chain: string;
+    escrow_address?: string;
     payment_address?: string;
     checkout_url?: string;
     expires_at?: string;
+    amount_usd?: number;
   };
 }
 
@@ -203,8 +258,10 @@ export async function createEscrow(
     },
     body: JSON.stringify({
       business_id: merchantId,
-      amount: options.amount_usd,
+      amount_usd: options.amount_usd,
       currency: options.currency,
+      depositor_address: options.depositor_address,
+      beneficiary_address: options.beneficiary_address,
       depositor_email: options.depositor_email,
       beneficiary_email: options.beneficiary_email,
       description: options.description,
@@ -216,7 +273,9 @@ export async function createEscrow(
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: "Unknown error" }));
-    throw new Error(error.message || `Escrow creation failed: ${response.status}`);
+    const msg = error.message || error.error || error.detail || JSON.stringify(error);
+    console.error("[CoinPayPortal] Escrow creation failed:", response.status, error);
+    throw new Error(msg || `Escrow creation failed: ${response.status}`);
   }
 
   return response.json();
@@ -243,6 +302,95 @@ export async function releaseEscrow(escrowId: string): Promise<EscrowStatusRespo
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: "Unknown error" }));
     throw new Error(error.message || `Escrow release failed: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+// ─── Invoice API ───────────────────────────────────────────────────────────
+
+export interface CreateInvoiceOptions {
+  amount: number;
+  currency?: string;
+  crypto_currency?: string;
+  client_id?: string;
+  due_date?: string;
+  notes?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface InvoiceResponse {
+  success: boolean;
+  invoice: {
+    id: string;
+    status: string;
+    amount: number;
+    currency: string;
+    pay_url?: string;
+    created_at?: string;
+  };
+}
+
+/**
+ * Create an invoice via CoinPayPortal
+ */
+export async function createInvoice(
+  options: CreateInvoiceOptions
+): Promise<InvoiceResponse> {
+  const apiKey = process.env.COINPAYPORTAL_API_KEY;
+  const merchantId = process.env.COINPAYPORTAL_MERCHANT_ID;
+
+  if (!apiKey || !merchantId) {
+    throw new Error("CoinPayPortal credentials not configured");
+  }
+
+  const response = await fetch(`${COINPAYPORTAL_API_URL}/invoices`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+    },
+    body: JSON.stringify({
+      business_id: merchantId,
+      amount: options.amount,
+      currency: options.currency || "USD",
+      crypto_currency: options.crypto_currency,
+      client_id: options.client_id,
+      due_date: options.due_date,
+      notes: options.notes,
+      metadata: options.metadata,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: "Unknown error" }));
+    throw new Error(error.message || `Invoice creation failed: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Send an invoice (generates payment link) via CoinPayPortal
+ */
+export async function sendInvoice(invoiceId: string): Promise<InvoiceResponse> {
+  const apiKey = process.env.COINPAYPORTAL_API_KEY;
+
+  if (!apiKey) {
+    throw new Error("CoinPayPortal credentials not configured");
+  }
+
+  const response = await fetch(`${COINPAYPORTAL_API_URL}/invoices/${invoiceId}/send`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: "Unknown error" }));
+    throw new Error(error.message || `Invoice send failed: ${response.status}`);
   }
 
   return response.json();

@@ -331,7 +331,8 @@ export function registerSkillsCommands(program) {
                 printSuccess("No draft skills to publish", opts);
                 return;
             }
-            spinner?.text = `Publishing ${drafts.length} draft skill(s)...`;
+            if (spinner)
+                spinner.text = `Publishing ${drafts.length} draft skill(s)...`;
             let published = 0;
             let failed = 0;
             for (const skill of drafts) {

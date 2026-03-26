@@ -93,8 +93,13 @@ export async function GET(request: NextRequest) {
       query = query.eq("location_type", location_type);
     }
 
-    if (listing_type) {
+    // Default to 'hiring' unless explicitly requesting for_hire or 'all'
+    if (listing_type === "all") {
+      // No filter — return both types
+    } else if (listing_type) {
       query = query.eq("listing_type", listing_type);
+    } else {
+      query = query.eq("listing_type", "hiring");
     }
 
     if (account_type) {

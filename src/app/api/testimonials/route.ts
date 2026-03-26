@@ -127,14 +127,26 @@ export async function POST(request: NextRequest) {
       }
 
       if (gig.poster_id === user.id) {
-        return NextResponse.json(
-          { error: "You cannot leave a testimonial for your own gig" },
-          { status: 400 }
-        );
+        // Gig poster is leaving a testimonial (e.g. reviewing the worker)
+        if (profile_id && profile_id !== user.id) {
+          notifyUserId = profile_id;
+          targetLabel = `the gig "${gig.title}"`;
+        } else if (profile_id === user.id) {
+          return NextResponse.json(
+            { error: "You cannot leave a testimonial for yourself" },
+            { status: 400 }
+          );
+        } else {
+          return NextResponse.json(
+            { error: "profile_id is required when the gig poster leaves a testimonial" },
+            { status: 400 }
+          );
+        }
+      } else {
+        // Someone else leaving a testimonial on this gig — notify the poster
+        notifyUserId = gig.poster_id;
+        targetLabel = `your gig "${gig.title}"`;
       }
-
-      notifyUserId = gig.poster_id;
-      targetLabel = `your gig "${gig.title}"`;
       notificationLink = "/dashboard/testimonials";
     } else {
       // Profile testimonial
@@ -150,6 +162,11 @@ export async function POST(request: NextRequest) {
       notificationLink = "/dashboard/testimonials";
     }
 
+    // Any testimonial tied to a gig auto-approves (including gig+profile worker reviews)
+    // to avoid manual gatekeeping of gig feedback.
+    // Profile-only testimonials remain pending for profile owner approval.
+    const autoApprove = !!gig_id;
+
     const { data, error } = await serviceClient
       .from("testimonials")
       .insert({
@@ -158,6 +175,7 @@ export async function POST(request: NextRequest) {
         author_id: user.id,
         rating,
         content: content.trim(),
+        ...(autoApprove ? { status: "approved" } : {}),
       })
       .select()
       .single();
@@ -211,12 +229,12 @@ export async function POST(request: NextRequest) {
               </blockquote>
               <p>
                 <a href="${baseUrl}${notificationLink}" style="display: inline-block; padding: 10px 20px; background: #6366f1; color: white; text-decoration: none; border-radius: 6px;">
-                  Review & Approve
+                  ${autoApprove ? "View Testimonial" : "Review & Approve"}
                 </a>
               </p>
-              <p style="color: #888; font-size: 13px;">
+              ${!autoApprove ? `<p style="color: #888; font-size: 13px;">
                 Testimonials appear after you approve them.
-              </p>
+              </p>` : ""}
             </div>
           `,
           text: `${authorName} left a ${rating}-star testimonial on ${targetLabel}: "${content.trim()}"\n\nReview it at ${baseUrl}${notificationLink}`,

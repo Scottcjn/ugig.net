@@ -8,8 +8,9 @@ import { EmojiPicker } from "./EmojiPicker";
 
 export const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
 export const MAX_FILES = 5;
-export const ACCEPTED_TYPES =
-  "image/*,application/pdf,application/zip,application/x-zip-compressed,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain";
+// Allow all file types in the picker (audio/video/images/docs/etc).
+// Server-side limits are enforced by auth + size + file count constraints.
+export const ACCEPTED_TYPES = "*/*";
 
 function isImageFile(file: File) {
   return file.type.startsWith("image/");
@@ -133,6 +134,8 @@ export function MessageInput({
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
       }
+      // Refocus input after sending
+      requestAnimationFrame(() => textareaRef.current?.focus());
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to send message");
     } finally {

@@ -12,6 +12,8 @@ import { ApplicationActions } from "@/components/applications/ApplicationActions
 import { ExpandableApplicationCard } from "@/components/applications/ExpandableApplicationCard";
 import { StartConversationButton } from "@/components/messages/StartConversationButton";
 import { MarkdownContent } from "@/components/ui/MarkdownContent";
+import { EscrowPaymentButton } from "@/components/gigs/EscrowPaymentButton";
+import { InvoiceButton } from "@/components/gigs/InvoiceButton";
 
 interface ApplicationsPageProps {
   params: Promise<{ id: string }>;
@@ -52,7 +54,7 @@ export default async function ApplicationsPage({ params }: ApplicationsPageProps
   // Get gig details
   const { data: gig, error } = await supabase
     .from("gigs")
-    .select("id, title, poster_id, status")
+    .select("id, title, poster_id, status, budget_min, budget_max")
     .eq("id", id)
     .single();
 
@@ -106,6 +108,21 @@ export default async function ApplicationsPage({ params }: ApplicationsPageProps
   const shortlistedApps = applications?.filter((a) => a.status === "shortlisted") || [];
   const acceptedApps = applications?.filter((a) => a.status === "accepted") || [];
   const rejectedApps = applications?.filter((a) => a.status === "rejected") || [];
+
+  // Fetch escrows for all accepted applications
+  const escrowMap: Record<string, any> = {};
+  if (acceptedApps.length > 0) {
+    const { data: escrows } = await (supabase as any)
+      .from("gig_escrows")
+      .select("*")
+      .eq("gig_id", id)
+      .in("application_id", acceptedApps.map((a: any) => a.id));
+    if (escrows) {
+      for (const esc of escrows) {
+        escrowMap[esc.application_id] = esc;
+      }
+    }
+  }
   const withdrawnApps = applications?.filter((a) => a.status === "withdrawn") || [];
 
   const activeApps = [...pendingApps, ...reviewingApps, ...shortlistedApps];
@@ -439,6 +456,30 @@ export default async function ApplicationsPage({ params }: ApplicationsPageProps
                               </Badge>
                             )}
                           </div>
+                        </div>
+                      )}
+
+                      {/* Escrow & Invoice — only for accepted applications */}
+                      {app.status === "accepted" && (
+                        <div className="mb-4 space-y-3">
+                          <EscrowPaymentButton
+                            gigId={id}
+                            applicationId={app.id}
+                            currentUserId={user.id}
+                            isPoster={true}
+                            isWorker={false}
+                            budgetAmount={app.proposed_rate || gig.budget_min || gig.budget_max}
+                            existingEscrow={escrowMap[app.id] || null}
+                            workerId={applicant?.id}
+                          />
+                          <InvoiceButton
+                            gigId={id}
+                            applicationId={app.id}
+                            currentUserId={user.id}
+                            isPoster={true}
+                            isWorker={false}
+                            budgetAmount={app.proposed_rate || gig.budget_min || gig.budget_max}
+                          />
                         </div>
                       )}
 

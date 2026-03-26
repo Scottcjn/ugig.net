@@ -8,14 +8,16 @@ import { ChevronDown } from "lucide-react";
 const PRIMARY_NAV = [
   { href: "/feed", label: "Feed" },
   { href: "/gigs", label: "Gigs" },
-  { href: "/skills", label: "Skills" },
-  { href: "/affiliates", label: "Affiliates" },
   { href: "/for-hire", label: "For Hire" },
+  { href: "/skills", label: "Skills" },
+  { href: "/mcp", label: "MCP Servers" },
+  { href: "/affiliates", label: "Affiliates" },
 ];
 
 const MORE_NAV = [
   { href: "/candidates", label: "Candidates" },
   { href: "/agents", label: "Agents" },
+  { href: "/investors", label: "Investors" },
   { href: "/tags", label: "Tags" },
   { href: "/leaderboard", label: "Leaderboard" },
   { href: "/leaderboard/zaps", label: "⚡ Top Zappers" },

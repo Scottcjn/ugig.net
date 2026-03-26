@@ -1,6 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { conversationCreateSchema } from "@/lib/validations";
 import { getAuthContext } from "@/lib/auth/get-user";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/types/database";
+
+const ARCHIVE_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+/**
+ * Lazy-archive stale conversations (last message > 7 days ago).
+ * Called before the inbox query so stale rows are filtered out.
+ */
+async function lazyArchiveStale(supabase: SupabaseClient<Database>) {
+  const cutoff = new Date(Date.now() - ARCHIVE_THRESHOLD_MS).toISOString();
+  await supabase
+    .from("conversations")
+    .update({ archived_at: new Date().toISOString() })
+    .is("archived_at", null)
+    .lt("last_message_at", cutoff);
+}
 
 // GET /api/conversations - List user's conversations
 export async function GET(request: NextRequest) {
@@ -14,6 +31,11 @@ export async function GET(request: NextRequest) {
     // Check if requesting archived conversations
     const { searchParams } = new URL(request.url);
     const showArchived = searchParams.get("archived") === "true";
+
+    // Lazy-archive stale conversations before querying
+    if (!showArchived) {
+      await lazyArchiveStale(supabase);
+    }
 
     // Get conversations where user is a participant
     let query = supabase

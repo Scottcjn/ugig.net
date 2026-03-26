@@ -135,7 +135,13 @@ export function GigComments({ gigId, currentUserId, gigOwnerId }: GigCommentsPro
   };
 
   const handleDeleteComment = async (commentId: string) => {
-    if (!await confirm("Are you sure you want to delete this comment?")) return;
+    try {
+      const ok = await confirm("Are you sure you want to delete this comment?");
+      if (!ok) return;
+    } catch {
+      // Fallback to native confirm if dialog provider fails
+      if (!window.confirm("Are you sure you want to delete this comment?")) return;
+    }
 
     setError(null);
 
@@ -149,7 +155,8 @@ export function GigComments({ gigId, currentUserId, gigOwnerId }: GigCommentsPro
         throw new Error(data.error || "Failed to delete comment");
       }
 
-      await fetchComments();
+      // Remove from local state immediately
+      setThreads((prev: GigCommentThread[]) => prev.filter((c: GigCommentThread) => c.id !== commentId));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete comment");
     }
@@ -261,8 +268,12 @@ export function GigComments({ gigId, currentUserId, gigOwnerId }: GigCommentsPro
               )}
               {canDelete(comment.author_id) && (
                 <button
-                  onClick={() => handleDeleteComment(comment.id)}
-                  className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleDeleteComment(comment.id);
+                  }}
+                  className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1 cursor-pointer"
                 >
                   <Trash2 className="h-3 w-3" />
                   Delete

@@ -3,6 +3,8 @@ import { getAuthContext } from "@/lib/auth/get-user";
 import { releaseEscrow } from "@/lib/coinpayportal";
 import { getUserDid, onGigCompleted } from "@/lib/reputation-hooks";
 import { z } from "zod";
+import { sendEmail, testimonialReminderEmail } from "@/lib/email";
+import { createServiceClient } from "@/lib/supabase/service";
 
 const releaseSchema = z.object({
   escrow_id: z.string().uuid(),
@@ -116,6 +118,62 @@ export async function POST(
         platform_fee_usd: escrow.platform_fee_usd,
       },
     });
+
+    // Email reminders to both parties to leave gig-specific testimonials
+    try {
+      const serviceClient = createServiceClient();
+
+      const { data: participants } = await supabase
+        .from("profiles")
+        .select("id, username, full_name")
+        .in("id", [escrow.poster_id, escrow.worker_id]);
+
+      const poster = participants?.find((p) => p.id === escrow.poster_id) as
+        | { id: string; username: string | null; full_name: string | null }
+        | undefined;
+      const worker = participants?.find((p) => p.id === escrow.worker_id) as
+        | { id: string; username: string | null; full_name: string | null }
+        | undefined;
+
+      const [{ data: posterAuth }, { data: workerAuth }] = await Promise.all([
+        serviceClient.auth.admin.getUserById(escrow.poster_id),
+        serviceClient.auth.admin.getUserById(escrow.worker_id),
+      ]);
+
+      const posterEmail = posterAuth?.user?.email || null;
+      const workerEmail = workerAuth?.user?.email || null;
+
+      const baseUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "https://ugig.net";
+
+      const posterName = poster?.full_name || poster?.username || "there";
+      const workerName = worker?.full_name || worker?.username || "there";
+      const posterProfileUrl = poster?.username ? `${baseUrl}/u/${poster.username}` : `${baseUrl}/profile`;
+      const workerProfileUrl = worker?.username ? `${baseUrl}/u/${worker.username}` : `${baseUrl}/profile`;
+
+      if (posterEmail) {
+        const email = testimonialReminderEmail({
+          recipientName: posterName,
+          otherPartyName: workerName,
+          gigTitle: gig?.title || "your completed gig",
+          targetProfileUrl: workerProfileUrl,
+          ownProfileUrl: posterProfileUrl,
+        });
+        await sendEmail({ to: posterEmail, ...email });
+      }
+
+      if (workerEmail) {
+        const email = testimonialReminderEmail({
+          recipientName: workerName,
+          otherPartyName: posterName,
+          gigTitle: gig?.title || "your completed gig",
+          targetProfileUrl: posterProfileUrl,
+          ownProfileUrl: workerProfileUrl,
+        });
+        await sendEmail({ to: workerEmail, ...email });
+      }
+    } catch (emailErr) {
+      console.error("Failed to send testimonial reminder emails:", emailErr);
+    }
 
     // Submit reputation receipt for completed work
     try {

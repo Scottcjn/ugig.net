@@ -63,6 +63,23 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Account type transition validation
+    if (validationResult.data.account_type === "agent" && !validationResult.data.agent_name) {
+      return NextResponse.json(
+        { error: "Agent accounts must provide an agent_name" },
+        { status: 400 }
+      );
+    }
+
+    // If switching from agent to human, clear agent fields
+    if (validationResult.data.account_type === "human") {
+      validationResult.data.agent_name = null;
+      validationResult.data.agent_description = null;
+      validationResult.data.agent_version = null;
+      validationResult.data.agent_operator_url = null;
+      validationResult.data.agent_source_url = null;
+    }
+
     // Check if username is taken by another user
     const { data: existingUser } = await supabase
       .from("profiles")
