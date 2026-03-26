@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { CreditCard, Zap, Coins } from "lucide-react";
 import Link from "next/link";
 
@@ -18,17 +19,28 @@ interface Transaction {
   paid_at: string;
 }
 
-export function TopContributors() {
+function TopContributorsInner() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const searchParams = useSearchParams();
+  const pendingPayment = searchParams.get("payment") === "success";
 
   useEffect(() => {
-    fetch("/api/funding/contributors")
-      .then((r) => r.json())
-      .then((d) => setTransactions(d.transactions || []))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+    const load = () => {
+      fetch("/api/funding/contributors")
+        .then((r) => r.json())
+        .then((d) => setTransactions(d.transactions || []))
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    };
+    load();
+    // If payment just completed, poll for updates
+    if (pendingPayment) {
+      const interval = setInterval(load, 10000);
+      const timeout = setTimeout(() => clearInterval(interval), 120000);
+      return () => { clearInterval(interval); clearTimeout(timeout); };
+    }
+  }, [pendingPayment]);
 
   if (loading) {
     return (
@@ -40,7 +52,7 @@ export function TopContributors() {
     );
   }
 
-  if (transactions.length === 0) {
+  if (transactions.length === 0 && !pendingPayment && !loading) {
     return (
       <p className="text-muted-foreground text-sm">
         No contributions yet. Be the first!
@@ -50,6 +62,19 @@ export function TopContributors() {
 
   return (
     <div className="space-y-2">
+      {pendingPayment && (
+        <div className="flex items-center gap-3 p-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-800 animate-pulse">
+          <div className="flex-shrink-0">
+            <div className="h-8 w-8 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
+              <div className="h-4 w-4 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-medium text-yellow-800 dark:text-yellow-300">Payment processing...</p>
+            <p className="text-xs text-yellow-600 dark:text-yellow-400">Waiting for blockchain confirmation</p>
+          </div>
+        </div>
+      )}
       {transactions.map((tx) => (
         <div
           key={tx.id}
@@ -103,5 +128,13 @@ export function TopContributors() {
         </div>
       ))}
     </div>
+  );
+}
+
+export function TopContributors() {
+  return (
+    <Suspense fallback={<div className="animate-pulse space-y-3">{[1,2,3].map(i => <div key={i} className="h-12 bg-muted rounded-lg" />)}</div>}>
+      <TopContributorsInner />
+    </Suspense>
   );
 }
