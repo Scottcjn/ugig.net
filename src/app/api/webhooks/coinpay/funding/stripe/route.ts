@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { stripe } from "@/lib/stripe";
+import { sendEmail } from "@/lib/email";
 import type Stripe from "stripe";
+
+const BUSINESS_EMAIL = process.env.COINPAY_BUSINESS_EMAIL || "payments@ugig.net";
 
 function getWebhookSecret(): string {
   return process.env.COINPAY_STRIPE_WEBHOOK_SECRET || "";
@@ -149,7 +152,7 @@ async function handlePaymentSucceeded(paymentObject: any) {
     );
   }
 
-  // Notify user
+  // Notify user (in-app)
   await supabase.from("notifications").insert({
     user_id: userId,
     type: "payment_received",
@@ -157,6 +160,51 @@ async function handlePaymentSucceeded(paymentObject: any) {
     body: `Your $${amountUsd.toFixed(2)} funding payment was successful. ${creditsToAward.toLocaleString()} credits added to your account.`,
     data: { payment_id: paymentId, amount_usd: amountUsd, credits: creditsToAward },
   });
+
+  // Get user email for confirmation
+  const { data: userProfile } = await supabase
+    .from("profiles")
+    .select("username, full_name, email:id")
+    .eq("id", userId)
+    .single();
+
+  // Get user email from auth
+  const { data: authData } = await (supabase as any).auth.admin.getUserById(userId);
+  const userEmail = authData?.user?.email;
+  const displayName = userProfile?.full_name || userProfile?.username || "Contributor";
+
+  // Email to contributor
+  if (userEmail) {
+    await sendEmail({
+      to: userEmail,
+      subject: `Thank you for your $${amountUsd.toFixed(2)} contribution to ugig.net! 💳`,
+      html: `
+        <h2>Thank you, ${displayName}! 🎉</h2>
+        <p>Your card payment of <strong>$${amountUsd.toFixed(2)}</strong> has been received.</p>
+        ${creditsToAward > 0 ? `<p><strong>${creditsToAward.toLocaleString()} credits</strong> have been added to your account.</p>` : ""}
+        <p>Your support helps build the future of AI-powered freelancing.</p>
+        <p><a href="https://ugig.net/funding">View funding progress →</a></p>
+        <p>— The ugig.net team</p>
+      `,
+    }).catch((err) => console.error("[CoinPay Stripe Webhook] User email failed:", err));
+  }
+
+  // Email to business owner
+  await sendEmail({
+    to: BUSINESS_EMAIL,
+    subject: `New funding: $${amountUsd.toFixed(2)} from ${displayName} 💳`,
+    html: `
+      <h2>New Card Funding Received</h2>
+      <ul>
+        <li><strong>From:</strong> ${displayName} (${userEmail || "no email"})</li>
+        <li><strong>Amount:</strong> $${amountUsd.toFixed(2)}</li>
+        <li><strong>Credits awarded:</strong> ${creditsToAward.toLocaleString()}</li>
+        <li><strong>Stripe Payment:</strong> ${paymentId}</li>
+        <li><strong>Time:</strong> ${new Date().toISOString()}</li>
+      </ul>
+      <p><a href="https://ugig.net/funding">View funding page →</a></p>
+    `,
+  }).catch((err) => console.error("[CoinPay Stripe Webhook] Business email failed:", err));
 }
 
 /**
