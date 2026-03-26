@@ -16,21 +16,14 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const { id } = await params;
 
     const body = await request.json();
-    const { status } = body;
-
-    if (!status || !["approved", "rejected"].includes(status)) {
-      return NextResponse.json(
-        { error: "Status must be 'approved' or 'rejected'" },
-        { status: 400 }
-      );
-    }
+    const { status, content, rating } = body;
 
     const serviceClient = createServiceClient();
 
-    // First fetch the testimonial to check ownership
+    // Fetch the testimonial to check ownership
     const { data: testimonial, error: fetchError } = await serviceClient
       .from("testimonials")
-      .select("id, profile_id, gig_id")
+      .select("id, profile_id, gig_id, author_id")
       .eq("id", id)
       .single();
 
@@ -41,7 +34,56 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Check permission: profile owner for profile testimonials, gig poster for gig testimonials
+    // Author editing their own testimonial (content/rating)
+    if (content !== undefined || rating !== undefined) {
+      if (testimonial.author_id !== user.id) {
+        return NextResponse.json(
+          { error: "Only the author can edit testimonial content" },
+          { status: 403 }
+        );
+      }
+
+      const updateData: Record<string, unknown> = {};
+      if (content !== undefined) {
+        if (typeof content !== "string" || content.trim().length < 10) {
+          return NextResponse.json({ error: "Content must be at least 10 characters" }, { status: 400 });
+        }
+        if (content.length > 2000) {
+          return NextResponse.json({ error: "Content must be under 2000 characters" }, { status: 400 });
+        }
+        updateData.content = content.trim();
+      }
+      if (rating !== undefined) {
+        if (typeof rating !== "number" || rating < 1 || rating > 5) {
+          return NextResponse.json({ error: "Rating must be 1-5" }, { status: 400 });
+        }
+        updateData.rating = rating;
+      }
+      // Editing resets to pending for re-approval
+      updateData.status = "pending";
+
+      const { data, error } = await serviceClient
+        .from("testimonials")
+        .update(updateData)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error || !data) {
+        return NextResponse.json({ error: "Failed to update testimonial" }, { status: 400 });
+      }
+
+      return NextResponse.json({ testimonial: data });
+    }
+
+    // Profile/gig owner managing status (approve/reject)
+    if (!status || !["approved", "rejected"].includes(status)) {
+      return NextResponse.json(
+        { error: "Status must be 'approved' or 'rejected'" },
+        { status: 400 }
+      );
+    }
+
     let hasPermission = false;
     if (testimonial.profile_id && testimonial.profile_id === user.id) {
       hasPermission = true;

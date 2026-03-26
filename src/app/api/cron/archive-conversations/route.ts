@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
         .eq("conversation_id", conv.id)
         .gte("created_at", sevenDaysAgo);
 
-      if (count === 0) {
+      if ((count ?? 0) === 0) {
         toArchive.push(conv.id);
       }
     }
