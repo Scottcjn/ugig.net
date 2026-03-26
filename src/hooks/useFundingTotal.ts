@@ -12,11 +12,16 @@ export function useFundingTotal() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/funding/total")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((d) => setData(d))
-      .catch(() => null)
-      .finally(() => setLoading(false));
+    const load = () => {
+      fetch("/api/funding/total")
+        .then((res) => (res.ok ? res.json() : null))
+        .then((d) => setData(d))
+        .catch(() => null)
+        .finally(() => setLoading(false));
+    };
+    load();
+    const interval = setInterval(load, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   return { data, loading };

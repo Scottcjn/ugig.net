@@ -34,12 +34,9 @@ function TopContributorsInner() {
         .finally(() => setLoading(false));
     };
     load();
-    // If payment just completed, poll for updates
-    if (pendingPayment) {
-      const interval = setInterval(load, 10000);
-      const timeout = setTimeout(() => clearInterval(interval), 120000);
-      return () => { clearInterval(interval); clearTimeout(timeout); };
-    }
+    // Poll: 10s if payment pending, 30s otherwise
+    const interval = setInterval(load, pendingPayment ? 10000 : 30000);
+    return () => clearInterval(interval);
   }, [pendingPayment]);
 
   if (loading) {
