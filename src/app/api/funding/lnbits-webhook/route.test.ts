@@ -27,6 +27,15 @@ function makeRequest(body: Record<string, unknown>) {
   });
 }
 
+/** Simulate LNbits double-encoding: json=payment.json() where .json() is already a string */
+function makeDoubleEncodedRequest(body: Record<string, unknown>) {
+  return new NextRequest("http://localhost/api/funding/lnbits-webhook", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(JSON.stringify(body)),
+  });
+}
+
 function mockPaymentLookup(payment: Record<string, unknown> | null) {
   const chain: Record<string, ReturnType<typeof vi.fn>> = {};
   for (const m of [
@@ -70,6 +79,13 @@ describe("POST /api/funding/lnbits-webhook", () => {
     mockFrom.mockReturnValue(mockPaymentLookup(null));
     const res = await POST(makeRequest({ checking_id: "lnbits-hash" }));
     // 404 means it parsed the hash fine, just didn't find it in DB
+    expect(res.status).toBe(404);
+  });
+
+  it("handles double-encoded JSON from LNbits (json=payment.json())", async () => {
+    mockFrom.mockReturnValue(mockPaymentLookup(null));
+    const res = await POST(makeDoubleEncodedRequest({ payment_hash: "double-encoded-hash" }));
+    // 404 means it parsed through the double-encoding and found the hash
     expect(res.status).toBe(404);
   });
 

@@ -11,26 +11,28 @@ import { FUNDING_TIERS, LIFETIME_THRESHOLD_USD } from "@/lib/funding";
  */
 export async function POST(request: NextRequest) {
   try {
-    // Log raw body for debugging webhook format
+    // LNbits double-encodes the webhook payload: it calls
+    // httpx.post(url, json=payment.json()) where payment.json() is already
+    // a JSON string, so the body we receive is a JSON-encoded string.
+    // Parse once, and if the result is a string, parse again.
     const rawText = await request.text();
-    console.log("[LNbits Webhook] Raw body:", rawText);
-    console.log("[LNbits Webhook] Content-Type:", request.headers.get("content-type"));
-
     let body: Record<string, unknown>;
     try {
-      body = JSON.parse(rawText);
+      let parsed: unknown = JSON.parse(rawText);
+      if (typeof parsed === "string") {
+        parsed = JSON.parse(parsed);
+      }
+      body = parsed as Record<string, unknown>;
     } catch {
-      console.error("[LNbits Webhook] Failed to parse JSON body");
+      console.error("[LNbits Webhook] Failed to parse body:", rawText.slice(0, 500));
       return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
     }
-
-    console.log("[LNbits Webhook] Parsed keys:", Object.keys(body));
 
     // LNbits sends checking_id as the primary key; payment_hash may also be present
     const paymentHash = (body.payment_hash || body.checking_id) as string | undefined;
 
     if (!paymentHash || typeof paymentHash !== "string") {
-      console.error("[LNbits Webhook] Missing payment_hash/checking_id. Body keys:", Object.keys(body), "Full body:", JSON.stringify(body).slice(0, 500));
+      console.error("[LNbits Webhook] Missing payment_hash/checking_id. Body keys:", Object.keys(body));
       return NextResponse.json({ error: "Missing payment_hash" }, { status: 400 });
     }
 
