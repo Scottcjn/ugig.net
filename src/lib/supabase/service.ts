@@ -63,6 +63,9 @@ export async function authenticateWithToken(authHeader: string | null): Promise<
     },
   });
 
+  // Disconnect realtime immediately — token auth clients only need REST
+  supabase.realtime.disconnect();
+
   const { data: { user }, error } = await supabase.auth.getUser(token);
   
   if (error || !user) {

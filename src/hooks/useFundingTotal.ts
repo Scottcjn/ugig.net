@@ -20,7 +20,8 @@ export function useFundingTotal() {
         .finally(() => setLoading(false));
     };
     load();
-    const interval = setInterval(load, 30000);
+    // Poll every 5 minutes — funding totals don't change frequently
+    const interval = setInterval(load, 300_000);
     return () => clearInterval(interval);
   }, []);
 

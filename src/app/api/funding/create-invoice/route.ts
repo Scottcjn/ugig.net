@@ -20,6 +20,14 @@ const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT_MAX = 5;
 const RATE_LIMIT_WINDOW_MS = 60_000;
 
+// Clean up expired rate limit entries every 60s to prevent unbounded growth
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of rateLimitMap) {
+    if (entry.resetAt < now) rateLimitMap.delete(key);
+  }
+}, 60_000).unref();
+
 /** Reset rate limiter (for testing) */
 export function _resetRateLimit() {
   rateLimitMap.clear();

@@ -34,8 +34,8 @@ function TopContributorsInner() {
         .finally(() => setLoading(false));
     };
     load();
-    // Poll: 10s if payment pending, 30s otherwise
-    const interval = setInterval(load, pendingPayment ? 10000 : 30000);
+    // Poll: 10s if payment pending, 5min otherwise
+    const interval = setInterval(load, pendingPayment ? 10_000 : 300_000);
     return () => clearInterval(interval);
   }, [pendingPayment]);
 

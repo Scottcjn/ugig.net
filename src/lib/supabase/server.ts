@@ -5,7 +5,7 @@ import type { Database } from "@/types/database";
 export async function createClient() {
   const cookieStore = await cookies();
 
-  return createServerClient<Database>(
+  const client = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -26,4 +26,11 @@ export async function createClient() {
       },
     }
   );
+
+  // Eagerly disconnect realtime — server-side clients only need REST/Auth.
+  // Each createServerClient() allocates a RealtimeClient with WebSocket state;
+  // disconnecting immediately prevents memory buildup under high request volume.
+  client.realtime.disconnect();
+
+  return client;
 }

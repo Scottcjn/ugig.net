@@ -53,8 +53,10 @@ export function NotificationBell() {
     }
     fetchNotifications();
 
-    // Polling for new notifications every 30 seconds
-    const interval = setInterval(fetchNotifications, 30000);
+    // Poll every 60s, but only when the tab is visible
+    const interval = setInterval(() => {
+      if (!document.hidden) fetchNotifications();
+    }, 60_000);
     return () => clearInterval(interval);
   }, []);
 
