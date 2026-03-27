@@ -7,6 +7,7 @@ import {
   FUNDING_TIERS,
   VALID_FUNDING_TIERS,
   INVOICE_EXPIRY_SECONDS,
+  usdToSats,
   type FundingTierId,
 } from "@/lib/funding";
 
@@ -70,14 +71,27 @@ export async function POST(request: NextRequest) {
     const { tier } = parsed.data;
     const tierConfig = FUNDING_TIERS[tier];
 
+    // Convert USD value to sats using live BTC rate
+    const amountSats = await usdToSats(tierConfig.usdValue);
+    if (amountSats < 1) {
+      return NextResponse.json(
+        { error: "Amount too small to create invoice" },
+        { status: 400 }
+      );
+    }
+
+    console.log(
+      `[Funding] ${tier}: $${tierConfig.usdValue} → ${amountSats} sats (live rate)`
+    );
+
     // Build webhook URL
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ugig.net";
     const webhookUrl = `${baseUrl}/api/funding/lnbits-webhook`;
 
     // Create LNbits invoice
     const invoice = await createInvoice({
-      amount: tierConfig.sats,
-      memo: `ugig.net funding: ${tierConfig.label}`,
+      amount: amountSats,
+      memo: `ugig.net funding: ${tierConfig.label} ($${tierConfig.usdValue})`,
       expiry: INVOICE_EXPIRY_SECONDS,
       webhook: webhookUrl,
     });
@@ -95,7 +109,7 @@ export async function POST(request: NextRequest) {
         payment_hash: invoice.payment_hash,
         bolt11: invoice.payment_request,
         tier,
-        amount_sats: tierConfig.sats,
+        amount_sats: amountSats,
         amount_usd: tierConfig.usdValue,
         status: "pending",
         expires_at: expiresAt,
@@ -114,7 +128,7 @@ export async function POST(request: NextRequest) {
       paymentHash: invoice.payment_hash,
       expiresAt,
       tier,
-      amountSats: tierConfig.sats,
+      amountSats,
     });
   } catch (error) {
     console.error("Create funding invoice error:", error);
