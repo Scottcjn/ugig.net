@@ -128,6 +128,13 @@ export default function WalletPage() {
     setTransactions(t.transactions ?? []);
   }, []);
 
+  const refreshBalance = useCallback(async () => {
+    try {
+      const b = await fetch("/api/wallet/balance").then((r) => r.json());
+      if (mountedRef.current) setBalance(b.balance_sats ?? 0);
+    } catch { /* ignore */ }
+  }, []);
+
   useEffect(() => {
     Promise.all([
       fetch("/api/wallet/balance").then((r) => r.json()),
@@ -137,7 +144,16 @@ export default function WalletPage() {
       setTransactions(t.transactions ?? []);
       setLoading(false);
     }).catch(() => setLoading(false));
-  }, []);
+
+    // Poll balance every 15s to pick up incoming Lightning Address payments
+    const balancePoll = setInterval(() => {
+      if (!document.hidden) {
+        refreshBalance();
+        refreshTransactions();
+      }
+    }, 15_000);
+    return () => clearInterval(balancePoll);
+  }, [refreshBalance, refreshTransactions]);
 
   useEffect(() => {
     mountedRef.current = true;
