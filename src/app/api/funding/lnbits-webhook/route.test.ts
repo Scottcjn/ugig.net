@@ -55,7 +55,7 @@ describe("POST /api/funding/lnbits-webhook", () => {
     mockCheckPayment.mockResolvedValue({ paid: true });
   });
 
-  it("returns 400 if no payment_hash", async () => {
+  it("returns 400 if no payment_hash or checking_id", async () => {
     const res = await POST(makeRequest({}));
     expect(res.status).toBe(400);
   });
@@ -63,6 +63,13 @@ describe("POST /api/funding/lnbits-webhook", () => {
   it("returns 404 if payment not found in DB", async () => {
     mockFrom.mockReturnValue(mockPaymentLookup(null));
     const res = await POST(makeRequest({ payment_hash: "unknown" }));
+    expect(res.status).toBe(404);
+  });
+
+  it("accepts checking_id as fallback (LNbits webhook format)", async () => {
+    mockFrom.mockReturnValue(mockPaymentLookup(null));
+    const res = await POST(makeRequest({ checking_id: "lnbits-hash" }));
+    // 404 means it parsed the hash fine, just didn't find it in DB
     expect(res.status).toBe(404);
   });
 

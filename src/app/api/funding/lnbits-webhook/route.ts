@@ -12,9 +12,11 @@ import { FUNDING_TIERS, LIFETIME_THRESHOLD_USD } from "@/lib/funding";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const paymentHash = body.payment_hash;
+    // LNbits sends checking_id as the primary key; payment_hash may also be present
+    const paymentHash = body.payment_hash || body.checking_id;
 
     if (!paymentHash || typeof paymentHash !== "string") {
+      console.error("[LNbits Webhook] Missing payment_hash/checking_id. Body keys:", Object.keys(body));
       return NextResponse.json({ error: "Missing payment_hash" }, { status: 400 });
     }
 
