@@ -1,64 +1,99 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createServiceClient } from '@/lib/supabase/service';
 
 const LNBITS_URL = process.env.LNBITS_URL || 'https://ln.coinpayportal.com';
 
 /**
- * Proxy /.well-known/lnurlp/<username> to LNbits
- * 
- * This is what makes user@ugig.net Lightning Addresses work.
- * When a wallet looks up chovy@ugig.net, it fetches:
- *   https://ugig.net/.well-known/lnurlp/chovy
- * 
- * We proxy that to our LNbits instance which handles the LNURL-pay flow.
+ * /.well-known/lnurlp/<username> — Lightning Address (LNURL-pay step 1)
+ *
+ * Looks up the user's LNbits wallet from our DB, then fetches THEIR specific
+ * lnurlp link from LNbits (not the global username resolution, which can
+ * hit stale/orphaned links).
  */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ username: string }> }
 ) {
   const { username } = await params;
-  
-  // Forward query params (needed for LNURL-pay callback with amount)
-  const searchParams = request.nextUrl.searchParams.toString();
-  const queryString = searchParams ? `?${searchParams}` : '';
-  
-  try {
-    const res = await fetch(
-      `${LNBITS_URL}/.well-known/lnurlp/${username}${queryString}`,
-      {
-        headers: {
-          'Accept': 'application/json',
-        },
-      }
-    );
+  const host = request.headers.get('host') || 'ugig.net';
 
-    if (!res.ok) {
+  try {
+    const supabase = createServiceClient();
+
+    // Look up the user's profile and LNbits wallet
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('username', username.toLowerCase())
+      .single();
+
+    if (!profile) {
       return NextResponse.json(
         { status: 'ERROR', reason: `Unknown user: ${username}` },
-        { status: res.status }
+        { status: 404, headers: { 'Access-Control-Allow-Origin': '*' } }
       );
     }
 
-    const data = await res.json();
-    
-    // Rewrite callback URL to go through our domain instead of ln.coinpayportal.com
-    if (data.callback && data.callback.includes(LNBITS_URL)) {
-      data.callback = data.callback.replace(
-        LNBITS_URL,
-        `https://${request.headers.get('host') || 'ugig.net'}`
+    const { data: lnWallet } = await (supabase
+      .from('user_ln_wallets' as any)
+      .select('invoice_key')
+      .eq('user_id', profile.id)
+      .single() as any);
+
+    if (!lnWallet?.invoice_key) {
+      return NextResponse.json(
+        { status: 'ERROR', reason: `No Lightning wallet for ${username}` },
+        { status: 404, headers: { 'Access-Control-Allow-Origin': '*' } }
       );
     }
 
-    return NextResponse.json(data, {
+    // Fetch the user's LNURL-pay links from their specific wallet
+    const linksRes = await fetch(`${LNBITS_URL}/lnurlp/api/v1/links`, {
+      headers: { 'X-Api-Key': lnWallet.invoice_key, 'Accept': 'application/json' },
+    });
+
+    if (!linksRes.ok) {
+      return NextResponse.json(
+        { status: 'ERROR', reason: 'Lightning Address service unavailable' },
+        { status: 502, headers: { 'Access-Control-Allow-Origin': '*' } }
+      );
+    }
+
+    const links = await linksRes.json();
+    const link = Array.isArray(links) ? links[0] : null;
+
+    if (!link) {
+      return NextResponse.json(
+        { status: 'ERROR', reason: `No Lightning Address for ${username}` },
+        { status: 404, headers: { 'Access-Control-Allow-Origin': '*' } }
+      );
+    }
+
+    // Build LNURL-pay response using the correct link
+    // Rewrite callback to go through our domain
+    const callback = `https://${host}/lnurlp/api/v1/lnurl/cb/${link.id}`;
+
+    return NextResponse.json({
+      tag: 'payRequest',
+      callback,
+      minSendable: (link.min || 1) * 1000,        // sats → msats
+      maxSendable: (link.max || 10000000) * 1000,
+      metadata: JSON.stringify([
+        ['text/plain', `Payment to ${username}`],
+        ['text/identifier', `${username}@${host}`],
+      ]),
+      commentAllowed: link.comment_chars || 255,
+    }, {
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Content-Type': 'application/json',
       },
     });
   } catch (error) {
-    console.error('LNURL proxy error:', error);
+    console.error('LNURL-pay error:', error);
     return NextResponse.json(
       { status: 'ERROR', reason: 'Lightning Address service unavailable' },
-      { status: 502 }
+      { status: 502, headers: { 'Access-Control-Allow-Origin': '*' } }
     );
   }
 }
