@@ -11,12 +11,26 @@ import { FUNDING_TIERS, LIFETIME_THRESHOLD_USD } from "@/lib/funding";
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    // Log raw body for debugging webhook format
+    const rawText = await request.text();
+    console.log("[LNbits Webhook] Raw body:", rawText);
+    console.log("[LNbits Webhook] Content-Type:", request.headers.get("content-type"));
+
+    let body: Record<string, unknown>;
+    try {
+      body = JSON.parse(rawText);
+    } catch {
+      console.error("[LNbits Webhook] Failed to parse JSON body");
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    }
+
+    console.log("[LNbits Webhook] Parsed keys:", Object.keys(body));
+
     // LNbits sends checking_id as the primary key; payment_hash may also be present
-    const paymentHash = body.payment_hash || body.checking_id;
+    const paymentHash = (body.payment_hash || body.checking_id) as string | undefined;
 
     if (!paymentHash || typeof paymentHash !== "string") {
-      console.error("[LNbits Webhook] Missing payment_hash/checking_id. Body keys:", Object.keys(body));
+      console.error("[LNbits Webhook] Missing payment_hash/checking_id. Body keys:", Object.keys(body), "Full body:", JSON.stringify(body).slice(0, 500));
       return NextResponse.json({ error: "Missing payment_hash" }, { status: 400 });
     }
 
