@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     if (amount_sats <= 0) {
       return NextResponse.json({ error: "Amount must be positive" }, { status: 400 });
     }
-    if (!["post", "gig", "comment", "profile", "skill", "mcp"].includes(target_type)) {
+    if (!["post", "gig", "comment", "profile", "skill", "mcp", "prompt"].includes(target_type)) {
       return NextResponse.json({ error: "Invalid target_type" }, { status: 400 });
     }
 
