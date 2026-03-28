@@ -11,6 +11,18 @@ import { FUNDING_TIERS, LIFETIME_THRESHOLD_USD } from "@/lib/funding";
  */
 export async function POST(request: NextRequest) {
   try {
+    // Verify webhook secret to authenticate the request (#73)
+    const webhookSecret = process.env.LNBITS_WEBHOOK_SECRET;
+    if (!webhookSecret) {
+      console.error("[LNbits Webhook] LNBITS_WEBHOOK_SECRET not configured — rejecting request");
+      return NextResponse.json({ error: "Webhook not configured" }, { status: 500 });
+    }
+    const providedSecret = request.headers.get("x-webhook-secret") || request.nextUrl.searchParams.get("secret");
+    if (!providedSecret || providedSecret !== webhookSecret) {
+      console.error("[LNbits Webhook] Invalid or missing webhook secret");
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     // LNbits double-encodes the webhook payload: it calls
     // httpx.post(url, json=payment.json()) where payment.json() is already
     // a JSON string, so the body we receive is a JSON-encoded string.

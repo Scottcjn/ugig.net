@@ -19,10 +19,15 @@ import { POST } from "./route";
 
 // ── Helpers ────────────────────────────────────────────────────────
 
+const TEST_WEBHOOK_SECRET = "test-webhook-secret";
+
 function makeRequest(body: Record<string, unknown>) {
   return new NextRequest("http://localhost/api/funding/lnbits-webhook", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "x-webhook-secret": TEST_WEBHOOK_SECRET,
+    },
     body: JSON.stringify(body),
   });
 }
@@ -31,7 +36,10 @@ function makeRequest(body: Record<string, unknown>) {
 function makeDoubleEncodedRequest(body: Record<string, unknown>) {
   return new NextRequest("http://localhost/api/funding/lnbits-webhook", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "x-webhook-secret": TEST_WEBHOOK_SECRET,
+    },
     body: JSON.stringify(JSON.stringify(body)),
   });
 }
@@ -62,6 +70,7 @@ describe("POST /api/funding/lnbits-webhook", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockCheckPayment.mockResolvedValue({ paid: true });
+    process.env.LNBITS_WEBHOOK_SECRET = TEST_WEBHOOK_SECRET;
   });
 
   it("returns 400 if no payment_hash or checking_id", async () => {

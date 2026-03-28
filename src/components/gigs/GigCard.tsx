@@ -80,9 +80,12 @@ export function GigCard({
 
   const budgetDisplay = getBudgetDisplay();
 
+  const isForHire = gig.listing_type === "for_hire";
+  const detailHref = isForHire ? `/for-hire/${gig.id}` : `/gigs/${gig.id}`;
+
   return (
     <Link
-      href={`/gigs/${gig.id}`}
+      href={detailHref}
       className="block p-6 border border-border rounded-lg shadow-sm hover:shadow-md hover:border-primary/40 transition-all duration-200 bg-card"
     >
       <div className="flex items-start justify-between gap-4">
@@ -133,7 +136,7 @@ export function GigCard({
         {gig.skills_required.slice(0, 4).map((skill) => (
           <Link
             key={skill}
-            href={`/gigs?skill=${encodeURIComponent(skill)}`}
+            href={isForHire ? `/for-hire?skill=${encodeURIComponent(skill)}` : `/gigs?skill=${encodeURIComponent(skill)}`}
             onClick={(e) => e.stopPropagation()}
           >
             <Badge

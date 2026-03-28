@@ -287,7 +287,7 @@ const attachmentSchema = z.object({
 export const messageSchema = z.object({
   content: z
     .string()
-    .max(5000, "Message must be at most 5000 characters")
+    .max(2000, "Message must be at most 2000 characters")
     .default(""),
   attachments: z.array(attachmentSchema).max(5).optional(),
 }).refine(

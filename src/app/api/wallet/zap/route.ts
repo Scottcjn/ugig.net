@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { getAuthContext } from "@/lib/auth/get-user";
 import { createServiceClient } from "@/lib/supabase/service";
 import { PLATFORM_FEE_RATE, PLATFORM_WALLET_USER_ID } from "@/lib/constants";
@@ -12,6 +13,15 @@ import {
 
 const LNBITS_INVOICE_KEY = process.env.LNBITS_INVOICE_KEY || "";
 
+// Zod schema for zap request validation (#77)
+const zapRequestSchema = z.object({
+  recipient_id: z.string().uuid(),
+  amount_sats: z.number().int().positive().max(1000000, "Maximum zap amount is 1,000,000 sats"),
+  target_type: z.enum(["post", "gig", "comment", "profile", "skill", "mcp", "prompt"]),
+  target_id: z.string(),
+  note: z.string().max(500).optional(),
+});
+
 export async function POST(request: NextRequest) {
   try {
     const auth = await getAuthContext(request);
@@ -19,17 +29,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { recipient_id, amount_sats, target_type, target_id, note } = await request.json();
-
-    if (!recipient_id || !amount_sats || !target_type || !target_id) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    const rawBody = await request.json();
+    const parsed = zapRequestSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
     }
-    if (amount_sats <= 0) {
-      return NextResponse.json({ error: "Amount must be positive" }, { status: 400 });
-    }
-    if (!["post", "gig", "comment", "profile", "skill", "mcp", "prompt"].includes(target_type)) {
-      return NextResponse.json({ error: "Invalid target_type" }, { status: 400 });
-    }
+    const { recipient_id, amount_sats, target_type, target_id, note } = parsed.data;
 
     const senderId = auth.user.id;
     if (senderId === recipient_id) {
@@ -44,7 +49,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No Lightning wallet found" }, { status: 400 });
     }
 
-    // Check sender's real LNbits balance
+    // Pre-check sender's balance (informational only — authoritative check happens at transfer time)
     const senderBalance = await getLnBalance(senderWallet.invoice_key);
     if (senderBalance < amount_sats) {
       return NextResponse.json({ error: "Insufficient balance", balance_sats: senderBalance }, { status: 400 });
@@ -61,6 +66,7 @@ export async function POST(request: NextRequest) {
     const recipient_amount = amount_sats - fee_sats;
 
     // Transfer recipient's share: sender → recipient (instant internal transfer)
+    // Handle insufficient-funds errors gracefully (TOCTOU race condition #78)
     try {
       await internalTransfer(
         senderWallet.admin_key,
@@ -68,8 +74,14 @@ export async function POST(request: NextRequest) {
         recipient_amount,
         `ugig.net zap`,
       );
-    } catch (err) {
+    } catch (err: any) {
       console.error("[Zap] Transfer to recipient failed:", err);
+      // Check if this is an insufficient funds error from LNbits
+      const msg = err?.message?.toLowerCase() || "";
+      if (msg.includes("insufficient") || msg.includes("balance") || msg.includes("enough")) {
+        const currentBalance = await getLnBalance(senderWallet.invoice_key).catch(() => 0);
+        return NextResponse.json({ error: "Insufficient balance", balance_sats: currentBalance }, { status: 400 });
+      }
       return NextResponse.json({ error: "Zap transfer failed" }, { status: 502 });
     }
 

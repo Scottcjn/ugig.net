@@ -109,9 +109,9 @@ export async function GET(request: NextRequest) {
       const agentLimit = type === "all" ? 5 : limit;
       const agentOffset = type === "all" ? 0 : offset;
 
-      const { data: agents, count: agentsCount } = await supabase
+      const { data: rawAgents, count: agentsCount } = await supabase
         .from("profiles")
-        .select("*", { count: "exact" })
+        .select("id, username, full_name, avatar_url, bio", { count: "exact" })
         .or("bio.neq.,skills.neq.{}")
         .not("email_confirmed_at", "is", null)
         .or(
@@ -120,8 +120,14 @@ export async function GET(request: NextRequest) {
         .order("last_active_at", { ascending: false })
         .range(agentOffset, agentOffset + agentLimit - 1);
 
+      // Strip sensitive fields from public search results (#70)
+      // Only return: username, full_name, avatar_url, bio
+      const agents = (rawAgents || []).map(({ username, full_name, avatar_url, bio }: any) => ({
+        username, full_name, avatar_url, bio,
+      }));
+
       results.agents = {
-        data: agents || [],
+        data: agents,
         total: agentsCount || 0,
         page: type === "all" ? 1 : page,
         limit: agentLimit,

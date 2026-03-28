@@ -12,9 +12,13 @@ const CRON_SECRET = process.env.CRON_SECRET;
  * Automatically pays settled conversions for offers with auto_pay=true
  */
 export async function POST(request: NextRequest) {
-  // Verify cron secret
+  // Verify cron secret — fail closed if not configured (#80)
   const authHeader = request.headers.get("authorization");
-  if (CRON_SECRET && authHeader !== `Bearer ${CRON_SECRET}`) {
+  if (!CRON_SECRET) {
+    console.error("[Cron] CRON_SECRET not set — rejecting request");
+    return NextResponse.json({ error: "Cron not configured" }, { status: 500 });
+  }
+  if (authHeader !== `Bearer ${CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

@@ -22,6 +22,33 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Validate file size — max 10MB (#79)
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+  if (file.size > MAX_FILE_SIZE) {
+    return NextResponse.json(
+      { error: "File size exceeds 10MB limit" },
+      { status: 400 }
+    );
+  }
+
+  // Validate file type against allowlist (#79)
+  const ALLOWED_TYPES = [
+    "image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml",
+    "application/pdf",
+    "text/plain", "text/csv", "text/markdown",
+    "application/json",
+    "application/zip", "application/gzip",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ];
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    return NextResponse.json(
+      { error: `File type '${file.type}' is not allowed` },
+      { status: 400 }
+    );
+  }
+
   // Verify user is a participant of this conversation
   const { data: conversation, error: convError } = await supabase
     .from("conversations")
@@ -59,7 +86,9 @@ export async function POST(request: NextRequest) {
 
   const {
     data: { publicUrl },
-  } = supabase.storage.from("attachments").getPublicUrl(path);
+  } = supabase.storage.from("attachments").getPublicUrl(path, {
+    download: file.name, // Serve with Content-Disposition: attachment (#79)
+  });
 
   return NextResponse.json({
     url: publicUrl,

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import Image from "next/image";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { LinkifiedText } from "@/components/ui/LinkifiedText";
 import { MarkdownContent } from "@/components/ui/MarkdownContent";
 import {
@@ -41,7 +41,7 @@ export async function generateMetadata({ params }: GigPageProps): Promise<Metada
 
   const { data: gig } = await supabase
     .from("gigs")
-    .select("title, description")
+    .select("title, description, listing_type")
     .eq("id", id)
     .single();
 
@@ -51,7 +51,7 @@ export async function generateMetadata({ params }: GigPageProps): Promise<Metada
 
   const title = `${gig.title} | ugig.net`;
   const description = gig.description.slice(0, 160);
-  const url = `/gigs/${id}`;
+  const url = gig.listing_type === "for_hire" ? `/for-hire/${id}` : `/gigs/${id}`;
 
   return {
     title,
@@ -91,10 +91,7 @@ export default async function GigPage({ params }: GigPageProps) {
     notFound();
   }
 
-  // Redirect for_hire listings to /for-hire path
-  if (gig.listing_type === "for_hire") {
-    redirect(`/for-hire`);
-  }
+  const isForHire = gig.listing_type === "for_hire";
 
   // Normalize poster - Supabase can return array or object depending on relation config
   const poster = Array.isArray(gig.poster) ? gig.poster[0] : gig.poster;
@@ -308,11 +305,11 @@ export default async function GigPage({ params }: GigPageProps) {
 
       <main className="container mx-auto px-4 py-8 max-w-5xl">
         <Link
-          href="/gigs"
+          href={isForHire ? "/for-hire" : "/gigs"}
           className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to gigs
+          {isForHire ? "Back to for hire" : "Back to gigs"}
         </Link>
 
         <div className="grid lg:grid-cols-3 gap-8">

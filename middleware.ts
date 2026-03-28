@@ -19,6 +19,14 @@ export async function middleware(request: NextRequest) {
   const method = request.method;
   const path = request.nextUrl.pathname;
 
+  // Block TRACE method — return 405 Method Not Allowed (#66)
+  if (method === "TRACE") {
+    return new NextResponse(null, {
+      status: 405,
+      headers: { Allow: "GET, HEAD, POST, PUT, DELETE, PATCH, OPTIONS" },
+    });
+  }
+
   // Redirect legacy/broken paths
   const redirect = REDIRECTS[path];
   if (redirect) {

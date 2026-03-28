@@ -40,11 +40,16 @@ export async function GET(
       return NextResponse.json({ error: "Gig not found" }, { status: 404 });
     }
 
-    // Increment view count
-    await supabase
-      .from("gigs")
-      .update({ views_count: gig.views_count + 1 })
-      .eq("id", id);
+    // Increment view count atomically (#83)
+    // Use RPC if available, fallback to standard update
+    const { error: rpcError } = await supabase.rpc("increment_gig_views" as any, { gig_id: id });
+    if (rpcError) {
+      // Fallback: standard update (still better than client-computed increment)
+      await supabase
+        .from("gigs")
+        .update({ views_count: (gig.views_count || 0) + 1 })
+        .eq("id", id);
+    }
 
     return NextResponse.json({ gig });
   } catch {

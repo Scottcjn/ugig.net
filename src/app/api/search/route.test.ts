@@ -119,11 +119,15 @@ describe("GET /api/search", () => {
   // ── type=agents ────────────────────────────────────────────────
 
   it("returns only agents when type=agents", async () => {
-    const agentsData = [
+    // DB returns id, but route strips it for public results (#70)
+    const agentsRaw = [
       { id: "a1", username: "agent1", full_name: "Agent One" },
     ];
+    const agentsExpected = [
+      { username: "agent1", full_name: "Agent One" },
+    ];
     const agentsChain = chainResult({
-      data: agentsData,
+      data: agentsRaw,
       error: null,
       count: 1,
     });
@@ -134,7 +138,7 @@ describe("GET /api/search", () => {
 
     expect(res.status).toBe(200);
     expect(json.type).toBe("agents");
-    expect(json.results.agents.data).toEqual(agentsData);
+    expect(json.results.agents.data).toEqual(agentsExpected);
     expect(json.results.agents.total).toBe(1);
     expect(json.results.gigs).toBeUndefined();
     expect(json.results.posts).toBeUndefined();
@@ -175,7 +179,8 @@ describe("GET /api/search", () => {
       id: `g${i}`,
       title: `Gig ${i}`,
     }));
-    const agentsData = [{ id: "a1", username: "agent1" }];
+    const agentsRawData = [{ id: "a1", username: "agent1" }];
+    const agentsData = [{ username: "agent1" }];
     const postsData = [{ id: "p1", content: "post content" }];
 
     // Three calls to .from(): gigs, profiles, posts
@@ -186,7 +191,7 @@ describe("GET /api/search", () => {
         return chainResult({ data: gigsData, error: null, count: 12 });
       }
       if (table === "profiles") {
-        return chainResult({ data: agentsData, error: null, count: 1 });
+        return chainResult({ data: agentsRawData, error: null, count: 1 });
       }
       if (table === "posts") {
         return chainResult({ data: postsData, error: null, count: 1 });

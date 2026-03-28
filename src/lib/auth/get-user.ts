@@ -94,6 +94,9 @@ export async function getAuthContext(
       }
     }
 
+    // Use service client but mark authMethod so route handlers can add user.id filters (#75)
+    // WARNING: API key auth bypasses RLS. All route handlers MUST filter by user.id
+    // when using auth.user.authMethod === "api_key" to prevent data leakage.
     const serviceClient = createServiceRoleClient();
     return {
       user: {
