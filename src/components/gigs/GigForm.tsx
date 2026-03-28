@@ -416,7 +416,6 @@ export function GigForm({ initialData, gigId, mode = "create" }: GigFormProps) {
             disabled={isLoading}
             className="w-full border border-input rounded-md px-3 py-2 bg-background"
           >
-            <option value="draft">Draft</option>
             <option value="active">Active</option>
             <option value="paused">Paused</option>
           </select>

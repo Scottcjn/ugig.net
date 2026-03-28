@@ -101,7 +101,7 @@ export function registerSkillsCommands(program: Command): void {
     .option("--category <cat>", "Category")
     .option("--tags <tags>", "Comma-separated tags")
     .option("--tagline <text>", "Short tagline")
-    .option("--status <status>", "Status: draft|active", "draft")
+    .option("--status <status>", "Status: active|archived", "active")
     .option("--source-url <url>", "Source URL for metadata autofill")
     .action(
       async (cmdOpts: {
@@ -148,7 +148,7 @@ export function registerSkillsCommands(program: Command): void {
             title: cmdOpts.title || autofilled.title,
             description: cmdOpts.description || autofilled.description,
             price_sats: parseInt(cmdOpts.price || "0", 10),
-            status: cmdOpts.status || "draft",
+            status: cmdOpts.status || "active",
           };
           if (cmdOpts.category) body.category = cmdOpts.category;
           if (cmdOpts.tagline) body.tagline = cmdOpts.tagline;
@@ -186,7 +186,7 @@ export function registerSkillsCommands(program: Command): void {
     .option("--category <cat>", "Category")
     .option("--tags <tags>", "Comma-separated tags")
     .option("--tagline <text>", "Short tagline")
-    .option("--status <status>", "Status: draft|active")
+    .option("--status <status>", "Status: active|archived")
     .option("--source-url <url>", "Source URL for metadata")
     .action(
       async (
@@ -406,56 +406,7 @@ export function registerSkillsCommands(program: Command): void {
       }
     });
 
-  // ── Publish all draft skills ───────────────────────────────────
-
-  skills
-    .command("publish-all")
-    .description("Publish all your draft skill listings")
-    .action(async () => {
-      const opts = program.opts() as GlobalOpts;
-      const spinner = opts.json ? null : ora("Fetching draft skills...").start();
-      try {
-        const client = createClient(opts);
-        const result = await client.get<{
-          listings: Record<string, unknown>[];
-        }>("/api/skills/my");
-
-        const drafts = (result.listings || []).filter(
-          (l: any) => l.status === "draft",
-        );
-
-        if (drafts.length === 0) {
-          spinner?.stop();
-          printSuccess("No draft skills to publish", opts as OutputOptions);
-          return;
-        }
-
-        if (spinner) spinner.text = `Publishing ${drafts.length} draft skill(s)...`;
-
-        let published = 0;
-        let failed = 0;
-
-        for (const skill of drafts) {
-          try {
-            await client.patch(`/api/skills/${(skill as any).slug}`, {
-              status: "active",
-            });
-            published++;
-          } catch {
-            failed++;
-          }
-        }
-
-        spinner?.stop();
-        printSuccess(
-          `Published ${published} skill(s)${failed > 0 ? `, ${failed} failed` : ""}`,
-          opts as OutputOptions,
-        );
-      } catch (err) {
-        spinner?.fail("Failed");
-        handleError(err, opts as OutputOptions);
-      }
-    });
+    // (publish-all removed — listings go live on create now)
 
   // ── Delete listing ─────────────────────────────────────────────
 

@@ -134,7 +134,7 @@ export function registerGigsCommands(program: Command): void {
     .option("--duration <duration>", "Duration")
     .option("--location-type <type>", "Location: remote, onsite, hybrid", "remote")
     .option("--location <location>", "Location details")
-    .option("--status <status>", "Status: draft or active", "active")
+    .option("--status <status>", "Status: active or paused", "active")
     .action(async (options) => {
       const opts = program.opts() as GlobalOpts;
 
@@ -270,7 +270,7 @@ export function registerGigsCommands(program: Command): void {
   gigs
     .command("status <id>")
     .description("Update gig status")
-    .requiredOption("--status <status>", "Status: draft, active, paused, closed, filled")
+    .requiredOption("--status <status>", "Status: active, paused, closed, filled")
     .action(async (id: string, options) => {
       const opts = program.opts() as GlobalOpts;
       const spinner = opts.json ? null : ora("Updating status...").start();
