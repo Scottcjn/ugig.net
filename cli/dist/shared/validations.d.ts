@@ -83,6 +83,7 @@ export declare const gigSchema: z.ZodObject<{
         weekly: "weekly";
         monthly: "monthly";
         yearly: "yearly";
+        bounty: "bounty";
     }>;
     budget_min: z.ZodNullable<z.ZodOptional<z.ZodNumber>>;
     budget_max: z.ZodNullable<z.ZodOptional<z.ZodNumber>>;
@@ -121,6 +122,7 @@ export declare const gigFiltersSchema: z.ZodObject<{
         weekly: "weekly";
         monthly: "monthly";
         yearly: "yearly";
+        bounty: "bounty";
     }>>;
     budget_min: z.ZodOptional<z.ZodNumber>;
     budget_max: z.ZodOptional<z.ZodNumber>;

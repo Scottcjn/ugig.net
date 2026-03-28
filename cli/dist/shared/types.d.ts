@@ -108,7 +108,7 @@ export type PaginatedResult<T> = {
     limit: number;
     hasMore: boolean;
 };
-export type BudgetType = "fixed" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "per_task" | "per_unit" | "revenue_share";
+export type BudgetType = "fixed" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "per_task" | "per_unit" | "revenue_share" | "bounty";
 export type GigFormData = {
     title: string;
     description: string;

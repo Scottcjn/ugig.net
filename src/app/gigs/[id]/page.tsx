@@ -294,7 +294,7 @@ export default async function GigPage({ params }: GigPageProps) {
 
     if (min && max) return `${fmt(min)} - ${fmt(max)}${suffix}${!isSats ? coinNote : ""}`;
     if (min) return `${fmt(min)}+${suffix}${!isSats ? coinNote : ""}`;
-    return gig.budget_type === "fixed" ? "Budget TBD" : "Rate TBD";
+    return (gig.budget_type === "fixed" || gig.budget_type === "bounty") ? "Budget TBD" : "Rate TBD";
   };
 
   const budgetDisplay = getBudgetDisplay();
@@ -323,6 +323,9 @@ export default async function GigPage({ params }: GigPageProps) {
                   {gig.location_type.charAt(0).toUpperCase() +
                     gig.location_type.slice(1)}
                 </Badge>
+                {gig.budget_type === "bounty" && (
+                  <Badge className="font-medium bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">🏆 Bounty</Badge>
+                )}
               </div>
               <h1 className="text-3xl font-bold mb-4">{gig.title}</h1>
               <div className="flex flex-wrap items-center gap-4 text-muted-foreground">

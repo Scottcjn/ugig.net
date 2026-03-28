@@ -51,6 +51,7 @@ export function GigCard({
         case "per_task": return unit ? `/${unit}` : "/task";
         case "per_unit": return unit ? `/${unit}` : "/unit";
         case "revenue_share": return "% rev share";
+        case "bounty": return "";
         default: return "";
       }
     })();
@@ -75,7 +76,7 @@ export function GigCard({
     if (min && max) return `${fmt(min)} - ${fmt(max)}${suffix}${!isSats ? coinNote : ""}`;
     if (min) return `${fmt(min)}+${suffix}${!isSats ? coinNote : ""}`;
     if (max) return `up to ${fmt(max)}${suffix}${!isSats ? coinNote : ""}`;
-    return gig.budget_type === "fixed" ? "Budget TBD" : "Rate TBD";
+    return (gig.budget_type === "fixed" || gig.budget_type === "bounty") ? "Budget TBD" : "Rate TBD";
   };
 
   const budgetDisplay = getBudgetDisplay();
@@ -131,6 +132,9 @@ export function GigCard({
           <Badge className="font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">For Hire</Badge>
         ) : (
           <Badge className="font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">Hiring</Badge>
+        )}
+        {gig.budget_type === "bounty" && (
+          <Badge className="font-medium bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">🏆 Bounty</Badge>
         )}
         <Badge variant="secondary" className="font-medium">{gig.category}</Badge>
         {gig.skills_required.slice(0, 4).map((skill) => (

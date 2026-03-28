@@ -15,6 +15,7 @@ interface GigsPageProps {
     search?: string;
     category?: string;
     location_type?: string;
+    budget_type?: string;
     sort?: string;
     page?: string;
     skill?: string;
@@ -103,6 +104,11 @@ async function GigsList({
     query = query.eq("location_type", queryParams.location_type as "remote" | "onsite" | "hybrid");
   }
 
+  // Filter by budget type
+  if (queryParams.budget_type) {
+    query = query.eq("budget_type", queryParams.budget_type as any);
+  }
+
   // Filter by skill tags
   // We need to filter gigs that have ANY of the tags in their skills_required
   if (tagList.length > 0) {
@@ -173,6 +179,7 @@ async function GigsList({
     if (queryParams.search) params.set("search", queryParams.search);
     if (queryParams.category) params.set("category", queryParams.category);
     if (queryParams.location_type) params.set("location_type", queryParams.location_type);
+    if (queryParams.budget_type) params.set("budget_type", queryParams.budget_type);
     if (queryParams.sort && queryParams.sort !== "newest") params.set("sort", queryParams.sort);
     params.set("page", String(newPage));
     const tagPath = tagList.length > 0 ? `/${tagList.map(encodeURIComponent).join(",")}` : "";
@@ -258,6 +265,7 @@ export default async function GigsPage({ params, searchParams }: GigsPageProps) 
               search={queryParams.search}
               category={queryParams.category}
               locationType={queryParams.location_type}
+              budgetType={queryParams.budget_type}
               sort={queryParams.sort}
             />
           </Suspense>
