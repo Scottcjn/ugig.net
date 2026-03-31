@@ -7,18 +7,28 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Zap, ArrowLeft } from "lucide-react";
+import { Zap, ArrowLeft, Loader2, Globe, Pencil } from "lucide-react";
 import { createClient as createBrowserClient } from "@/lib/supabase/client";
+
+interface FetchedMeta {
+  title: string;
+  description: string;
+  logo_url: string;
+  tags: string[];
+}
 
 export function DirectoryNewForm() {
   const router = useRouter();
-  const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
+  const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [tagsInput, setTagsInput] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [balance, setBalance] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(false);
+  const [fetched, setFetched] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [error, setError] = useState("");
   const [checkingAuth, setCheckingAuth] = useState(true);
 
@@ -47,6 +57,42 @@ export function DirectoryNewForm() {
     init();
   }, [router]);
 
+  async function handleFetchMeta() {
+    if (!url) return;
+    setError("");
+    setFetching(true);
+
+    try {
+      const res = await fetch("/api/directory/fetch-meta", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Failed to fetch site info");
+        setFetching(false);
+        return;
+      }
+
+      const meta: FetchedMeta = data;
+      setTitle(meta.title || "");
+      setDescription(meta.description || "");
+      setLogoUrl(meta.logo_url || "");
+      setTagsInput((meta.tags || []).join(", "));
+      setFetched(true);
+      setEditing(false);
+    } catch {
+      setError("Failed to fetch site info. You can fill in details manually.");
+      setFetched(true);
+      setEditing(true);
+    } finally {
+      setFetching(false);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -58,7 +104,7 @@ export function DirectoryNewForm() {
         .map((t) => t.trim())
         .filter(Boolean);
 
-      const body: Record<string, any> = { title, url };
+      const body: Record<string, any> = { title: title || url, url };
       if (description) body.description = description;
       if (tags.length > 0) body.tags = tags;
       if (logoUrl) body.logo_url = logoUrl;
@@ -104,8 +150,7 @@ export function DirectoryNewForm() {
 
       <h1 className="text-3xl font-bold mb-2">List Your Project</h1>
       <p className="text-muted-foreground mb-6">
-        Add your project to the directory for 500 ⚡ sats. Listing is active for
-        1 year.
+        Paste your URL and we&apos;ll fetch the details. 500 ⚡ sats for 1 year.
       </p>
 
       {balance !== null && (
@@ -128,86 +173,195 @@ export function DirectoryNewForm() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <div>
-          <Label htmlFor="title">
-            Project Name <span className="text-destructive">*</span>
-          </Label>
-          <Input
-            id="title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="My Awesome Project"
-            maxLength={100}
-            required
-          />
+      {/* Step 1: URL input */}
+      {!fetched && (
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="url">Project URL</Label>
+            <div className="flex gap-2 mt-1">
+              <Input
+                id="url"
+                type="url"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="https://your-project.com"
+                required
+                disabled={fetching}
+              />
+              <Button
+                type="button"
+                onClick={handleFetchMeta}
+                disabled={!url || fetching}
+              >
+                {fetching ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Globe className="h-4 w-4" />
+                )}
+                <span className="ml-1">{fetching ? "Fetching..." : "Fetch"}</span>
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              We&apos;ll auto-fill title, description, logo, and tags from your site.
+            </p>
+          </div>
         </div>
+      )}
 
-        <div>
-          <Label htmlFor="url">
-            Project URL <span className="text-destructive">*</span>
-          </Label>
-          <Input
-            id="url"
-            type="url"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://example.com"
-            required
-          />
-        </div>
+      {/* Step 2: Preview + Edit + Submit */}
+      {fetched && (
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Preview card */}
+          {!editing && (
+            <div className="border border-border rounded-lg p-4 space-y-3">
+              <div className="flex items-start gap-3">
+                {logoUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={logoUrl}
+                    alt=""
+                    className="w-12 h-12 rounded-lg object-cover bg-muted flex-shrink-0"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                )}
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-lg truncate">
+                    {title || url}
+                  </h3>
+                  <p className="text-sm text-muted-foreground truncate">{url}</p>
+                </div>
+              </div>
 
-        <div>
-          <Label htmlFor="description">Description</Label>
-          <Textarea
-            id="description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Brief description of your project (max 500 chars)"
-            maxLength={500}
-            rows={3}
-          />
-          <p className="text-xs text-muted-foreground mt-1">
-            {description.length}/500
-          </p>
-        </div>
+              {description && (
+                <p className="text-sm text-muted-foreground line-clamp-3">
+                  {description}
+                </p>
+              )}
 
-        <div>
-          <Label htmlFor="tags">Tags</Label>
-          <Input
-            id="tags"
-            value={tagsInput}
-            onChange={(e) => setTagsInput(e.target.value)}
-            placeholder="bitcoin, saas, open-source (comma-separated)"
-          />
-        </div>
+              {tagsInput && (
+                <div className="flex flex-wrap gap-1.5">
+                  {tagsInput
+                    .split(",")
+                    .map((t) => t.trim())
+                    .filter(Boolean)
+                    .map((tag) => (
+                      <span
+                        key={tag}
+                        className="px-2 py-0.5 bg-primary/10 text-primary rounded-full text-xs"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                </div>
+              )}
 
-        <div>
-          <Label htmlFor="logo_url">Logo URL</Label>
-          <Input
-            id="logo_url"
-            type="url"
-            value={logoUrl}
-            onChange={(e) => setLogoUrl(e.target.value)}
-            placeholder="https://example.com/logo.png"
-          />
-        </div>
-
-        <Button
-          type="submit"
-          className="w-full"
-          disabled={loading || !title || !url}
-        >
-          {loading ? (
-            "Processing..."
-          ) : (
-            <>
-              <Zap className="h-4 w-4 mr-1" />
-              Pay 500 ⚡ & List
-            </>
+              <div className="flex gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditing(true)}
+                >
+                  <Pencil className="h-3 w-3 mr-1" />
+                  Edit
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setFetched(false);
+                    setTitle("");
+                    setDescription("");
+                    setTagsInput("");
+                    setLogoUrl("");
+                  }}
+                >
+                  Change URL
+                </Button>
+              </div>
+            </div>
           )}
-        </Button>
-      </form>
+
+          {/* Edit fields */}
+          {editing && (
+            <div className="space-y-4 border border-border rounded-lg p-4">
+              <div>
+                <Label htmlFor="title">Project Name</Label>
+                <Input
+                  id="title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="My Awesome Project"
+                  maxLength={100}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Brief description (max 500 chars)"
+                  maxLength={500}
+                  rows={3}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  {description.length}/500
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="tags">Tags</Label>
+                <Input
+                  id="tags"
+                  value={tagsInput}
+                  onChange={(e) => setTagsInput(e.target.value)}
+                  placeholder="bitcoin, saas, open-source"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="logo_url">Logo URL</Label>
+                <Input
+                  id="logo_url"
+                  type="url"
+                  value={logoUrl}
+                  onChange={(e) => setLogoUrl(e.target.value)}
+                  placeholder="https://example.com/logo.png"
+                />
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setEditing(false)}
+              >
+                Done Editing
+              </Button>
+            </div>
+          )}
+
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={loading || !url}
+          >
+            {loading ? (
+              "Processing..."
+            ) : (
+              <>
+                <Zap className="h-4 w-4 mr-1" />
+                Pay 500 ⚡ & List
+              </>
+            )}
+          </Button>
+        </form>
+      )}
     </div>
   );
 }
