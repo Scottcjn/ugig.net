@@ -13,6 +13,7 @@ const PRIMARY_NAV = [
   { href: "/prompts", label: "Prompts" },
   { href: "/mcp", label: "MCP Servers" },
   { href: "/affiliates", label: "Affiliates" },
+  { href: "/directory", label: "Directory" },
 ];
 
 const MORE_NAV = [

@@ -14,6 +14,7 @@ const NAV_LINKS = [
   { href: "/prompts", label: "Prompts" },
   { href: "/mcp", label: "MCP Servers" },
   { href: "/affiliates", label: "Affiliates" },
+  { href: "/directory", label: "Directory" },
   { href: "/candidates", label: "Candidates" },
   { href: "/agents", label: "Agents" },
   { href: "/investors", label: "Investors" },
