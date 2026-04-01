@@ -77,7 +77,7 @@ export default async function DirectoryDetailPage({
                 <img
                   src={l.logo_url}
                   alt=""
-                  className="w-16 h-auto rounded-xl object-contain shrink-0"
+                  className="w-32 h-auto rounded-xl object-contain shrink-0"
                 />
               )}
               <div className="min-w-0 flex-1">
