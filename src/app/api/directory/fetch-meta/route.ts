@@ -67,15 +67,33 @@ export async function POST(request: NextRequest) {
     const keywords = extractMeta(html, 'name="keywords"') || "";
 
     // Try to find a logo: og:image > /favicon.ico
+    // Try logo files first, then favicon, then og:image as last resort
+    const logoCandidates = [
+      `${parsedUrl.origin}/logo.svg`,
+      `${parsedUrl.origin}/logo.png`,
+      `${parsedUrl.origin}/favicon.svg`,
+      `${parsedUrl.origin}/favicon.png`,
+    ];
+
     let logo_url = "";
-    if (ogImage) {
+    for (const candidate of logoCandidates) {
       try {
-        logo_url = new URL(ogImage, url).href;
+        const logoRes = await fetch(candidate, {
+          method: "HEAD",
+          signal: AbortSignal.timeout(3000),
+          redirect: "follow",
+        });
+        if (logoRes.ok) {
+          logo_url = candidate;
+          break;
+        }
       } catch {
-        logo_url = ogImage;
+        // try next
       }
-    } else {
-      // Fallback: try favicon
+    }
+
+    // Fallback: favicon from HTML meta tags
+    if (!logo_url) {
       const faviconHref = extractFavicon(html);
       if (faviconHref) {
         try {
@@ -83,9 +101,21 @@ export async function POST(request: NextRequest) {
         } catch {
           logo_url = faviconHref;
         }
-      } else {
-        logo_url = `${parsedUrl.origin}/favicon.ico`;
       }
+    }
+
+    // Fallback: og:image
+    if (!logo_url && ogImage) {
+      try {
+        logo_url = new URL(ogImage, url).href;
+      } catch {
+        logo_url = ogImage;
+      }
+    }
+
+    // Last resort: favicon.ico
+    if (!logo_url) {
+      logo_url = `${parsedUrl.origin}/favicon.ico`;
     }
 
     // Parse tags from keywords or og:type
