@@ -143,7 +143,7 @@ async function DirectoryList({
                 <img
                   src={listing.logo_url}
                   alt=""
-                  className="w-24 h-auto rounded-lg object-contain shrink-0"
+                  className="w-48 h-auto rounded-lg object-contain shrink-0"
                 />
               )}
               <div className="min-w-0 flex-1">
