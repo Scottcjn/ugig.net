@@ -6,8 +6,11 @@ import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { ExternalLink, ArrowLeft, Calendar } from "lucide-react";
+import { ExternalLink, ArrowLeft, Calendar, MessageSquare } from "lucide-react";
 import { DirectoryOwnerActions } from "./DirectoryOwnerActions";
+import { DirectoryVoteButton } from "@/components/directory/DirectoryVoteButton";
+import { DirectoryComments } from "@/components/directory/DirectoryComments";
+import { ZapButton } from "@/components/zaps/ZapButton";
 
 interface DirectoryDetailProps {
   params: Promise<{ id: string }>;
@@ -55,6 +58,21 @@ export default async function DirectoryDetailPage({
     data: { user },
   } = await supabase.auth.getUser();
   const isOwner = user?.id === l.user_id;
+  const isAuthenticated = !!user;
+
+  // Fetch current user's vote
+  let initialUserVote: number | null = null;
+  if (user) {
+    const { data: vote } = await supabase
+      .from("directory_votes" as any)
+      .select("vote_type")
+      .eq("listing_id", id)
+      .eq("user_id", user.id)
+      .single();
+    if (vote) {
+      initialUserVote = (vote as any).vote_type;
+    }
+  }
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -136,22 +154,49 @@ export default async function DirectoryDetailPage({
                 <Calendar className="h-4 w-4" />
                 {new Date(l.created_at).toLocaleDateString()}
               </span>
+              {l.comments_count > 0 && (
+                <span className="flex items-center gap-1">
+                  <MessageSquare className="h-4 w-4" />
+                  {l.comments_count}
+                </span>
+              )}
             </div>
 
-            {/* Visit button */}
-            <div className="mt-6">
+            {/* Vote, Zap, and Visit button */}
+            <div className="mt-6 flex flex-wrap items-center gap-3">
               <a href={l.url} target="_blank" rel="noopener noreferrer">
                 <Button>
                   <ExternalLink className="h-4 w-4 mr-2" />
                   Visit Project
                 </Button>
               </a>
+              <DirectoryVoteButton
+                listingId={id}
+                initialUpvotes={l.upvotes ?? 0}
+                initialDownvotes={l.downvotes ?? 0}
+                initialScore={l.score ?? 0}
+                initialUserVote={initialUserVote}
+              />
+              <ZapButton
+                targetType="directory"
+                targetId={id}
+                recipientId={l.user_id}
+                totalSats={l.zaps_total ?? 0}
+              />
             </div>
 
             {/* Owner actions */}
             {isOwner && (
               <DirectoryOwnerActions listing={l} />
             )}
+          </div>
+
+          {/* Comments section */}
+          <div className="mt-8 border border-border rounded-lg bg-card p-6 md:p-8">
+            <DirectoryComments
+              listingId={id}
+              isAuthenticated={isAuthenticated}
+            />
           </div>
         </div>
       </main>

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { FolderOpen, ExternalLink, Zap } from "lucide-react";
+import { FolderOpen, ExternalLink, Zap, ThumbsUp, MessageSquare } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Project Directory | ugig.net",
@@ -181,16 +181,32 @@ async function DirectoryList({
               </div>
             )}
 
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Avatar className="h-5 w-5">
-                {listing.user?.avatar_url && (
-                  <AvatarImage src={listing.user.avatar_url} />
+            <div className="flex items-center justify-between text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <Avatar className="h-5 w-5">
+                  {listing.user?.avatar_url && (
+                    <AvatarImage src={listing.user.avatar_url} />
+                  )}
+                  <AvatarFallback className="text-[10px]">
+                    {(listing.user?.username || "?")[0].toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <span>{listing.user?.username}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                {(listing.score != null && listing.score !== 0) && (
+                  <span className={`flex items-center gap-0.5 ${listing.score > 0 ? "text-green-500" : listing.score < 0 ? "text-red-500" : ""}`}>
+                    <ThumbsUp className="h-3.5 w-3.5" />
+                    {listing.score}
+                  </span>
                 )}
-                <AvatarFallback className="text-[10px]">
-                  {(listing.user?.username || "?")[0].toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <span>{listing.user?.username}</span>
+                {(listing.comments_count != null && listing.comments_count > 0) && (
+                  <span className="flex items-center gap-0.5">
+                    <MessageSquare className="h-3.5 w-3.5" />
+                    {listing.comments_count}
+                  </span>
+                )}
+              </div>
             </div>
           </Link>
         ))}

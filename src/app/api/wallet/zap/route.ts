@@ -17,7 +17,7 @@ const LNBITS_INVOICE_KEY = process.env.LNBITS_INVOICE_KEY || "";
 const zapRequestSchema = z.object({
   recipient_id: z.string().uuid(),
   amount_sats: z.number().int().positive().max(1000000, "Maximum zap amount is 1,000,000 sats"),
-  target_type: z.enum(["post", "gig", "comment", "profile", "skill", "mcp", "prompt"]),
+  target_type: z.enum(["post", "gig", "comment", "profile", "skill", "mcp", "prompt", "directory"]),
   target_id: z.string(),
   note: z.string().max(500).optional(),
 });
