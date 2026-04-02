@@ -135,7 +135,7 @@ export default async function DirectoryDetailPage({
             {l.tags && l.tags.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-6">
                 {l.tags.map((tag: string) => (
-                  <Link key={tag} href={`/directory?tag=${tag}`}>
+                  <Link key={tag} href={`/directory/tags/${encodeURIComponent(tag)}`}>
                     <Badge variant="secondary" className="cursor-pointer">
                       {tag}
                     </Badge>

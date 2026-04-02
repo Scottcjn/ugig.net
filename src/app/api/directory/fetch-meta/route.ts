@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import OpenAI from "openai";
 import crypto from "crypto";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -179,13 +180,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse tags from keywords
-    const tags: string[] = keywords
+    let tags: string[] = keywords
       ? keywords
           .split(",")
           .map((t: string) => t.trim().toLowerCase())
           .filter(Boolean)
           .slice(0, 10)
       : [];
+
+    // If we got fewer than 3 tags from meta keywords, use AI to generate them
+    if (tags.length < 3) {
+      const aiTags = await generateTagsWithAI(title, description, url);
+      const merged = [...new Set([...tags, ...aiTags])].slice(0, 10);
+      tags = merged;
+    }
 
     return NextResponse.json({
       title: title.substring(0, 100),
@@ -313,4 +321,67 @@ function decodeEntities(str: string): string {
     .replace(/&#39;/g, "'")
     .replace(/&#x27;/g, "'")
     .replace(/&#x2F;/g, "/");
+}
+
+/**
+ * Generate tags for a website using OpenAI based on title, description, and URL.
+ * Falls back to extracting words from the title if AI fails.
+ */
+async function generateTagsWithAI(
+  title: string,
+  description: string,
+  url: string
+): Promise<string[]> {
+  try {
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+    const prompt = `Given this website, generate 5-8 relevant tags/topics. Return only a JSON array of lowercase tag strings. No explanation.
+
+Title: ${title}
+Description: ${description}
+URL: ${url}`;
+
+    const response = await Promise.race([
+      openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" },
+        max_tokens: 200,
+      }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("AI timeout")), 5000)
+      ),
+    ]);
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) return fallbackTags(title);
+
+    const parsed = JSON.parse(content);
+    // Handle both { tags: [...] } and raw array shapes
+    const arr = Array.isArray(parsed) ? parsed : parsed.tags;
+    if (!Array.isArray(arr)) return fallbackTags(title);
+
+    return arr
+      .filter((t: unknown) => typeof t === "string")
+      .map((t: string) => t.trim().toLowerCase())
+      .filter(Boolean)
+      .slice(0, 8);
+  } catch {
+    return fallbackTags(title);
+  }
+}
+
+const STOP_WORDS = new Set([
+  "a", "an", "the", "and", "or", "but", "in", "on", "at", "to", "for",
+  "of", "with", "by", "is", "it", "its", "be", "as", "was", "are",
+  "from", "has", "have", "this", "that", "your", "you", "we", "our",
+]);
+
+function fallbackTags(title: string): string[] {
+  return title
+    .toLowerCase()
+    .split(/[\s\-—|:,./]+/)
+    .map((w) => w.replace(/[^a-z0-9]/g, ""))
+    .filter((w) => w.length > 2 && !STOP_WORDS.has(w))
+    .slice(0, 5);
 }
