@@ -188,16 +188,25 @@ export async function POST(request: NextRequest) {
           .slice(0, 10)
       : [];
 
+    // Extract visible text for AI context
+    const pageText = extractVisibleText(html).substring(0, 3000);
+
+    // If description is missing or too short, generate with AI
+    let finalDescription = description;
+    if (!finalDescription || finalDescription.length < 50) {
+      finalDescription = await generateDescriptionWithAI(title, finalDescription, pageText, url);
+    }
+
     // If we got fewer than 3 tags from meta keywords, use AI to generate them
     if (tags.length < 3) {
-      const aiTags = await generateTagsWithAI(title, description, url);
+      const aiTags = await generateTagsWithAI(title, finalDescription, url);
       const merged = [...new Set([...tags, ...aiTags])].slice(0, 10);
       tags = merged;
     }
 
     return NextResponse.json({
       title: title.substring(0, 100),
-      description: description.substring(0, 500),
+      description: finalDescription.substring(0, 500),
       logo_url,
       banner_url,
       screenshot_url,
@@ -384,4 +393,59 @@ function fallbackTags(title: string): string[] {
     .map((w) => w.replace(/[^a-z0-9]/g, ""))
     .filter((w) => w.length > 2 && !STOP_WORDS.has(w))
     .slice(0, 5);
+}
+
+/**
+ * Strip HTML tags, scripts, styles and extract visible text content.
+ */
+function extractVisibleText(html: string): string {
+  return html
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")
+    .replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, " ")
+    .replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, " ")
+    .replace(/<header[^>]*>[\s\S]*?<\/header>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&[a-z]+;/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Generate a concise project description using AI based on page content.
+ */
+async function generateDescriptionWithAI(
+  title: string,
+  existingDesc: string,
+  pageText: string,
+  url: string
+): Promise<string> {
+  try {
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+    const prompt = `Write a concise 1-2 sentence description for this project/website listing in a directory. Be specific about what it does. No marketing fluff. Max 200 characters.
+
+Title: ${title}
+URL: ${url}
+${existingDesc ? `Existing description: ${existingDesc}` : ""}
+Page content: ${pageText.substring(0, 2000)}`;
+
+    const response = await Promise.race([
+      openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 150,
+        temperature: 0.3,
+      }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("AI timeout")), 5000)
+      ),
+    ]);
+
+    const content = response.choices[0]?.message?.content?.trim();
+    if (content && content.length > 20) return content;
+    return existingDesc || `${title} — visit ${new URL(url).hostname} to learn more.`;
+  } catch {
+    return existingDesc || `${title} — visit ${new URL(url).hostname} to learn more.`;
+  }
 }
