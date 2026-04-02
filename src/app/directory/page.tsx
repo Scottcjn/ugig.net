@@ -12,12 +12,12 @@ import { FolderOpen, ExternalLink, Zap, ThumbsUp, MessageSquare } from "lucide-r
 export const metadata: Metadata = {
   title: "Project Directory | ugig.net",
   description:
-    "Discover projects built by the ugig.net community. List your project for 500 sats.",
+    "Discover projects built by the ugig.net community. List your project for 50 sats.",
   alternates: { canonical: "/directory" },
   openGraph: {
     title: "Project Directory | ugig.net",
     description:
-      "Discover projects built by the ugig.net community. List your project for 500 sats.",
+      "Discover projects built by the ugig.net community. List your project for 50 sats.",
     url: "/directory",
     type: "website",
   },
@@ -84,7 +84,7 @@ async function DirectoryList({
           <Link href="/directory/new">
             <Button size="sm">
               <Zap className="h-4 w-4 mr-1" />
-              List Your Project — 500 ⚡
+              List Your Project — 50 ⚡
             </Button>
           </Link>
         </div>
@@ -293,12 +293,12 @@ export default async function DirectoryPage({
             <Link href="/directory/new">
               <Button size="sm">
                 <Zap className="h-4 w-4 mr-1" />
-                List Your Project — 500 ⚡
+                List Your Project — 50 ⚡
               </Button>
             </Link>
           </div>
           <p className="text-muted-foreground mb-8">
-            Discover projects built by the community. List yours for 500 ⚡
+            Discover projects built by the community. List yours for 50 ⚡
             sats.
           </p>
 

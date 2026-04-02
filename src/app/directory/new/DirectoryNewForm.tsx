@@ -158,7 +158,7 @@ export function DirectoryNewForm() {
 
       <h1 className="text-3xl font-bold mb-2">List Your Project</h1>
       <p className="text-muted-foreground mb-6">
-        Paste your URL and we&apos;ll fetch the details. 500 ⚡ sats for 1 year.
+        Paste your URL and we&apos;ll fetch the details. 50 ⚡ sats for 1 year.
       </p>
 
       {balance !== null && (
@@ -167,9 +167,9 @@ export function DirectoryNewForm() {
           <span>
             Wallet balance: <strong>{balance.toLocaleString()} sats</strong>
           </span>
-          {balance < 500 && (
+          {balance < 50 && (
             <span className="text-destructive ml-auto">
-              Need at least 500 sats
+              Need at least 50 sats
             </span>
           )}
         </div>
@@ -398,7 +398,7 @@ export function DirectoryNewForm() {
             ) : (
               <>
                 <Zap className="h-4 w-4 mr-1" />
-                Pay 500 ⚡ & List
+                Pay 50 ⚡ & List
               </>
             )}
           </Button>

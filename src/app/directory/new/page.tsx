@@ -4,7 +4,7 @@ import { DirectoryNewForm } from "./DirectoryNewForm";
 
 export const metadata: Metadata = {
   title: "List Your Project | Project Directory | ugig.net",
-  description: "Add your project to the ugig.net directory for 500 sats.",
+  description: "Add your project to the ugig.net directory for 50 sats.",
 };
 
 export default function NewDirectoryListingPage() {

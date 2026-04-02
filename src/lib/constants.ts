@@ -142,4 +142,4 @@ export const AFFILIATE_PRODUCT_TYPES = [
 export type AffiliateProductType = (typeof AFFILIATE_PRODUCT_TYPES)[number];
 
 /** Fee in sats to list a project in the directory */
-export const DIRECTORY_LISTING_FEE_SATS = 500;
+export const DIRECTORY_LISTING_FEE_SATS = 50;
