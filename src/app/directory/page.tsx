@@ -136,8 +136,18 @@ async function DirectoryList({
           <Link
             key={listing.id}
             href={`/directory/${listing.id}`}
-            className="group p-5 border border-border rounded-lg bg-card hover:shadow-md hover:border-primary/30 transition-all duration-200"
+            className="group border border-border rounded-lg bg-card hover:shadow-md hover:border-primary/30 transition-all duration-200 overflow-hidden"
           >
+            {/* Card header image: banner or screenshot */}
+            {(listing.banner_url || listing.screenshot_url) && (
+              <img
+                src={listing.banner_url || listing.screenshot_url}
+                alt=""
+                className="w-full h-32 object-cover"
+              />
+            )}
+
+            <div className="p-5">
             <div className="flex items-start gap-3 mb-3">
               {listing.logo_url && (
                 <img
@@ -207,6 +217,7 @@ async function DirectoryList({
                   </span>
                 )}
               </div>
+            </div>
             </div>
           </Link>
         ))}

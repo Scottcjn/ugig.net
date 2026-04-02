@@ -21,6 +21,8 @@ const createListingSchema = z.object({
   description: z.string().max(500).optional(),
   tags: z.array(z.string().max(50)).max(10).optional(),
   logo_url: z.string().url().optional(),
+  banner_url: z.string().url().optional(),
+  screenshot_url: z.string().url().optional(),
 });
 
 /**
@@ -98,7 +100,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { title, url, description, tags, logo_url } = parsed.data;
+    const { title, url, description, tags, logo_url, banner_url, screenshot_url } = parsed.data;
     const userId = auth.user.id;
     const admin = createServiceClient();
 
@@ -215,6 +217,8 @@ export async function POST(request: NextRequest) {
         description: description || null,
         tags: tags || [],
         logo_url: logo_url || null,
+        banner_url: banner_url || null,
+        screenshot_url: screenshot_url || null,
         zap_tx_id: zapId,
       })
       .select()

@@ -14,6 +14,8 @@ interface FetchedMeta {
   title: string;
   description: string;
   logo_url: string;
+  banner_url: string;
+  screenshot_url: string;
   tags: string[];
 }
 
@@ -24,6 +26,8 @@ export function DirectoryNewForm() {
   const [description, setDescription] = useState("");
   const [tagsInput, setTagsInput] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
+  const [bannerUrl, setBannerUrl] = useState("");
+  const [screenshotUrl, setScreenshotUrl] = useState("");
   const [balance, setBalance] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(false);
@@ -81,6 +85,8 @@ export function DirectoryNewForm() {
       setTitle(meta.title || "");
       setDescription(meta.description || "");
       setLogoUrl(meta.logo_url || "");
+      setBannerUrl(meta.banner_url || "");
+      setScreenshotUrl(meta.screenshot_url || "");
       setTagsInput((meta.tags || []).join(", "));
       setFetched(true);
       setEditing(false);
@@ -108,6 +114,8 @@ export function DirectoryNewForm() {
       if (description) body.description = description;
       if (tags.length > 0) body.tags = tags;
       if (logoUrl) body.logo_url = logoUrl;
+      if (bannerUrl) body.banner_url = bannerUrl;
+      if (screenshotUrl) body.screenshot_url = screenshotUrl;
 
       const res = await fetch("/api/directory", {
         method: "POST",
@@ -257,6 +265,38 @@ export function DirectoryNewForm() {
                 </div>
               )}
 
+              {/* Banner preview */}
+              {bannerUrl && (
+                <div className="mt-3">
+                  <p className="text-xs text-muted-foreground mb-1">Banner</p>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={bannerUrl}
+                    alt="Banner"
+                    className="w-full h-32 object-cover rounded-lg border border-border"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Screenshot preview */}
+              {screenshotUrl && (
+                <div className="mt-3">
+                  <p className="text-xs text-muted-foreground mb-1">Homepage Preview</p>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={screenshotUrl}
+                    alt="Homepage screenshot"
+                    className="w-full h-40 object-cover object-top rounded-lg border border-border shadow-sm"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                </div>
+              )}
+
               <div className="flex gap-2 pt-2">
                 <Button
                   type="button"
@@ -277,6 +317,8 @@ export function DirectoryNewForm() {
                     setDescription("");
                     setTagsInput("");
                     setLogoUrl("");
+                    setBannerUrl("");
+                    setScreenshotUrl("");
                   }}
                 >
                   Change URL

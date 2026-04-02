@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+import crypto from "crypto";
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 /**
  * POST /api/directory/fetch-meta
  *
- * Fetches title, description, logo (og:image/favicon), and keywords/tags
- * from a given URL by parsing its HTML meta tags.
+ * Fetches title, description, logo (og:image/favicon), banner (og:image/twitter:image),
+ * homepage screenshot, and keywords/tags from a given URL.
  */
 export async function POST(request: NextRequest) {
   let body: { url?: string };
@@ -64,10 +69,14 @@ export async function POST(request: NextRequest) {
 
     const ogImage = extractMeta(html, 'property="og:image"') || "";
 
+    const twitterImage =
+      extractMeta(html, 'name="twitter:image"') ||
+      extractMeta(html, 'name="twitter:image:src"') ||
+      "";
+
     const keywords = extractMeta(html, 'name="keywords"') || "";
 
-    // Try to find a logo: og:image > /favicon.ico
-    // Try logo files first, then favicon, then og:image as last resort
+    // --- Logo detection ---
     const logoCandidates = [
       `${parsedUrl.origin}/logo.svg`,
       `${parsedUrl.origin}/logo.png`,
@@ -92,7 +101,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Fallback: favicon from HTML meta tags
     if (!logo_url) {
       const faviconHref = extractFavicon(html);
       if (faviconHref) {
@@ -104,7 +112,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Fallback: og:image
     if (!logo_url && ogImage) {
       try {
         logo_url = new URL(ogImage, url).href;
@@ -113,12 +120,65 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Last resort: favicon.ico
     if (!logo_url) {
       logo_url = `${parsedUrl.origin}/favicon.ico`;
     }
 
-    // Parse tags from keywords or og:type
+    // --- Banner detection ---
+    // Priority: og:image > twitter:image > fallback banner files
+    let banner_url = "";
+
+    // Use og:image as banner if it exists
+    if (ogImage) {
+      try {
+        banner_url = new URL(ogImage, url).href;
+      } catch {
+        banner_url = ogImage;
+      }
+    }
+
+    // Fallback to twitter:image
+    if (!banner_url && twitterImage) {
+      try {
+        banner_url = new URL(twitterImage, url).href;
+      } catch {
+        banner_url = twitterImage;
+      }
+    }
+
+    // Fallback: try common banner file paths
+    if (!banner_url) {
+      const bannerCandidates = [
+        `${parsedUrl.origin}/banner.png`,
+        `${parsedUrl.origin}/banner.jpg`,
+        `${parsedUrl.origin}/banner.svg`,
+      ];
+      for (const candidate of bannerCandidates) {
+        try {
+          const bannerRes = await fetch(candidate, {
+            method: "HEAD",
+            signal: AbortSignal.timeout(3000),
+            redirect: "follow",
+          });
+          if (bannerRes.ok) {
+            banner_url = candidate;
+            break;
+          }
+        } catch {
+          // try next
+        }
+      }
+    }
+
+    // --- Homepage screenshot via Microlink ---
+    let screenshot_url = "";
+    try {
+      screenshot_url = await captureScreenshot(url);
+    } catch {
+      // Screenshot is optional — don't fail the whole request
+    }
+
+    // Parse tags from keywords
     const tags: string[] = keywords
       ? keywords
           .split(",")
@@ -131,6 +191,8 @@ export async function POST(request: NextRequest) {
       title: title.substring(0, 100),
       description: description.substring(0, 500),
       logo_url,
+      banner_url,
+      screenshot_url,
       tags,
     });
   } catch (err) {
@@ -139,8 +201,75 @@ export async function POST(request: NextRequest) {
   }
 }
 
+/**
+ * Capture a homepage screenshot via Microlink API and upload to Supabase storage.
+ */
+async function captureScreenshot(url: string): Promise<string> {
+  const microlinkUrl = `https://api.microlink.io/?url=${encodeURIComponent(url)}&screenshot=true&meta=false&embed=screenshot.url`;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+
+  try {
+    const res = await fetch(microlinkUrl, {
+      signal: controller.signal,
+      redirect: "follow",
+    });
+    clearTimeout(timeout);
+
+    if (!res.ok) return "";
+
+    // The embed=screenshot.url mode redirects to the image directly
+    const contentType = res.headers.get("content-type") || "";
+
+    let imageBuffer: Buffer;
+
+    if (contentType.startsWith("image/")) {
+      // Direct image response (embed mode)
+      imageBuffer = Buffer.from(await res.arrayBuffer());
+    } else {
+      // JSON response — extract screenshot URL and fetch the image
+      const data = await res.json();
+      const screenshotUrl =
+        data?.data?.screenshot?.url || data?.screenshot?.url;
+      if (!screenshotUrl) return "";
+
+      const imgRes = await fetch(screenshotUrl, {
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!imgRes.ok) return "";
+      imageBuffer = Buffer.from(await imgRes.arrayBuffer());
+    }
+
+    if (imageBuffer.length === 0) return "";
+
+    // Upload to Supabase storage
+    const urlHash = crypto.createHash("md5").update(url).digest("hex");
+    const filePath = `${urlHash}/${Date.now()}.png`;
+
+    const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+    const { error } = await sb.storage
+      .from("directory-screenshots")
+      .upload(filePath, imageBuffer, {
+        contentType: "image/png",
+        upsert: true,
+      });
+
+    if (error) return "";
+
+    const {
+      data: { publicUrl },
+    } = sb.storage.from("directory-screenshots").getPublicUrl(filePath);
+
+    return publicUrl;
+  } catch {
+    return "";
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 function extractMeta(html: string, attr: string): string {
-  // Match both content="..." and content='...'
   const regex = new RegExp(
     `<meta[^>]*${attr.replace(/"/g, '["\']')}[^>]*content=["']([^"']*)["'][^>]*/?>`,
     "i"
@@ -148,7 +277,6 @@ function extractMeta(html: string, attr: string): string {
   const match = html.match(regex);
   if (match) return decodeEntities(match[1]);
 
-  // Try reversed order (content before property)
   const regex2 = new RegExp(
     `<meta[^>]*content=["']([^"']*)["'][^>]*${attr.replace(/"/g, '["\']')}[^>]*/?>`,
     "i"
@@ -170,7 +298,6 @@ function extractFavicon(html: string): string {
   );
   if (match) return match[1];
 
-  // Reversed order
   const match2 = html.match(
     /<link[^>]*href=["']([^"']*)["'][^>]*rel=["'](?:icon|shortcut icon|apple-touch-icon)["'][^>]*\/?>/i
   );

@@ -88,7 +88,17 @@ export default async function DirectoryDetailPage({
             Back to Directory
           </Link>
 
-          <div className="border border-border rounded-lg bg-card p-6 md:p-8">
+          <div className="border border-border rounded-lg bg-card overflow-hidden">
+            {/* Banner */}
+            {l.banner_url && (
+              <img
+                src={l.banner_url}
+                alt=""
+                className="w-full h-48 object-cover"
+              />
+            )}
+
+            <div className="p-6 md:p-8">
             {/* Header */}
             <div className="flex items-start gap-4 mb-6">
               {l.logo_url && (
@@ -185,10 +195,23 @@ export default async function DirectoryDetailPage({
               />
             </div>
 
+            {/* Homepage Screenshot */}
+            {l.screenshot_url && (
+              <div className="mt-6">
+                <h2 className="text-sm font-medium text-muted-foreground mb-2">Homepage Preview</h2>
+                <img
+                  src={l.screenshot_url}
+                  alt={`${l.title} homepage`}
+                  className="w-full rounded-lg border border-border shadow-sm"
+                />
+              </div>
+            )}
+
             {/* Owner actions */}
             {isOwner && (
               <DirectoryOwnerActions listing={l} />
             )}
+          </div>
           </div>
 
           {/* Comments section */}
