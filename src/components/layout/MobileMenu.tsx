@@ -7,7 +7,7 @@ import { Menu, X, Search } from "lucide-react";
 
 const NAV_LINKS = [
   { href: "/search", label: "Search", icon: true },
-  { href: "/feed", label: "Lobby" },
+  { href: "/feed", label: "Lounge" },
   { href: "/gigs", label: "Gigs" },
   { href: "/for-hire", label: "For Hire" },
   { href: "/skills", label: "Skills" },
