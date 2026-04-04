@@ -254,9 +254,10 @@ export default async function GigsPage({ params, searchParams }: GigsPageProps) 
 
       <main className="flex-1 container mx-auto px-4 py-8">
         <div className="max-w-5xl mx-auto">
-          <h1 className="text-3xl font-bold mb-2">Browse Gigs</h1>
+          <h1 className="text-3xl font-bold mb-2">Gigs (Hiring)</h1>
           <p className="text-muted-foreground mb-8">
-            Browse Gigs — Find clients looking to hire
+            Clients posting work they need done. Looking for work instead?{" "}
+            <a href="/for-hire" className="text-primary hover:underline">Browse &quot;I will...&quot; listings →</a>
           </p>
 
           <Suspense fallback={<div className="h-48" />}>
