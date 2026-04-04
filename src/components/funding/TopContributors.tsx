@@ -34,9 +34,16 @@ function TopContributorsInner() {
         .finally(() => setLoading(false));
     };
     load();
-    // Poll: 10s if payment pending, 5min otherwise
-    const interval = setInterval(load, pendingPayment ? 10_000 : 300_000);
-    return () => clearInterval(interval);
+    // Poll: 10s if payment pending, 5min active, 15min hidden
+    let timer: ReturnType<typeof setTimeout>;
+    function schedule() {
+      const delay = pendingPayment ? 10_000 : document.hidden ? 15 * 60_000 : 300_000;
+      timer = setTimeout(() => { load(); schedule(); }, delay);
+    }
+    schedule();
+    function onVis() { clearTimeout(timer); if (!document.hidden) load(); schedule(); }
+    document.addEventListener("visibilitychange", onVis);
+    return () => { clearTimeout(timer); document.removeEventListener("visibilitychange", onVis); };
   }, [pendingPayment]);
 
   if (loading) {

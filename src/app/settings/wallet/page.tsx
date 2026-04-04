@@ -145,14 +145,33 @@ export default function WalletPage() {
       setLoading(false);
     }).catch(() => setLoading(false));
 
-    // Poll balance every 15s to pick up incoming Lightning Address payments
-    const balancePoll = setInterval(() => {
+    // Poll balance: 15s when active, 15min when tab is hidden
+    let pollTimer: ReturnType<typeof setTimeout>;
+    function schedulePoll() {
+      const delay = document.hidden ? 15 * 60_000 : 15_000;
+      pollTimer = setTimeout(() => {
+        refreshBalance();
+        refreshTransactions();
+        schedulePoll();
+      }, delay);
+    }
+    schedulePoll();
+
+    // Re-schedule on visibility change so active tab gets fast polls
+    function onVisibility() {
+      clearTimeout(pollTimer);
       if (!document.hidden) {
         refreshBalance();
         refreshTransactions();
       }
-    }, 15_000);
-    return () => clearInterval(balancePoll);
+      schedulePoll();
+    }
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      clearTimeout(pollTimer);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [refreshBalance, refreshTransactions]);
 
   useEffect(() => {

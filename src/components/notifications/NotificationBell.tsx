@@ -56,11 +56,23 @@ export function NotificationBell() {
     }
     fetchNotifications();
 
-    // Poll every 60s, but only when the tab is visible
-    const interval = setInterval(() => {
-      if (!document.hidden) fetchNotifications();
-    }, 60_000);
-    return () => { cancelled = true; clearInterval(interval); };
+    // Poll: 60s when active, 15min when tab is hidden
+    let pollTimer: ReturnType<typeof setTimeout>;
+    function schedulePoll() {
+      const delay = document.hidden ? 15 * 60_000 : 60_000;
+      pollTimer = setTimeout(() => {
+        if (!cancelled) fetchNotifications();
+        schedulePoll();
+      }, delay);
+    }
+    schedulePoll();
+    function onVisibility() {
+      clearTimeout(pollTimer);
+      if (!document.hidden && !cancelled) fetchNotifications();
+      schedulePoll();
+    }
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => { cancelled = true; clearTimeout(pollTimer); document.removeEventListener("visibilitychange", onVisibility); };
   }, []);
 
   useEffect(() => {

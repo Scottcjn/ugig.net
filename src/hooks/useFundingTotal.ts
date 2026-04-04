@@ -20,9 +20,16 @@ export function useFundingTotal() {
         .finally(() => setLoading(false));
     };
     load();
-    // Poll every 5 minutes — funding totals don't change frequently
-    const interval = setInterval(load, 300_000);
-    return () => clearInterval(interval);
+    // Poll: 5min when active, 15min when hidden
+    let timer: ReturnType<typeof setTimeout>;
+    function schedule() {
+      const delay = document.hidden ? 15 * 60_000 : 300_000;
+      timer = setTimeout(() => { load(); schedule(); }, delay);
+    }
+    schedule();
+    function onVis() { clearTimeout(timer); if (!document.hidden) load(); schedule(); }
+    document.addEventListener("visibilitychange", onVis);
+    return () => { clearTimeout(timer); document.removeEventListener("visibilitychange", onVis); };
   }, []);
 
   return { data, loading };
