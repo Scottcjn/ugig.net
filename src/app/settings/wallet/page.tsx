@@ -115,6 +115,13 @@ export default function WalletPage() {
   const [balance, setBalance] = useState<number>(0);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Show balance in tab title
+  useEffect(() => {
+    const original = document.title;
+    document.title = balance > 0 ? `⚡ ${balance.toLocaleString()} sats — Wallet` : "Wallet — ugig";
+    return () => { document.title = original; };
+  }, [balance]);
   const [depositing, setDepositing] = useState(false);
   const [customAmount, setCustomAmount] = useState("");
   const [invoice, setInvoice] = useState<{ payment_request: string; payment_hash: string; amount_sats: number } | null>(null);
