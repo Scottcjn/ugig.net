@@ -39,8 +39,11 @@ export function NotificationBell() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function fetchNotifications() {
       const result = await notifications.list({ limit: 10 });
+      if (cancelled) return;
       if (!result.error && result.data) {
         const data = result.data as {
           notifications: Notification[];
@@ -57,7 +60,7 @@ export function NotificationBell() {
     const interval = setInterval(() => {
       if (!document.hidden) fetchNotifications();
     }, 60_000);
-    return () => clearInterval(interval);
+    return () => { cancelled = true; clearInterval(interval); };
   }, []);
 
   useEffect(() => {
