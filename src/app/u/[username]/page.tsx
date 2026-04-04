@@ -38,6 +38,7 @@ import { SkillEndorsements } from "@/components/endorsements";
 import { MarkdownContent } from "@/components/ui/MarkdownContent";
 import { TestimonialSection } from "@/components/testimonials/TestimonialSection";
 import { CompletedGigs } from "@/components/profile/CompletedGigs";
+import { ProfileActivityStats } from "@/components/profile/ProfileActivityStats";
 
 interface Props {
   params: Promise<{ username: string }>;
@@ -699,6 +700,13 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
                 })}
               </p>
             </div>
+
+            {/* Activity Stats */}
+            <ProfileActivityStats
+              userId={profile.id}
+              lastActiveAt={profile.last_active_at}
+              createdAt={profile.created_at}
+            />
 
             {/* Contact CTA */}
             {profile.id !== currentUser?.id && (
