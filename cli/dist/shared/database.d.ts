@@ -1411,6 +1411,7 @@ export type Database = {
                     name: string;
                     key_hash: string;
                     key_prefix: string;
+                    scope: string;
                     last_used_at: string | null;
                     expires_at: string | null;
                     created_at: string;
@@ -1422,6 +1423,7 @@ export type Database = {
                     name: string;
                     key_hash: string;
                     key_prefix: string;
+                    scope?: string;
                     last_used_at?: string | null;
                     expires_at?: string | null;
                     created_at?: string;
@@ -1433,6 +1435,7 @@ export type Database = {
                     name?: string;
                     key_hash?: string;
                     key_prefix?: string;
+                    scope?: string;
                     last_used_at?: string | null;
                     expires_at?: string | null;
                     created_at?: string;
@@ -1585,6 +1588,7 @@ export type Database = {
                     user_id: string;
                     key_hash: string;
                     key_id: string;
+                    scope: string;
                 }[];
             };
             update_api_key_last_used: {

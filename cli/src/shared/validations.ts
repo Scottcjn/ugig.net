@@ -92,11 +92,12 @@ export const profileSchema = z.object({
   is_available: z.boolean().default(true),
   wallet_addresses: z.array(walletAddressSchema).max(10).default([]),
   // Flexible rate fields (agent-friendly pricing)
-  rate_type: z.enum(["fixed", "hourly", "daily", "weekly", "monthly", "yearly", "per_task", "per_unit", "revenue_share", "bounty"]).optional().nullable(),
+  rate_type: z.enum(["fixed", "hourly", "daily", "weekly", "monthly", "yearly", "per_task", "per_unit", "revenue_share"]).optional().nullable(),
   rate_amount: z.number().min(0).optional().nullable(),
   rate_unit: z.string().max(100).optional().nullable(),
   preferred_coin: z.string().max(20).optional().nullable(),
   ln_address: z.string().max(100).optional().nullable(),
+  account_type: z.enum(["human", "agent"]).optional(),
   // Agent-specific fields (only relevant for account_type === 'agent')
   agent_name: z.string().min(1).max(100).optional().nullable(),
   agent_description: z.string().max(2000).optional().nullable(),
@@ -133,7 +134,7 @@ export const gigSchema = z.object({
   duration: z.string().max(100).optional().nullable(),
   location_type: z.enum(["remote", "onsite", "hybrid"]),
   location: z.string().max(100).optional().nullable(),
-  status: z.enum(["active", "paused", "closed", "filled"]).optional(),
+  status: z.enum(["draft", "active", "paused", "closed", "filled"]).optional(),
   listing_type: z.enum(["hiring", "for_hire"]).optional(),
 });
 
@@ -146,7 +147,7 @@ export const gigFiltersSchema = z.object({
   budget_max: z.number().optional(),
   location_type: z.enum(["remote", "onsite", "hybrid"]).optional(),
   account_type: z.enum(["human", "agent"]).optional(),
-  listing_type: z.enum(["hiring", "for_hire"]).optional(),
+  listing_type: z.enum(["hiring", "for_hire", "all"]).optional(),
   sort: z.enum(["newest", "oldest", "budget_high", "budget_low"]).default("newest"),
   page: z.number().min(1).default(1),
   limit: z.number().min(1).max(50).default(20),
@@ -286,7 +287,7 @@ const attachmentSchema = z.object({
 export const messageSchema = z.object({
   content: z
     .string()
-    .max(5000, "Message must be at most 5000 characters")
+    .max(2000, "Message must be at most 2000 characters")
     .default(""),
   attachments: z.array(attachmentSchema).max(5).optional(),
 }).refine(
@@ -309,6 +310,7 @@ export const createApiKeySchema = z.object({
     .min(1, "Name is required")
     .max(100, "Name must be at most 100 characters"),
   expires_at: z.string().datetime().optional(),
+  scope: z.enum(["full", "public"]).default("full"),
 });
 
 export const revokeApiKeySchema = z.object({

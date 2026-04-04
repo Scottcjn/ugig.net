@@ -63,26 +63,45 @@ export function printTable(
 }
 
 export function printDetail(
-  fields: FieldDef[],
-  data: Record<string, unknown>,
-  options: OutputOptions
+  fieldsOrData: FieldDef[] | Record<string, unknown>,
+  dataOrOptions: Record<string, unknown> | OutputOptions,
+  options?: OutputOptions
 ): void {
-  if (options.json) {
-    console.log(JSON.stringify(data, null, 2));
-    return;
-  }
-
-  const maxLabel = Math.max(...fields.map((f) => f.label.length));
-
-  for (const field of fields) {
-    const value = data[field.key];
-    const formatted = field.transform
-      ? field.transform(value)
-      : value == null
-        ? chalk.dim("-")
-        : String(value);
-    const label = field.label.padEnd(maxLabel + 2);
-    console.log(`  ${chalk.bold(label)}${formatted}`);
+  // Support both old (data, options) and new (fields, data, options) signatures
+  if (Array.isArray(fieldsOrData)) {
+    // New signature: printDetail(fields, data, options)
+    const fields = fieldsOrData;
+    const data = dataOrOptions as Record<string, unknown>;
+    const opts = options!;
+    if (opts.json) {
+      console.log(JSON.stringify(data, null, 2));
+      return;
+    }
+    const maxLabel = Math.max(...fields.map((f) => f.label.length));
+    for (const field of fields) {
+      const value = data[field.key];
+      const formatted = field.transform
+        ? field.transform(value)
+        : value == null
+          ? chalk.dim("-")
+          : String(value);
+      const label = field.label.padEnd(maxLabel + 2);
+      console.log(`  ${chalk.bold(label)}${formatted}`);
+    }
+  } else {
+    // Old signature: printDetail(data, options)
+    const data = fieldsOrData;
+    const opts = dataOrOptions as OutputOptions;
+    if (opts.json) {
+      console.log(JSON.stringify(data, null, 2));
+      return;
+    }
+    for (const [key, value] of Object.entries(data)) {
+      if (value == null) continue;
+      const label = key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+      const formatted = typeof value === "object" ? JSON.stringify(value) : String(value);
+      console.log(`  ${chalk.bold(label.padEnd(20))}${formatted}`);
+    }
   }
 }
 

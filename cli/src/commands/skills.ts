@@ -55,7 +55,7 @@ export function registerSkillsCommands(program: Command): void {
               { header: "Price", key: "price_sats", width: 10, transform: (v) => `${v} sats` },
               { header: "Rating", key: "rating_avg", width: 8 },
               { header: "Downloads", key: "downloads_count", width: 10 },
-              { header: "Scan", key: "scan_status", width: 10, transform: (v) => v || "—" },
+              { header: "Scan", key: "scan_status", width: 10, transform: (v) => String(v || "—") },
               { header: "Created", key: "created_at", transform: relativeDate },
             ],
             result.listings,
@@ -300,7 +300,7 @@ export function registerSkillsCommands(program: Command): void {
           body: fd,
         });
 
-        const data = await response.json();
+        const data = await response.json() as any;
 
         if (!response.ok) {
           if (data.scan) {
@@ -371,7 +371,7 @@ export function registerSkillsCommands(program: Command): void {
             { header: "Slug", key: "slug", width: 25, transform: truncate(23) },
             { header: "Title", key: "title", width: 30, transform: truncate(28) },
             { header: "Status", key: "status", width: 10 },
-            { header: "Scan", key: "scan_status", width: 10, transform: (v) => v || "—" },
+            { header: "Scan", key: "scan_status", width: 10, transform: (v) => String(v || "—") },
             { header: "Price", key: "price_sats", width: 10, transform: (v) => `${v} sats` },
             { header: "Downloads", key: "downloads_count", width: 10 },
           ],
