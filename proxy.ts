@@ -18,6 +18,51 @@ const THROTTLED_PATHS = [
 const THROTTLE_WINDOW_MS = 30_000;
 const throttleMap = new Map<string, { ts: number; body: string }>();
 
+// ── Polling abuse detection ─────────────────────────────────────
+// If an IP hits throttled endpoints for >8 hours continuously,
+// block them from those endpoints entirely until they stop for 30 min.
+const ABUSE_WINDOW_MS = 8 * 60 * 60_000; // 8 hours
+const ABUSE_COOLDOWN_MS = 30 * 60_000; // 30 min cooldown
+const abuseTracker = new Map<string, { firstSeen: number; lastSeen: number; blocked: boolean }>();
+
+function checkPollingAbuse(ip: string): boolean {
+  const now = Date.now();
+  const entry = abuseTracker.get(ip);
+
+  if (!entry) {
+    abuseTracker.set(ip, { firstSeen: now, lastSeen: now, blocked: false });
+    return false;
+  }
+
+  // If blocked, check if cooldown passed
+  if (entry.blocked) {
+    if (now - entry.lastSeen > ABUSE_COOLDOWN_MS) {
+      // Cooldown passed, reset
+      abuseTracker.delete(ip);
+      return false;
+    }
+    entry.lastSeen = now;
+    return true; // still blocked
+  }
+
+  // If gap > 30 min since last request, reset tracking
+  if (now - entry.lastSeen > ABUSE_COOLDOWN_MS) {
+    abuseTracker.set(ip, { firstSeen: now, lastSeen: now, blocked: false });
+    return false;
+  }
+
+  entry.lastSeen = now;
+
+  // If polling for >8 hours continuously, block
+  if (now - entry.firstSeen > ABUSE_WINDOW_MS) {
+    entry.blocked = true;
+    console.log(`[abuse] Blocked polling from ${ip} after 8h continuous`);
+    return true;
+  }
+
+  return false;
+}
+
 // Cleanup stale entries every 60s
 let lastThrottleCleanup = Date.now();
 function cleanupThrottle() {
@@ -26,6 +71,10 @@ function cleanupThrottle() {
   lastThrottleCleanup = now;
   for (const [key, entry] of throttleMap) {
     if (now - entry.ts > THROTTLE_WINDOW_MS * 2) throttleMap.delete(key);
+  }
+  // Also clean abuse tracker
+  for (const [ip, entry] of abuseTracker) {
+    if (now - entry.lastSeen > ABUSE_COOLDOWN_MS * 2) abuseTracker.delete(ip);
   }
 }
 
@@ -60,6 +109,22 @@ export async function proxy(request: NextRequest) {
   // Throttle heavy polling endpoints — 1 request per IP+path per 30s
   if (method === "GET" && THROTTLED_PATHS.includes(path)) {
     cleanupThrottle();
+
+    // Block IPs that poll continuously for >8 hours
+    if (checkPollingAbuse(ip)) {
+      return new NextResponse(
+        JSON.stringify({ error: "Too many requests. Please refresh the page." }),
+        {
+          status: 429,
+          headers: {
+            "Content-Type": "application/json",
+            "Retry-After": "1800",
+            "X-Blocked": "polling-abuse",
+          },
+        },
+      );
+    }
+
     const key = `${ip}:${path}`;
     const cached = throttleMap.get(key);
     const now = Date.now();
