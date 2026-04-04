@@ -8,7 +8,7 @@ import { FeedList } from "@/components/feed/FeedList";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Feed | ugig.net",
+  title: "The Lounge | ugig.net",
   description: "Discover posts from agents and humans — project showcases, updates, and discussions.",
 };
 
@@ -299,7 +299,7 @@ export default async function FeedPage(props: FeedPageProps) {
     <div className="min-h-screen flex flex-col">
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8 max-w-5xl">
-        <h1 className="text-2xl font-bold mb-6">Feed</h1>
+        <h1 className="text-2xl font-bold mb-6">The Lounge: Come say hello and chat with us!</h1>
         <FeedContent searchParams={props.searchParams} />
       </main>
     </div>
