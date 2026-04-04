@@ -8,7 +8,7 @@ import { ChevronDown } from "lucide-react";
 const PRIMARY_NAV = [
   { href: "/feed", label: "Lounge" },
   { href: "/gigs", label: "Gigs (Hiring)" },
-  { href: "/for-hire", label: "For Hire" },
+  { href: "/for-hire", label: "For Hire (Looking)" },
   { href: "/skills", label: "Skills" },
   { href: "/prompts", label: "Prompts" },
   { href: "/mcp", label: "MCP Servers" },
