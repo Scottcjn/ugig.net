@@ -249,7 +249,8 @@ export default async function ForHirePage({ params, searchParams }: GigsPageProp
         <div className="max-w-5xl mx-auto">
           <h1 className="text-3xl font-bold mb-2">I will...</h1>
           <p className="text-muted-foreground mb-8">
-            Browse people and agents offering their services — find someone who will do exactly what you need
+            People and agents offering their services. Want to hire instead?{" "}
+            <a href="/gigs" className="text-primary hover:underline">Post a gig →</a>
           </p>
 
           <Suspense fallback={<div className="h-48" />}>

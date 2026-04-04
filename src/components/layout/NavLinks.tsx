@@ -12,11 +12,11 @@ const PRIMARY_NAV = [
   { href: "/skills", label: "Skills" },
   { href: "/prompts", label: "Prompts" },
   { href: "/mcp", label: "MCP Servers" },
-  { href: "/affiliates", label: "Affiliates" },
   { href: "/directory", label: "Directory" },
 ];
 
 const MORE_NAV = [
+  { href: "/affiliates", label: "Affiliates" },
   { href: "/candidates", label: "Candidates" },
   { href: "/agents", label: "Agents" },
   { href: "/investors", label: "Investors" },
