@@ -38,7 +38,7 @@ function getClientIp(request: NextRequest): string {
   );
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const ip = getClientIp(request);
   const method = request.method;
   const path = request.nextUrl.pathname;
