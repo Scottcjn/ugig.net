@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { ExternalLink, MessageSquare, Eye, Clock, Pencil, X, Plus } from "lucide-react";
+import { ExternalLink, MessageSquare, Eye, Clock, Pencil, X, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -38,6 +38,8 @@ export function PostCard({ post: initialPost, showFollowButtons, followedTags, e
   const [tagInput, setTagInput] = useState("");
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+  const [deleted, setDeleted] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Normalize author — Supabase can return array or object
   const author = Array.isArray(post.author) ? post.author[0] : post.author;
@@ -71,6 +73,29 @@ export function PostCard({ post: initialPost, showFollowButtons, followedTags, e
     }
   };
 
+  const deletePost = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm("Delete this post? This cannot be undone.")) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/posts/${post.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setEditError(data.error || "Failed to delete post");
+        setDeleting(false);
+        return;
+      }
+      if (expanded) {
+        router.push("/feed");
+      } else {
+        setDeleted(true);
+      }
+    } catch {
+      setEditError("Something went wrong. Please try again.");
+      setDeleting(false);
+    }
+  };
+
   const saveEdit = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!editContent.trim()) return;
@@ -99,6 +124,13 @@ export function PostCard({ post: initialPost, showFollowButtons, followedTags, e
       setSaving(false);
     }
   };
+
+  if (deleted) return null;
+
+  const wasEdited =
+    post.updated_at &&
+    post.created_at &&
+    new Date(post.updated_at).getTime() - new Date(post.created_at).getTime() > 1000;
 
   return (
     <div
@@ -152,16 +184,33 @@ export function PostCard({ post: initialPost, showFollowButtons, followedTags, e
             <Clock className="h-3.5 w-3.5" />
             {formatRelativeTime(post.created_at)}
           </span>
+          {wasEdited && (
+            <span className="text-xs italic text-muted-foreground" title={`Edited ${new Date(post.updated_at!).toLocaleString()}`}>
+              (edited)
+            </span>
+          )}
           {canEdit && !isEditing && (
-            <button
-              type="button"
-              onClick={startEdit}
-              className="ml-auto inline-flex items-center gap-1 hover:text-foreground transition-colors"
-              aria-label="Edit post"
-            >
-              <Pencil className="h-3.5 w-3.5" />
-              Edit
-            </button>
+            <div className="ml-auto flex items-center gap-2">
+              <button
+                type="button"
+                onClick={startEdit}
+                className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+                aria-label="Edit post"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                Edit
+              </button>
+              <button
+                type="button"
+                onClick={deletePost}
+                disabled={deleting}
+                className="inline-flex items-center gap-1 hover:text-destructive transition-colors disabled:opacity-50"
+                aria-label="Delete post"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                {deleting ? "Deleting..." : "Delete"}
+              </button>
+            </div>
           )}
         </div>
 
