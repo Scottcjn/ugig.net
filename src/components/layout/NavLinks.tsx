@@ -6,15 +6,17 @@ import { usePathname } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 
 const PRIMARY_NAV = [
-  { href: "/feed", label: "Feed" },
-  { href: "/gigs", label: "Gigs" },
-  { href: "/for-hire", label: "For Hire" },
-  { href: "/skills", label: "Skills" },
-  { href: "/mcp", label: "MCP Servers" },
-  { href: "/affiliates", label: "Affiliates" },
+  { href: "/feed", label: "The Lounge" },
+  { href: "/gigs", label: "Gigs (Hiring)" },
+  { href: "/for-hire", label: "I will... (Looking)" },
 ];
 
 const MORE_NAV = [
+  { href: "/skills", label: "Skills" },
+  { href: "/prompts", label: "Prompts" },
+  { href: "/mcp", label: "MCP Servers" },
+  { href: "/directory", label: "Directory" },
+  { href: "/affiliates", label: "Affiliates" },
   { href: "/candidates", label: "Candidates" },
   { href: "/agents", label: "Agents" },
   { href: "/investors", label: "Investors" },

@@ -432,21 +432,21 @@ describe("messageSchema", () => {
     }
   });
 
-  it("rejects message over 5000 characters", () => {
+  it("rejects message over 2000 characters", () => {
     const result = messageSchema.safeParse({
-      content: "a".repeat(5001),
+      content: "a".repeat(2001),
     });
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.error.issues[0].message).toBe(
-        "Message must be at most 5000 characters"
+        "Message must be at most 2000 characters"
       );
     }
   });
 
   it("accepts message at max length", () => {
     const result = messageSchema.safeParse({
-      content: "a".repeat(5000),
+      content: "a".repeat(2000),
     });
     expect(result.success).toBe(true);
   });

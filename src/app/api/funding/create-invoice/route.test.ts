@@ -27,7 +27,13 @@ vi.mock("@/lib/lnbits", () => ({
   createInvoice: (...args: unknown[]) => mockCreateInvoice(...args),
 }));
 
+// Mock BTC rate at $100,000 for predictable sats calculations
+// $100 → 100_000 sats, $1 → 100 sats, etc.
+const mockFetch = vi.fn();
+global.fetch = mockFetch;
+
 import { POST, _resetRateLimit } from "./route";
+import { _resetBtcRateCache } from "@/lib/funding";
 
 // ── Helpers ────────────────────────────────────────────────────────
 
@@ -55,12 +61,18 @@ describe("POST /api/funding/create-invoice", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     _resetRateLimit();
+    _resetBtcRateCache();
     mockCreateInvoice.mockResolvedValue({
       payment_hash: "abc123hash",
       payment_request: "lnbc1000...",
       checking_id: "chk123",
     });
     mockFrom.mockReturnValue(chainResult({ data: null, error: null }));
+    // Mock BTC rate at $100,000 → $1 = 1,000 sats
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ success: true, rate: 100_000 }),
+    });
   });
 
   it("returns 400 for invalid tier", async () => {
@@ -75,6 +87,7 @@ describe("POST /api/funding/create-invoice", () => {
     expect(data.paymentRequest).toBe("lnbc1000...");
     expect(data.paymentHash).toBe("abc123hash");
     expect(data.tier).toBe("credits_100k");
+    // $100 at $100k/BTC = 100,000 sats
     expect(data.amountSats).toBe(100_000);
     expect(data.expiresAt).toBeDefined();
   });
@@ -84,7 +97,8 @@ describe("POST /api/funding/create-invoice", () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.tier).toBe("lifetime");
-    expect(data.amountSats).toBe(200_000);
+    // $20 at $100k/BTC = 20,000 sats
+    expect(data.amountSats).toBe(20_000);
   });
 
   it("creates invoice for supporter tier", async () => {
@@ -96,9 +110,10 @@ describe("POST /api/funding/create-invoice", () => {
 
   it("calls LNbits createInvoice with correct params", async () => {
     await POST(makeRequest({ tier: "credits_500k" }));
+    // $600 at $100k/BTC = 600,000 sats
     expect(mockCreateInvoice).toHaveBeenCalledWith(
       expect.objectContaining({
-        amount: 500_000,
+        amount: 600_000,
         memo: expect.stringContaining("500k"),
       })
     );

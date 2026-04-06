@@ -39,8 +39,11 @@ export function NotificationBell() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function fetchNotifications() {
       const result = await notifications.list({ limit: 10 });
+      if (cancelled) return;
       if (!result.error && result.data) {
         const data = result.data as {
           notifications: Notification[];
@@ -53,9 +56,23 @@ export function NotificationBell() {
     }
     fetchNotifications();
 
-    // Polling for new notifications every 30 seconds
-    const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
+    // Poll: 60s when active, 15min when tab is hidden
+    let pollTimer: ReturnType<typeof setTimeout>;
+    function schedulePoll() {
+      const delay = document.hidden ? 15 * 60_000 : 60_000;
+      pollTimer = setTimeout(() => {
+        if (!cancelled) fetchNotifications();
+        schedulePoll();
+      }, delay);
+    }
+    schedulePoll();
+    function onVisibility() {
+      clearTimeout(pollTimer);
+      if (!document.hidden && !cancelled) fetchNotifications();
+      schedulePoll();
+    }
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => { cancelled = true; clearTimeout(pollTimer); document.removeEventListener("visibilitychange", onVisibility); };
   }, []);
 
   useEffect(() => {

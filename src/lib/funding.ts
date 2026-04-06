@@ -6,31 +6,27 @@ export const FUNDING_TIERS = {
   credits_100k: {
     id: "credits_100k" as const,
     label: "100k Credits",
-    sats: 100_000,
     creditsAwarded: 100_000, // $100 worth
     usdValue: 100,
-    description: "100,000 sats → $100 in platform credits",
+    description: "$100 in platform credits",
   },
   credits_500k: {
     id: "credits_500k" as const,
     label: "500k Credits",
-    sats: 500_000,
     creditsAwarded: 600_000, // $600 worth (discount)
     usdValue: 600,
-    description: "500,000 sats → $600 in platform credits (20% bonus)",
+    description: "$600 in platform credits (20% bonus)",
   },
   credits_1m: {
     id: "credits_1m" as const,
     label: "1M Credits",
-    sats: 1_000_000,
     creditsAwarded: 1_500_000, // $1500 worth (discount)
     usdValue: 1500,
-    description: "1,000,000 sats → $1,500 in platform credits (50% bonus)",
+    description: "$1,500 in platform credits (50% bonus)",
   },
   lifetime: {
     id: "lifetime" as const,
     label: "Lifetime Premium",
-    sats: 200_000, // ~$20 at typical rate
     creditsAwarded: 0,
     usdValue: 20,
     description: "Lifetime Premium plan — unlimited job postings, premium placement, API access, Founder badge",
@@ -38,12 +34,54 @@ export const FUNDING_TIERS = {
   supporter: {
     id: "supporter" as const,
     label: "Supporter",
-    sats: 10_000,
     creditsAwarded: 0,
     usdValue: 1,
-    description: "10,000–50,000 sats → Supporter badge",
+    description: "Supporter badge",
   },
 } as const;
+
+/** Cached BTC/USD rate */
+let btcRateCache: { rate: number; ts: number } | null = null;
+const RATE_CACHE_MS = 5 * 60 * 1000; // 5 min
+
+/**
+ * Fetch the current BTC/USD rate from CoinPayPortal.
+ * Uses a 5-minute cache to avoid hammering the API.
+ */
+export async function getBtcRate(): Promise<number> {
+  if (btcRateCache && Date.now() - btcRateCache.ts < RATE_CACHE_MS) {
+    return btcRateCache.rate;
+  }
+
+  const res = await fetch("https://coinpayportal.com/api/rates?coin=BTC", {
+    cache: "no-store",
+  });
+  const data = await res.json();
+
+  if (!data.success || !data.rate) {
+    if (btcRateCache) return btcRateCache.rate; // stale cache fallback
+    throw new Error("Failed to fetch BTC rate");
+  }
+
+  btcRateCache = { rate: data.rate, ts: Date.now() };
+  return data.rate;
+}
+
+/**
+ * Convert USD to satoshis using live BTC rate.
+ * 1 BTC = 100,000,000 sats
+ */
+export async function usdToSats(usd: number): Promise<number> {
+  const btcRate = await getBtcRate();
+  const btc = usd / btcRate;
+  const sats = Math.round(btc * 100_000_000);
+  return sats;
+}
+
+/** Reset BTC rate cache (for testing) */
+export function _resetBtcRateCache() {
+  btcRateCache = null;
+}
 
 export type FundingTierId = keyof typeof FUNDING_TIERS;
 

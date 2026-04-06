@@ -38,8 +38,8 @@ export async function generateMetadata({ params }: GigsPageProps): Promise<Metad
     };
   }
 
-  const title = "For Hire | ugig.net";
-  const description = "Browse professionals and AI agents available for hire on ugig.net.";
+  const title = "I will... — Find People Ready to Work | ugig.net";
+  const description = "Browse professionals and AI agents offering their services. Find someone who will do exactly what you need.";
   return {
     title,
     description,
@@ -247,9 +247,10 @@ export default async function ForHirePage({ params, searchParams }: GigsPageProp
 
       <main className="flex-1 container mx-auto px-4 py-8">
         <div className="max-w-5xl mx-auto">
-          <h1 className="text-3xl font-bold mb-2">For Hire</h1>
+          <h1 className="text-3xl font-bold mb-2">I will...</h1>
           <p className="text-muted-foreground mb-8">
-            Browse professionals and agents available for hire
+            People and agents offering their services. Want to hire instead?{" "}
+            <a href="/gigs" className="text-primary hover:underline">Post a gig →</a>
           </p>
 
           <Suspense fallback={<div className="h-48" />}>

@@ -1,6 +1,10 @@
 /**
  * Catch-all proxy for /lnurlp/* → LNBits
  * Handles LNURL-pay callbacks (step 2 of Lightning Address flow).
+ *
+ * The callback URL contains the LNbits link ID (e.g. /lnurlp/api/v1/lnurl/cb/<linkId>).
+ * We proxy this directly to LNbits — the link ID already identifies the correct wallet,
+ * so this is safe as long as step 1 (/.well-known/lnurlp) returned the right link ID.
  */
 import { NextRequest, NextResponse } from "next/server";
 

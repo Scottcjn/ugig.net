@@ -120,7 +120,7 @@ export function registerWalletCommands(program: Command): void {
       const spinner = ora("Sending withdrawal...").start();
       try {
         const client = createClient(opts);
-        const { data } = await client.post("/api/wallet/withdraw", {
+        const { data } = await client.post<any>("/api/wallet/withdraw", {
           amount_sats: parseInt(amount),
           destination,
         });

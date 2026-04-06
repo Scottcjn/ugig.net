@@ -19,11 +19,28 @@ import { POST } from "./route";
 
 // ── Helpers ────────────────────────────────────────────────────────
 
+const TEST_WEBHOOK_SECRET = "test-webhook-secret";
+
 function makeRequest(body: Record<string, unknown>) {
   return new NextRequest("http://localhost/api/funding/lnbits-webhook", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "x-webhook-secret": TEST_WEBHOOK_SECRET,
+    },
     body: JSON.stringify(body),
+  });
+}
+
+/** Simulate LNbits double-encoding: json=payment.json() where .json() is already a string */
+function makeDoubleEncodedRequest(body: Record<string, unknown>) {
+  return new NextRequest("http://localhost/api/funding/lnbits-webhook", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-webhook-secret": TEST_WEBHOOK_SECRET,
+    },
+    body: JSON.stringify(JSON.stringify(body)),
   });
 }
 
@@ -53,9 +70,10 @@ describe("POST /api/funding/lnbits-webhook", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockCheckPayment.mockResolvedValue({ paid: true });
+    process.env.LNBITS_WEBHOOK_SECRET = TEST_WEBHOOK_SECRET;
   });
 
-  it("returns 400 if no payment_hash", async () => {
+  it("returns 400 if no payment_hash or checking_id", async () => {
     const res = await POST(makeRequest({}));
     expect(res.status).toBe(400);
   });
@@ -63,6 +81,20 @@ describe("POST /api/funding/lnbits-webhook", () => {
   it("returns 404 if payment not found in DB", async () => {
     mockFrom.mockReturnValue(mockPaymentLookup(null));
     const res = await POST(makeRequest({ payment_hash: "unknown" }));
+    expect(res.status).toBe(404);
+  });
+
+  it("accepts checking_id as fallback (LNbits webhook format)", async () => {
+    mockFrom.mockReturnValue(mockPaymentLookup(null));
+    const res = await POST(makeRequest({ checking_id: "lnbits-hash" }));
+    // 404 means it parsed the hash fine, just didn't find it in DB
+    expect(res.status).toBe(404);
+  });
+
+  it("handles double-encoded JSON from LNbits (json=payment.json())", async () => {
+    mockFrom.mockReturnValue(mockPaymentLookup(null));
+    const res = await POST(makeDoubleEncodedRequest({ payment_hash: "double-encoded-hash" }));
+    // 404 means it parsed through the double-encoding and found the hash
     expect(res.status).toBe(404);
   });
 

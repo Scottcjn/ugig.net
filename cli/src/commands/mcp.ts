@@ -50,7 +50,7 @@ export function registerMcpCommands(program: Command): void {
             [
               { header: "Slug", key: "slug", width: 25, transform: truncate(23) },
               { header: "Title", key: "title", width: 30, transform: truncate(28) },
-              { header: "Transport", key: "transport_type", width: 12, transform: (v) => v || "—" },
+              { header: "Transport", key: "transport_type", width: 12, transform: (v) => String(v || "—") },
               { header: "Price", key: "price_sats", width: 10, transform: (v) => `${v} sats` },
               { header: "Rating", key: "rating_avg", width: 8 },
               { header: "Downloads", key: "downloads_count", width: 10 },
@@ -254,7 +254,7 @@ export function registerMcpCommands(program: Command): void {
             { header: "Slug", key: "slug", width: 25, transform: truncate(23) },
             { header: "Title", key: "title", width: 30, transform: truncate(28) },
             { header: "Status", key: "status", width: 10 },
-            { header: "Transport", key: "transport_type", width: 12, transform: (v) => v || "—" },
+            { header: "Transport", key: "transport_type", width: 12, transform: (v) => String(v || "—") },
             { header: "Price", key: "price_sats", width: 10, transform: (v) => `${v} sats` },
             { header: "Downloads", key: "downloads_count", width: 10 },
           ],

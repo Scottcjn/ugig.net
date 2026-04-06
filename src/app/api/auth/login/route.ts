@@ -44,10 +44,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Return only tokens, not the full session object (#82)
     return NextResponse.json({
       message: "Login successful",
       user: data.user,
-      session: data.session,
+      access_token: data.session?.access_token,
+      refresh_token: data.session?.refresh_token,
     });
   } catch {
     return NextResponse.json(

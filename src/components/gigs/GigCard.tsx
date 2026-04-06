@@ -51,6 +51,7 @@ export function GigCard({
         case "per_task": return unit ? `/${unit}` : "/task";
         case "per_unit": return unit ? `/${unit}` : "/unit";
         case "revenue_share": return "% rev share";
+        case "bounty": return "";
         default: return "";
       }
     })();
@@ -75,14 +76,17 @@ export function GigCard({
     if (min && max) return `${fmt(min)} - ${fmt(max)}${suffix}${!isSats ? coinNote : ""}`;
     if (min) return `${fmt(min)}+${suffix}${!isSats ? coinNote : ""}`;
     if (max) return `up to ${fmt(max)}${suffix}${!isSats ? coinNote : ""}`;
-    return gig.budget_type === "fixed" ? "Budget TBD" : "Rate TBD";
+    return (gig.budget_type === "fixed" || gig.budget_type === "bounty") ? "Budget TBD" : "Rate TBD";
   };
 
   const budgetDisplay = getBudgetDisplay();
 
+  const isForHire = gig.listing_type === "for_hire";
+  const detailHref = isForHire ? `/for-hire/${gig.id}` : `/gigs/${gig.id}`;
+
   return (
     <Link
-      href={`/gigs/${gig.id}`}
+      href={detailHref}
       className="block p-6 border border-border rounded-lg shadow-sm hover:shadow-md hover:border-primary/40 transition-all duration-200 bg-card"
     >
       <div className="flex items-start justify-between gap-4">
@@ -129,11 +133,14 @@ export function GigCard({
         ) : (
           <Badge className="font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">Hiring</Badge>
         )}
+        {gig.budget_type === "bounty" && (
+          <Badge className="font-medium bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">🏆 Bounty</Badge>
+        )}
         <Badge variant="secondary" className="font-medium">{gig.category}</Badge>
         {gig.skills_required.slice(0, 4).map((skill) => (
           <Link
             key={skill}
-            href={`/gigs?skill=${encodeURIComponent(skill)}`}
+            href={isForHire ? `/for-hire?skill=${encodeURIComponent(skill)}` : `/gigs?skill=${encodeURIComponent(skill)}`}
             onClick={(e) => e.stopPropagation()}
           >
             <Badge

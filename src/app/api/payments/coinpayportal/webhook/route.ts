@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import {
   verifyWebhookSignature,
   type CoinPayWebhookPayload,
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     }
 
     const payload: CoinPayWebhookPayload = JSON.parse(rawBody);
-    const supabase = await createClient();
+    const supabase = createServiceClient();
 
     console.log(`CoinPayPortal webhook: ${payload.type}`, {
       payment_id: payload.data.payment_id,
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
 }
 
 async function handlePaymentConfirmed(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: ReturnType<typeof createServiceClient>,
   payload: CoinPayWebhookPayload
 ) {
   const { data: paymentData } = payload;
@@ -168,7 +168,7 @@ async function handlePaymentConfirmed(
 }
 
 async function grantLifetimeForInvestment(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: ReturnType<typeof createServiceClient>,
   userId: string,
   paymentId: string,
   amountUsd: number
@@ -218,16 +218,17 @@ async function grantLifetimeForInvestment(
 }
 
 async function handlePaymentForwarded(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: ReturnType<typeof createServiceClient>,
   payload: CoinPayWebhookPayload
 ) {
   const { data: paymentData } = payload;
 
-  // Update payment with forwarding info
-  await supabase
-    .from("payments")
+  // Update payment with forwarding info + crypto amount
+  await (supabase
+    .from("payments") as any)
     .update({
       status: "forwarded",
+      amount_crypto: paymentData.amount_crypto || (paymentData as any).crypto_amount || null,
       metadata: {
         tx_hash: paymentData.tx_hash,
         merchant_tx_hash: paymentData.merchant_tx_hash,
@@ -238,7 +239,7 @@ async function handlePaymentForwarded(
 }
 
 async function handlePaymentExpired(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: ReturnType<typeof createServiceClient>,
   payload: CoinPayWebhookPayload
 ) {
   const { data: paymentData } = payload;
@@ -271,7 +272,7 @@ async function handlePaymentExpired(
 // ─── Escrow webhook handlers ───────────────────────────────────────────────
 
 async function handleEscrowFunded(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: ReturnType<typeof createServiceClient>,
   payload: CoinPayWebhookPayload
 ) {
   const escrowId = payload.data.metadata?.coinpay_escrow_id as string || payload.data.payment_id;
@@ -341,7 +342,7 @@ async function handleEscrowFunded(
 }
 
 async function handleEscrowReleased(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: ReturnType<typeof createServiceClient>,
   payload: CoinPayWebhookPayload
 ) {
   const escrowId = payload.data.metadata?.coinpay_escrow_id as string || payload.data.payment_id;
@@ -380,7 +381,7 @@ async function handleEscrowReleased(
 }
 
 async function handleEscrowRefunded(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: ReturnType<typeof createServiceClient>,
   payload: CoinPayWebhookPayload
 ) {
   const escrowId = payload.data.metadata?.coinpay_escrow_id as string || payload.data.payment_id;

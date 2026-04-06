@@ -33,7 +33,7 @@ export function registerSkillsCommands(program) {
                 { header: "Price", key: "price_sats", width: 10, transform: (v) => `${v} sats` },
                 { header: "Rating", key: "rating_avg", width: 8 },
                 { header: "Downloads", key: "downloads_count", width: 10 },
-                { header: "Scan", key: "scan_status", width: 10, transform: (v) => v || "—" },
+                { header: "Scan", key: "scan_status", width: 10, transform: (v) => String(v || "—") },
                 { header: "Created", key: "created_at", transform: relativeDate },
             ], result.listings, opts);
         }
@@ -70,7 +70,7 @@ export function registerSkillsCommands(program) {
         .option("--category <cat>", "Category")
         .option("--tags <tags>", "Comma-separated tags")
         .option("--tagline <text>", "Short tagline")
-        .option("--status <status>", "Status: draft|active", "draft")
+        .option("--status <status>", "Status: active|archived", "active")
         .option("--source-url <url>", "Source URL for metadata autofill")
         .action(async (cmdOpts) => {
         const opts = program.opts();
@@ -99,7 +99,7 @@ export function registerSkillsCommands(program) {
                 title: cmdOpts.title || autofilled.title,
                 description: cmdOpts.description || autofilled.description,
                 price_sats: parseInt(cmdOpts.price || "0", 10),
-                status: cmdOpts.status || "draft",
+                status: cmdOpts.status || "active",
             };
             if (cmdOpts.category)
                 body.category = cmdOpts.category;
@@ -133,7 +133,7 @@ export function registerSkillsCommands(program) {
         .option("--category <cat>", "Category")
         .option("--tags <tags>", "Comma-separated tags")
         .option("--tagline <text>", "Short tagline")
-        .option("--status <status>", "Status: draft|active")
+        .option("--status <status>", "Status: active|archived")
         .option("--source-url <url>", "Source URL for metadata")
         .action(async (slug, cmdOpts) => {
         const opts = program.opts();
@@ -286,7 +286,7 @@ export function registerSkillsCommands(program) {
                 { header: "Slug", key: "slug", width: 25, transform: truncate(23) },
                 { header: "Title", key: "title", width: 30, transform: truncate(28) },
                 { header: "Status", key: "status", width: 10 },
-                { header: "Scan", key: "scan_status", width: 10, transform: (v) => v || "—" },
+                { header: "Scan", key: "scan_status", width: 10, transform: (v) => String(v || "—") },
                 { header: "Price", key: "price_sats", width: 10, transform: (v) => `${v} sats` },
                 { header: "Downloads", key: "downloads_count", width: 10 },
             ], result.listings, opts);
@@ -315,45 +315,7 @@ export function registerSkillsCommands(program) {
             handleError(err, opts);
         }
     });
-    // ── Publish all draft skills ───────────────────────────────────
-    skills
-        .command("publish-all")
-        .description("Publish all your draft skill listings")
-        .action(async () => {
-        const opts = program.opts();
-        const spinner = opts.json ? null : ora("Fetching draft skills...").start();
-        try {
-            const client = createClient(opts);
-            const result = await client.get("/api/skills/my");
-            const drafts = (result.listings || []).filter((l) => l.status === "draft");
-            if (drafts.length === 0) {
-                spinner?.stop();
-                printSuccess("No draft skills to publish", opts);
-                return;
-            }
-            if (spinner)
-                spinner.text = `Publishing ${drafts.length} draft skill(s)...`;
-            let published = 0;
-            let failed = 0;
-            for (const skill of drafts) {
-                try {
-                    await client.patch(`/api/skills/${skill.slug}`, {
-                        status: "active",
-                    });
-                    published++;
-                }
-                catch {
-                    failed++;
-                }
-            }
-            spinner?.stop();
-            printSuccess(`Published ${published} skill(s)${failed > 0 ? `, ${failed} failed` : ""}`, opts);
-        }
-        catch (err) {
-            spinner?.fail("Failed");
-            handleError(err, opts);
-        }
-    });
+    // (publish-all removed — listings go live on create now)
     // ── Delete listing ─────────────────────────────────────────────
     skills
         .command("delete <slug>")

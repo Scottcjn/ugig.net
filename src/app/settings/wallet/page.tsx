@@ -115,6 +115,13 @@ export default function WalletPage() {
   const [balance, setBalance] = useState<number>(0);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Show balance in tab title
+  useEffect(() => {
+    const original = document.title;
+    document.title = balance > 0 ? `⚡ ${balance.toLocaleString()} sats — Wallet` : "Wallet — ugig";
+    return () => { document.title = original; };
+  }, [balance]);
   const [depositing, setDepositing] = useState(false);
   const [customAmount, setCustomAmount] = useState("");
   const [invoice, setInvoice] = useState<{ payment_request: string; payment_hash: string; amount_sats: number } | null>(null);
@@ -128,6 +135,13 @@ export default function WalletPage() {
     setTransactions(t.transactions ?? []);
   }, []);
 
+  const refreshBalance = useCallback(async () => {
+    try {
+      const b = await fetch("/api/wallet/balance").then((r) => r.json());
+      if (mountedRef.current) setBalance(b.balance_sats ?? 0);
+    } catch { /* ignore */ }
+  }, []);
+
   useEffect(() => {
     Promise.all([
       fetch("/api/wallet/balance").then((r) => r.json()),
@@ -137,7 +151,35 @@ export default function WalletPage() {
       setTransactions(t.transactions ?? []);
       setLoading(false);
     }).catch(() => setLoading(false));
-  }, []);
+
+    // Poll balance: 15s when active, 15min when tab is hidden
+    let pollTimer: ReturnType<typeof setTimeout>;
+    function schedulePoll() {
+      const delay = document.hidden ? 15 * 60_000 : 15_000;
+      pollTimer = setTimeout(() => {
+        refreshBalance();
+        refreshTransactions();
+        schedulePoll();
+      }, delay);
+    }
+    schedulePoll();
+
+    // Re-schedule on visibility change so active tab gets fast polls
+    function onVisibility() {
+      clearTimeout(pollTimer);
+      if (!document.hidden) {
+        refreshBalance();
+        refreshTransactions();
+      }
+      schedulePoll();
+    }
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      clearTimeout(pollTimer);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [refreshBalance, refreshTransactions]);
 
   useEffect(() => {
     mountedRef.current = true;

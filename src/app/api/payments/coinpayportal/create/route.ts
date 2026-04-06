@@ -4,7 +4,7 @@ import { createPayment, type SupportedCurrency } from "@/lib/coinpayportal";
 import { z } from "zod";
 
 const createPaymentSchema = z.object({
-  type: z.enum(["subscription", "gig_payment", "tip"]),
+  type: z.enum(["subscription", "gig_payment", "tip", "funding"]),
   plan: z.enum(["monthly", "annual", "lifetime"]).optional(),
   currency: z.enum(["usdc_pol", "usdc_sol", "pol", "sol", "btc", "eth", "usdc_eth", "usdt"]),
   amount_usd: z.number().min(1).optional(),
@@ -65,14 +65,15 @@ export async function POST(request: NextRequest) {
         description = `Gig payment for ${gig_id}`;
         break;
       case "tip":
+      case "funding":
         if (!amount_usd) {
           return NextResponse.json(
-            { error: "amount_usd required for tips" },
+            { error: "amount_usd required for funding" },
             { status: 400 }
           );
         }
         amount = amount_usd;
-        description = "Tip";
+        description = type === "funding" ? "ugig.net funding" : "Tip";
         break;
       default:
         return NextResponse.json(
@@ -109,7 +110,7 @@ export async function POST(request: NextRequest) {
         amount_usd: amount,
         currency,
         status: "pending",
-        type,
+        type: type as any,
         metadata: {
           gig_id,
           checkout_url: paymentResult.checkout_url,

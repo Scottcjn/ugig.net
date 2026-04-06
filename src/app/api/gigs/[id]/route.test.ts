@@ -9,8 +9,11 @@ const mockUpdate = vi.fn();
 const mockDelete = vi.fn();
 const mockFrom = vi.fn();
 
+const mockRpc = vi.fn().mockResolvedValue({ error: null });
+
 const supabaseClient = {
   from: mockFrom,
+  rpc: mockRpc,
 };
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -66,16 +69,12 @@ describe("GET /api/gigs/[id]", () => {
   it("returns a gig when found", async () => {
     const gig = { id: "test-gig-id", title: "Test Gig", views_count: 5 };
 
-    // First .from("gigs") → select chain (the read)
+    // .from("gigs") → select chain (the read)
     const selectChain = chainResult({ data: gig, error: null });
-    // Second .from("gigs") → update chain (increment views)
-    const updateChain = chainResult({ data: null, error: null });
+    mockFrom.mockReturnValue(selectChain);
 
-    let callCount = 0;
-    mockFrom.mockImplementation(() => {
-      callCount++;
-      return callCount === 1 ? selectChain : updateChain;
-    });
+    // rpc("increment_gig_views") succeeds — no fallback needed
+    mockRpc.mockResolvedValue({ error: null });
 
     const res = await GET(makeRequest("GET"), routeParams);
     const json = await res.json();

@@ -121,11 +121,28 @@ export async function POST(request: NextRequest) {
     if (ref && data.user) {
       try {
         // Find the referrer by referral_code or username
-        const { data: referrer } = await svc
+        // Validate ref is alphanumeric to prevent PostgREST filter injection (#72)
+        if (!/^[a-zA-Z0-9_-]+$/.test(ref)) {
+          // Invalid ref format, skip referral tracking silently
+          throw new Error("Invalid referral code format");
+        }
+        // Use separate .eq() queries instead of .or() interpolation (#72)
+        let referrer: { id: string } | null = null;
+        const { data: byCode } = await svc
           .from("profiles")
           .select("id")
-          .or(`referral_code.eq.${ref},username.eq.${ref}`)
+          .eq("referral_code", ref)
           .maybeSingle();
+        if (byCode) {
+          referrer = byCode;
+        } else {
+          const { data: byUsername } = await svc
+            .from("profiles")
+            .select("id")
+            .eq("username", ref)
+            .maybeSingle();
+          referrer = byUsername;
+        }
 
         if (referrer) {
           // Update any pending referrals matching this email

@@ -288,6 +288,7 @@ export function GigForm({ initialData, gigId, mode = "create" }: GigFormProps) {
               <option value="per_task">Per Task</option>
               <option value="per_unit">Per Unit</option>
               <option value="revenue_share">Revenue Share</option>
+              <option value="bounty">Bounty</option>
             </select>
           </div>
           <div className="space-y-2">
@@ -299,6 +300,7 @@ export function GigForm({ initialData, gigId, mode = "create" }: GigFormProps) {
                budgetType === "yearly" ? `Min Rate (${currencySymbol}/yr)` :
                budgetType === "revenue_share" ? "Min Share (%)" :
                (budgetType === "per_task" || budgetType === "per_unit") ? `Min Rate (${currencySymbol}/unit)` :
+               budgetType === "bounty" ? `Min Bounty (${currencySymbol})` :
                isForHire ? `Min Rate (${currencySymbol})` : `Min Budget (${currencySymbol})`}
             </Label>
             <Input
@@ -319,6 +321,7 @@ export function GigForm({ initialData, gigId, mode = "create" }: GigFormProps) {
                budgetType === "yearly" ? `Max Rate (${currencySymbol}/yr)` :
                budgetType === "revenue_share" ? "Max Share (%)" :
                (budgetType === "per_task" || budgetType === "per_unit") ? `Max Rate (${currencySymbol}/unit)` :
+               budgetType === "bounty" ? `Max Bounty (${currencySymbol})` :
                isForHire ? `Max Rate (${currencySymbol})` : `Max Budget (${currencySymbol})`}
             </Label>
             <Input
@@ -416,7 +419,6 @@ export function GigForm({ initialData, gigId, mode = "create" }: GigFormProps) {
             disabled={isLoading}
             className="w-full border border-input rounded-md px-3 py-2 bg-background"
           >
-            <option value="draft">Draft</option>
             <option value="active">Active</option>
             <option value="paused">Paused</option>
           </select>

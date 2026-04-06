@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { PLATFORM_WALLET_USER_ID } from "@/lib/constants";
 
 const SYSTEM_WALLET_USER = "00000000-0000-0000-0000-000000000000";
 
@@ -7,11 +8,12 @@ export async function GET() {
   try {
     const supabase = createServiceClient();
 
-    // Total sats across ALL user wallets (excluding system wallet)
+    // Total sats across ALL user wallets (excluding system + platform wallets)
     const { data: allWallets } = await supabase
       .from("wallets" as any)
       .select("balance_sats")
-      .neq("user_id", SYSTEM_WALLET_USER);
+      .neq("user_id", SYSTEM_WALLET_USER)
+      .neq("user_id", PLATFORM_WALLET_USER_ID);
 
     const totalSats = (allWallets as any[])?.reduce(
       (sum: number, w: any) => sum + (w.balance_sats || 0),

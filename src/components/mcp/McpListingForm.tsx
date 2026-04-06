@@ -277,21 +277,21 @@ export function McpListingForm({ slug, initialData }: McpListingFormProps) {
               <input
                 type="radio"
                 name="status"
-                value="draft"
-                checked={status === "draft"}
-                onChange={(e) => setStatus(e.target.value)}
-              />
-              <span className="text-sm">Draft</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="status"
                 value="active"
                 checked={status === "active"}
                 onChange={(e) => setStatus(e.target.value)}
               />
               <span className="text-sm">Active (visible on marketplace)</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="status"
+                value="archived"
+                checked={status === "archived"}
+                onChange={(e) => setStatus(e.target.value)}
+              />
+              <span className="text-sm">Archived</span>
             </label>
           </div>
         </div>

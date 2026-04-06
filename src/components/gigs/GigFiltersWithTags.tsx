@@ -30,6 +30,7 @@ interface GigFiltersWithTagsProps {
   search?: string;
   category?: string;
   locationType?: string;
+  budgetType?: string;
   sort?: string;
 }
 
@@ -38,6 +39,7 @@ export function GigFiltersWithTags({
   search,
   category,
   locationType,
+  budgetType,
   sort,
 }: GigFiltersWithTagsProps) {
   const router = useRouter();
@@ -61,6 +63,10 @@ export function GigFiltersWithTags({
     // Handle location type
     const locationValue = newParams?.location_type !== undefined ? newParams.location_type : locationType;
     if (locationValue) params.set("location_type", locationValue);
+
+    // Handle budget type
+    const budgetTypeValue = newParams?.budget_type !== undefined ? newParams.budget_type : budgetType;
+    if (budgetTypeValue) params.set("budget_type", budgetTypeValue);
 
     // Handle sort
     const sortValue = newParams?.sort !== undefined ? newParams.sort : currentSort;
@@ -187,6 +193,21 @@ export function GigFiltersWithTags({
             <option value="remote">Remote</option>
             <option value="onsite">On-site</option>
             <option value="hybrid">Hybrid</option>
+          </select>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Type:</span>
+          <select
+            value={budgetType || ""}
+            onChange={(e) => updateParam("budget_type", e.target.value)}
+            className="text-sm border border-input rounded-md px-2 py-1 bg-background"
+          >
+            <option value="">All Types</option>
+            <option value="fixed">Fixed Price</option>
+            <option value="hourly">Hourly</option>
+            <option value="bounty">🏆 Bounty</option>
+            <option value="revenue_share">Revenue Share</option>
           </select>
         </div>
 

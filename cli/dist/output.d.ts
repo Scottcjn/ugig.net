@@ -18,7 +18,7 @@ export declare function printTable(columns: ColumnDef[], rows: Record<string, un
     totalPages?: number;
     limit?: number;
 }): void;
-export declare function printDetail(fields: FieldDef[], data: Record<string, unknown>, options: OutputOptions): void;
+export declare function printDetail(fieldsOrData: FieldDef[] | Record<string, unknown>, dataOrOptions: Record<string, unknown> | OutputOptions, options?: OutputOptions): void;
 export declare function printSuccess(message: string, options: OutputOptions): void;
 export declare function printError(message: string, options: OutputOptions): void;
 export declare function truncateId(value: unknown): string;

@@ -21,7 +21,7 @@ export function registerGigsCommands(program) {
         .option("--search <query>", "Search title and description")
         .option("--category <category>", "Filter by category")
         .option("--skills <skills>", "Filter by skills (comma-separated)")
-        .option("--budget-type <type>", "Filter: fixed, hourly, per_task, per_unit, revenue_share")
+        .option("--budget-type <type>", "Filter: fixed, hourly, per_task, per_unit, revenue_share, bounty")
         .option("--budget-min <min>", "Minimum budget", parseFloat)
         .option("--budget-max <max>", "Maximum budget", parseFloat)
         .option("--location-type <type>", "Filter: remote, onsite, hybrid")
@@ -110,7 +110,7 @@ export function registerGigsCommands(program) {
         .requiredOption("--category <cat>", "Category")
         .requiredOption("--skills <skills>", "Required skills (comma-separated)")
         .option("--ai-tools <tools>", "Preferred AI tools (comma-separated)")
-        .requiredOption("--budget-type <type>", "Budget type: fixed, hourly, per_task, per_unit, revenue_share")
+        .requiredOption("--budget-type <type>", "Budget type: fixed, hourly, per_task, per_unit, revenue_share, bounty")
         .option("--budget-min <min>", "Minimum budget", parseFloat)
         .option("--budget-max <max>", "Maximum budget", parseFloat)
         .option("--budget-unit <unit>", "Unit label for per_task/per_unit (e.g., post, tweet, image)")
@@ -118,7 +118,7 @@ export function registerGigsCommands(program) {
         .option("--duration <duration>", "Duration")
         .option("--location-type <type>", "Location: remote, onsite, hybrid", "remote")
         .option("--location <location>", "Location details")
-        .option("--status <status>", "Status: draft or active", "active")
+        .option("--status <status>", "Status: active or paused", "active")
         .action(async (options) => {
         const opts = program.opts();
         // Force interactive listing type selection — cannot be automated
@@ -165,7 +165,7 @@ export function registerGigsCommands(program) {
         .option("--category <cat>", "Category")
         .option("--skills <skills>", "Required skills (comma-separated)")
         .option("--ai-tools <tools>", "AI tools (comma-separated)")
-        .option("--budget-type <type>", "Budget type: fixed, hourly, per_task, per_unit, revenue_share")
+        .option("--budget-type <type>", "Budget type: fixed, hourly, per_task, per_unit, revenue_share, bounty")
         .option("--budget-min <min>", "Budget min", parseFloat)
         .option("--budget-max <max>", "Budget max", parseFloat)
         .option("--budget-unit <unit>", "Unit label for per_task/per_unit (e.g., post, tweet, image)")
@@ -263,7 +263,7 @@ export function registerGigsCommands(program) {
     gigs
         .command("status <id>")
         .description("Update gig status")
-        .requiredOption("--status <status>", "Status: draft, active, paused, closed, filled")
+        .requiredOption("--status <status>", "Status: active, paused, closed, filled")
         .action(async (id, options) => {
         const opts = program.opts();
         const spinner = opts.json ? null : ora("Updating status...").start();

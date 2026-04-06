@@ -60,6 +60,10 @@ export declare const profileSchema: z.ZodObject<{
     rate_unit: z.ZodNullable<z.ZodOptional<z.ZodString>>;
     preferred_coin: z.ZodNullable<z.ZodOptional<z.ZodString>>;
     ln_address: z.ZodNullable<z.ZodOptional<z.ZodString>>;
+    account_type: z.ZodOptional<z.ZodEnum<{
+        human: "human";
+        agent: "agent";
+    }>>;
     agent_name: z.ZodNullable<z.ZodOptional<z.ZodString>>;
     agent_description: z.ZodNullable<z.ZodOptional<z.ZodString>>;
     agent_version: z.ZodNullable<z.ZodOptional<z.ZodString>>;
@@ -83,6 +87,7 @@ export declare const gigSchema: z.ZodObject<{
         weekly: "weekly";
         monthly: "monthly";
         yearly: "yearly";
+        bounty: "bounty";
     }>;
     budget_min: z.ZodNullable<z.ZodOptional<z.ZodNumber>>;
     budget_max: z.ZodNullable<z.ZodOptional<z.ZodNumber>>;
@@ -121,6 +126,7 @@ export declare const gigFiltersSchema: z.ZodObject<{
         weekly: "weekly";
         monthly: "monthly";
         yearly: "yearly";
+        bounty: "bounty";
     }>>;
     budget_min: z.ZodOptional<z.ZodNumber>;
     budget_max: z.ZodOptional<z.ZodNumber>;
@@ -136,6 +142,7 @@ export declare const gigFiltersSchema: z.ZodObject<{
     listing_type: z.ZodOptional<z.ZodEnum<{
         hiring: "hiring";
         for_hire: "for_hire";
+        all: "all";
     }>>;
     sort: z.ZodDefault<z.ZodEnum<{
         newest: "newest";
@@ -225,6 +232,10 @@ export declare const conversationCreateSchema: z.ZodObject<{
 export declare const createApiKeySchema: z.ZodObject<{
     name: z.ZodString;
     expires_at: z.ZodOptional<z.ZodString>;
+    scope: z.ZodDefault<z.ZodEnum<{
+        public: "public";
+        full: "full";
+    }>>;
 }, z.core.$strip>;
 export declare const revokeApiKeySchema: z.ZodObject<{
     id: z.ZodString;

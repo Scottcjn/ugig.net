@@ -11,10 +11,40 @@ import { FUNDING_TIERS, LIFETIME_THRESHOLD_USD } from "@/lib/funding";
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const paymentHash = body.payment_hash;
+    // Verify webhook secret to authenticate the request (#73)
+    const webhookSecret = process.env.LNBITS_WEBHOOK_SECRET;
+    if (!webhookSecret) {
+      console.error("[LNbits Webhook] LNBITS_WEBHOOK_SECRET not configured — rejecting request");
+      return NextResponse.json({ error: "Webhook not configured" }, { status: 500 });
+    }
+    const providedSecret = request.headers.get("x-webhook-secret") || request.nextUrl.searchParams.get("secret");
+    if (!providedSecret || providedSecret !== webhookSecret) {
+      console.error("[LNbits Webhook] Invalid or missing webhook secret");
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // LNbits double-encodes the webhook payload: it calls
+    // httpx.post(url, json=payment.json()) where payment.json() is already
+    // a JSON string, so the body we receive is a JSON-encoded string.
+    // Parse once, and if the result is a string, parse again.
+    const rawText = await request.text();
+    let body: Record<string, unknown>;
+    try {
+      let parsed: unknown = JSON.parse(rawText);
+      if (typeof parsed === "string") {
+        parsed = JSON.parse(parsed);
+      }
+      body = parsed as Record<string, unknown>;
+    } catch {
+      console.error("[LNbits Webhook] Failed to parse body:", rawText.slice(0, 500));
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    }
+
+    // LNbits sends checking_id as the primary key; payment_hash may also be present
+    const paymentHash = (body.payment_hash || body.checking_id) as string | undefined;
 
     if (!paymentHash || typeof paymentHash !== "string") {
+      console.error("[LNbits Webhook] Missing payment_hash/checking_id. Body keys:", Object.keys(body));
       return NextResponse.json({ error: "Missing payment_hash" }, { status: 400 });
     }
 

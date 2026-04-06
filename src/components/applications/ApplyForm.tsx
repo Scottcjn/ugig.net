@@ -13,7 +13,7 @@ import { AI_TOOLS } from "@/types";
 interface ApplyFormProps {
   gigId: string;
   gigTitle: string;
-  budgetType: "fixed" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "per_task" | "per_unit" | "revenue_share";
+  budgetType: "fixed" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "per_task" | "per_unit" | "revenue_share" | "bounty";
   budgetMin: number | null;
   budgetMax: number | null;
   budgetUnit?: string | null;

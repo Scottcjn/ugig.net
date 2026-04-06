@@ -64,9 +64,18 @@ export async function GET(request: NextRequest) {
       )
       .eq("status", "active");
 
-    // Apply filters
+    // Apply filters — use textSearch or individual filters to prevent PostgREST filter injection (#71)
     if (search) {
-      query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%`);
+      // Sanitize: escape PostgREST special chars and SQL wildcards
+      const safeSearch = search
+        .replace(/\\/g, "\\\\")
+        .replace(/%/g, "\\%")
+        .replace(/_/g, "\\_")
+        .replace(/,/g, "\\,")
+        .replace(/\(/g, "\\(")
+        .replace(/\)/g, "\\)")
+        .replace(/\./g, "\\.");
+      query = query.or(`title.ilike.%${safeSearch}%,description.ilike.%${safeSearch}%`);
     }
 
     if (category) {
@@ -121,9 +130,10 @@ export async function GET(request: NextRequest) {
         query = query.order("created_at", { ascending: false });
     }
 
-    // Apply pagination
-    const offset = (page - 1) * limit;
-    query = query.range(offset, offset + limit - 1);
+    // Apply pagination — ensure non-negative offset (#69)
+    const offset = Math.max(0, (page - 1) * limit);
+    const clampedLimit = Math.max(1, Math.min(50, limit));
+    query = query.range(offset, offset + clampedLimit - 1);
 
     const { data: gigs, error, count } = await query;
 

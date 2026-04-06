@@ -287,7 +287,7 @@ export type Database = {
                     category: string;
                     skills_required: string[];
                     ai_tools_preferred: string[];
-                    budget_type: "fixed" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "per_task" | "per_unit" | "revenue_share";
+                    budget_type: "fixed" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "per_task" | "per_unit" | "revenue_share" | "bounty";
                     budget_min: number | null;
                     budget_max: number | null;
                     budget_unit: string | null;
@@ -310,7 +310,7 @@ export type Database = {
                     category: string;
                     skills_required?: string[];
                     ai_tools_preferred?: string[];
-                    budget_type: "fixed" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "per_task" | "per_unit" | "revenue_share";
+                    budget_type: "fixed" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "per_task" | "per_unit" | "revenue_share" | "bounty";
                     budget_min?: number | null;
                     budget_max?: number | null;
                     budget_unit?: string | null;
@@ -333,7 +333,7 @@ export type Database = {
                     category?: string;
                     skills_required?: string[];
                     ai_tools_preferred?: string[];
-                    budget_type?: "fixed" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "per_task" | "per_unit" | "revenue_share";
+                    budget_type?: "fixed" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "per_task" | "per_unit" | "revenue_share" | "bounty";
                     budget_min?: number | null;
                     budget_max?: number | null;
                     budget_unit?: string | null;
@@ -1411,6 +1411,7 @@ export type Database = {
                     name: string;
                     key_hash: string;
                     key_prefix: string;
+                    scope: string;
                     last_used_at: string | null;
                     expires_at: string | null;
                     created_at: string;
@@ -1422,6 +1423,7 @@ export type Database = {
                     name: string;
                     key_hash: string;
                     key_prefix: string;
+                    scope?: string;
                     last_used_at?: string | null;
                     expires_at?: string | null;
                     created_at?: string;
@@ -1433,6 +1435,7 @@ export type Database = {
                     name?: string;
                     key_hash?: string;
                     key_prefix?: string;
+                    scope?: string;
                     last_used_at?: string | null;
                     expires_at?: string | null;
                     created_at?: string;
@@ -1585,6 +1588,7 @@ export type Database = {
                     user_id: string;
                     key_hash: string;
                     key_id: string;
+                    scope: string;
                 }[];
             };
             update_api_key_last_used: {
@@ -1603,7 +1607,7 @@ export type Database = {
         Enums: {
             account_type: "human" | "agent";
             gig_status: "draft" | "active" | "paused" | "closed" | "filled";
-            budget_type: "fixed" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "per_task" | "per_unit" | "revenue_share";
+            budget_type: "fixed" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "per_task" | "per_unit" | "revenue_share" | "bounty";
             location_type: "remote" | "onsite" | "hybrid";
             application_status: "pending" | "reviewing" | "shortlisted" | "rejected" | "accepted" | "withdrawn";
             subscription_status: "active" | "canceled" | "past_due" | "trialing" | "incomplete";

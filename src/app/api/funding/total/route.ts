@@ -26,7 +26,7 @@ export async function GET() {
     const { data: cryptoPayments } = await supabase
       .from("payments")
       .select("amount_usd")
-      .eq("type", "tip")
+      .in("type", ["tip", "funding"] as any)
       .in("status", ["confirmed", "forwarded"] as ("confirmed" | "forwarded")[]);
 
     const cryptoTotal = (cryptoPayments || []).reduce(
@@ -45,7 +45,7 @@ export async function GET() {
     const { data: cryptoContributors } = await supabase
       .from("payments")
       .select("user_id")
-      .eq("type", "tip")
+      .in("type", ["tip", "funding"] as any)
       .in("status", ["confirmed", "forwarded"] as ("confirmed" | "forwarded")[]);
 
     const uniqueUserIds = new Set([

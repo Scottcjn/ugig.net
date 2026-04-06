@@ -1663,6 +1663,7 @@ export type Database = {
         | "weekly"
         | "monthly"
         | "yearly"
+        | "bounty"
       gig_status: "draft" | "active" | "paused" | "closed" | "filled"
       location_type: "remote" | "onsite" | "hybrid"
       notification_type:
@@ -1840,6 +1841,7 @@ export const Constants = {
         "weekly",
         "monthly",
         "yearly",
+        "bounty",
       ],
       gig_status: ["draft", "active", "paused", "closed", "filled"],
       location_type: ["remote", "onsite", "hybrid"],

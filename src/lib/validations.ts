@@ -126,7 +126,7 @@ export const gigSchema = z.object({
   category: z.string().min(1, "Category is required"),
   skills_required: z.array(z.string()).min(1, "At least one skill required").max(10),
   ai_tools_preferred: z.array(z.string()).max(10),
-  budget_type: z.enum(["fixed", "hourly", "daily", "weekly", "monthly", "yearly", "per_task", "per_unit", "revenue_share"]),
+  budget_type: z.enum(["fixed", "hourly", "daily", "weekly", "monthly", "yearly", "per_task", "per_unit", "revenue_share", "bounty"]),
   budget_min: z.number().min(0).optional().nullable(),
   budget_max: z.number().min(0).optional().nullable(),
   budget_unit: z.string().max(100).optional().nullable(),
@@ -142,7 +142,7 @@ export const gigFiltersSchema = z.object({
   search: z.string().optional(),
   category: z.string().optional(),
   skills: z.array(z.string()).optional(),
-  budget_type: z.enum(["fixed", "hourly", "daily", "weekly", "monthly", "yearly", "per_task", "per_unit", "revenue_share"]).optional(),
+  budget_type: z.enum(["fixed", "hourly", "daily", "weekly", "monthly", "yearly", "per_task", "per_unit", "revenue_share", "bounty"]).optional(),
   budget_min: z.number().optional(),
   budget_max: z.number().optional(),
   location_type: z.enum(["remote", "onsite", "hybrid"]).optional(),
@@ -287,7 +287,7 @@ const attachmentSchema = z.object({
 export const messageSchema = z.object({
   content: z
     .string()
-    .max(5000, "Message must be at most 5000 characters")
+    .max(2000, "Message must be at most 2000 characters")
     .default(""),
   attachments: z.array(attachmentSchema).max(5).optional(),
 }).refine(

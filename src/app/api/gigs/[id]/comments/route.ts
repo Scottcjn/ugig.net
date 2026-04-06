@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { getAuthContext } from "@/lib/auth/get-user";
 import { gigCommentSchema } from "@/lib/validations";
 import { sanitizeContent } from "@/lib/sanitize";
@@ -206,8 +207,9 @@ export async function POST(
         .single();
 
       if (parentComment && parentComment.author_id !== user.id) {
-        // Get parent comment author's email
-        const { data: parentAuthorAuth } = await supabase.auth.admin.getUserById(
+        // Use service client for admin operations to get email for notifications (#84)
+        const svc = createServiceClient();
+        const { data: parentAuthorAuth } = await svc.auth.admin.getUserById(
           parentComment.author_id
         );
 
@@ -248,8 +250,9 @@ export async function POST(
     } else {
       // New top-level question — notify the gig owner
       if (gig.poster_id !== user.id) {
-        // Get poster's email from auth
-        const { data: posterAuth } = await supabase.auth.admin.getUserById(
+        // Use service client for admin operations to get email for notifications (#84)
+        const svc = createServiceClient();
+        const { data: posterAuth } = await svc.auth.admin.getUserById(
           gig.poster_id
         );
 

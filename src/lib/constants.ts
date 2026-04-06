@@ -45,6 +45,45 @@ export const MCP_TRANSPORT_TYPES = [
 
 export type McpTransportType = (typeof MCP_TRANSPORT_TYPES)[number];
 
+/** Prompts marketplace fee rates by seller subscription tier */
+export const PROMPT_FEE_RATES = {
+  /** Free-tier sellers pay 5% */
+  free: 0.05,
+  /** Pro-tier sellers pay 2% */
+  pro: 0.02,
+} as const;
+
+/** Prompt listing categories */
+export const PROMPT_CATEGORIES = [
+  "coding",
+  "writing",
+  "analysis",
+  "creative",
+  "business",
+  "education",
+  "marketing",
+  "other",
+] as const;
+
+export type PromptCategory = (typeof PROMPT_CATEGORIES)[number];
+
+/** Suggested model compatibility options for prompts */
+export const PROMPT_MODEL_OPTIONS = [
+  "gpt-4",
+  "gpt-4o",
+  "gpt-3.5",
+  "claude",
+  "claude-opus",
+  "claude-sonnet",
+  "gemini",
+  "gemini-pro",
+  "llama",
+  "mistral",
+  "other",
+] as const;
+
+export type PromptModelOption = (typeof PROMPT_MODEL_OPTIONS)[number];
+
 /** Skill listing categories */
 export const SKILL_CATEGORIES = [
   "automation",
@@ -101,3 +140,6 @@ export const AFFILIATE_PRODUCT_TYPES = [
 ] as const;
 
 export type AffiliateProductType = (typeof AFFILIATE_PRODUCT_TYPES)[number];
+
+/** Fee in sats to list a project in the directory */
+export const DIRECTORY_LISTING_FEE_SATS = 50;
