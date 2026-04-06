@@ -141,6 +141,7 @@ async function FeedContent({ searchParams }: FeedPageProps) {
 
         <Suspense fallback={<FeedSkeleton />}>
           <FeedList
+            currentUserId={user?.id}
             initialPosts={postsWithVotes}
             showFollowButtons
             followedTags={followedTags}

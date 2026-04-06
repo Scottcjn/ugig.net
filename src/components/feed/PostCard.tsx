@@ -1,9 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { ExternalLink, MessageSquare, Eye, Clock } from "lucide-react";
+import { ExternalLink, MessageSquare, Eye, Clock, Pencil, X, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { AgentBadge } from "@/components/ui/AgentBadge";
 import { VerifiedBadge } from "@/components/ui/VerifiedBadge";
@@ -21,15 +25,79 @@ interface PostCardProps {
   showFollowButtons?: boolean;
   followedTags?: Set<string>;
   expanded?: boolean;
+  currentUserId?: string;
 }
 
-export function PostCard({ post, showFollowButtons, followedTags, expanded }: PostCardProps) {
+export function PostCard({ post: initialPost, showFollowButtons, followedTags, expanded, currentUserId }: PostCardProps) {
   const router = useRouter();
+  const [post, setPost] = useState(initialPost);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState(post.content || "");
+  const [editUrl, setEditUrl] = useState(post.url || "");
+  const [editTags, setEditTags] = useState<string[]>(post.tags || []);
+  const [tagInput, setTagInput] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
   // Normalize author — Supabase can return array or object
   const author = Array.isArray(post.author) ? post.author[0] : post.author;
+  const canEdit = !!currentUserId && post.author_id === currentUserId;
 
   const handleCardClick = () => {
+    if (isEditing) return;
     router.push(`/post/${post.id}`);
+  };
+
+  const startEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditContent(post.content || "");
+    setEditUrl(post.url || "");
+    setEditTags(post.tags || []);
+    setEditError(null);
+    setIsEditing(true);
+  };
+
+  const cancelEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsEditing(false);
+    setEditError(null);
+  };
+
+  const addEditTag = () => {
+    const tag = tagInput.trim().replace(/^#/, "");
+    if (tag && !editTags.includes(tag) && editTags.length < 10) {
+      setEditTags([...editTags, tag]);
+      setTagInput("");
+    }
+  };
+
+  const saveEdit = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!editContent.trim()) return;
+    setSaving(true);
+    setEditError(null);
+    try {
+      const res = await fetch(`/api/posts/${post.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: editContent.trim(),
+          url: editUrl.trim() || null,
+          tags: editTags,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setEditError(data.error || "Failed to update post");
+        return;
+      }
+      setPost({ ...post, ...data.post, author: post.author });
+      setIsEditing(false);
+    } catch {
+      setEditError("Something went wrong. Please try again.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -84,21 +152,91 @@ export function PostCard({ post, showFollowButtons, followedTags, expanded }: Po
             <Clock className="h-3.5 w-3.5" />
             {formatRelativeTime(post.created_at)}
           </span>
+          {canEdit && !isEditing && (
+            <button
+              type="button"
+              onClick={startEdit}
+              className="ml-auto inline-flex items-center gap-1 hover:text-foreground transition-colors"
+              aria-label="Edit post"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              Edit
+            </button>
+          )}
         </div>
 
         {/* Content */}
-        <div className="mt-2" onClick={(e) => {
-          // Only stop propagation if clicking an actual link
-          if ((e.target as HTMLElement).closest('a')) {
-            e.stopPropagation();
-          }
-        }}>
-          <MarkdownContent
-            content={post.content || ""}
-            clamp={expanded ? undefined : "line-clamp-6"}
-            className="break-words"
-          />
-        </div>
+        {isEditing ? (
+          <div className="mt-2 space-y-2" onClick={(e) => e.stopPropagation()}>
+            <Textarea
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              rows={4}
+              maxLength={5000}
+              className="resize-none"
+            />
+            <Input
+              type="url"
+              placeholder="Link URL (optional)"
+              value={editUrl}
+              onChange={(e) => setEditUrl(e.target.value)}
+            />
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder="Add tag"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === ",") {
+                    e.preventDefault();
+                    addEditTag();
+                  }
+                }}
+                className="flex-1 h-8 text-sm"
+              />
+              <Button type="button" variant="ghost" size="sm" onClick={addEditTag} disabled={!tagInput.trim()} className="h-8">
+                <Plus className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+            {editTags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {editTags.map((tag) => (
+                  <Badge
+                    key={tag}
+                    variant="secondary"
+                    className="text-xs gap-1 cursor-pointer"
+                    onClick={() => setEditTags(editTags.filter((t) => t !== tag))}
+                  >
+                    #{tag}
+                    <X className="h-3 w-3" />
+                  </Badge>
+                ))}
+              </div>
+            )}
+            {editError && <p className="text-sm text-destructive">{editError}</p>}
+            <div className="flex items-center gap-2">
+              <Button type="button" size="sm" onClick={saveEdit} disabled={saving || !editContent.trim()}>
+                {saving ? "Saving..." : "Save"}
+              </Button>
+              <Button type="button" size="sm" variant="ghost" onClick={cancelEdit} disabled={saving}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-2" onClick={(e) => {
+            // Only stop propagation if clicking an actual link
+            if ((e.target as HTMLElement).closest('a')) {
+              e.stopPropagation();
+            }
+          }}>
+            <MarkdownContent
+              content={post.content || ""}
+              clamp={expanded ? undefined : "line-clamp-6"}
+              className="break-words"
+            />
+          </div>
+        )}
 
         {/* Poll if present */}
         {post.post_type === "poll" && (

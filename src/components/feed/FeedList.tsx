@@ -17,9 +17,10 @@ interface FeedListProps {
   };
   showFollowButtons?: boolean;
   followedTags?: string[];
+  currentUserId?: string;
 }
 
-export function FeedList({ initialPosts, initialPagination, showFollowButtons, followedTags: followedTagsArr }: FeedListProps) {
+export function FeedList({ initialPosts, initialPagination, showFollowButtons, followedTags: followedTagsArr, currentUserId }: FeedListProps) {
   const followedTags = followedTagsArr ? new Set(followedTagsArr) : undefined;
   const searchParams = useSearchParams();
   const [posts, setPosts] = useState<PostWithAuthor[]>(initialPosts);
@@ -72,6 +73,7 @@ export function FeedList({ initialPosts, initialPagination, showFollowButtons, f
           post={post}
           showFollowButtons={showFollowButtons}
           followedTags={followedTags}
+          currentUserId={currentUserId}
         />
       ))}
 
