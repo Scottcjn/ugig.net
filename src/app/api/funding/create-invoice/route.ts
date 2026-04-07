@@ -1,148 +1,135 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import {
+  createCoinpayPayment,
+  SUPPORTED_CURRENCIES,
+  type CoinpayCurrency,
+} from "@/lib/coinpay-client";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { createInvoice } from "@/lib/lnbits";
-import {
-  FUNDING_TIERS,
-  VALID_FUNDING_TIERS,
-  INVOICE_EXPIRY_SECONDS,
-  usdToSats,
-  type FundingTierId,
-} from "@/lib/funding";
 
-const createInvoiceSchema = z.object({
-  tier: z.enum(VALID_FUNDING_TIERS as [FundingTierId, ...FundingTierId[]]),
+const SUPPORTED_KEYS = Object.keys(SUPPORTED_CURRENCIES) as [
+  CoinpayCurrency,
+  ...CoinpayCurrency[],
+];
+
+const Body = z.object({
+  amount_usd: z.number().min(1).max(1_000_000),
+  currency: z.enum(SUPPORTED_KEYS),
+  contributor_name: z.string().trim().max(120).optional(),
+  contributor_email: z.string().trim().email().max(200).optional(),
 });
 
-/** Simple in-memory rate limiter: max 5 invoices per user per minute */
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT_MAX = 5;
-const RATE_LIMIT_WINDOW_MS = 60_000;
-
-// Clean up expired rate limit entries every 60s to prevent unbounded growth
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, entry] of rateLimitMap) {
-    if (entry.resetAt < now) rateLimitMap.delete(key);
-  }
-}, 60_000).unref();
-
-/** Reset rate limiter (for testing) */
-export function _resetRateLimit() {
-  rateLimitMap.clear();
-}
-
-function checkRateLimit(userId: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(userId);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(userId, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
-    return true;
-  }
-  if (entry.count >= RATE_LIMIT_MAX) return false;
-  entry.count++;
-  return true;
-}
-
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
+  let parsed;
   try {
-    // Auth
-    const supabase = await createClient();
+    parsed = Body.safeParse(await req.json());
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message ?? "Invalid input" },
+      { status: 400 }
+    );
+  }
+  let { contributor_name, contributor_email } = parsed.data;
+  const { amount_usd, currency } = parsed.data;
+
+  // If the requester is logged in, prefer their auth identity over any
+  // form-supplied name/email. Funding is open to anonymous contributors.
+  let userId: string | null = null;
+  try {
+    const sessionClient = await createClient();
     const {
       data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    } = await sessionClient.auth.getUser();
+    if (user) {
+      userId = user.id;
+      if (user.email) contributor_email = user.email;
+      const admin = createServiceClient();
+      if (admin) {
+        const { data: profile } = await admin
+          .from("profiles")
+          .select("full_name, username")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (profile?.full_name) contributor_name = profile.full_name;
+        else if (profile?.username) contributor_name = profile.username;
+      }
     }
+  } catch (e) {
+    console.error("[funding/create-invoice] session lookup failed", e);
+  }
 
-    // Rate limit
-    if (!checkRateLimit(user.id)) {
-      return NextResponse.json(
-        { error: "Too many invoice requests. Please wait a moment." },
-        { status: 429 }
-      );
-    }
-
-    // Validate body
-    const body = await request.json();
-    const parsed = createInvoiceSchema.safeParse(body);
-    if (!parsed.success) {
-      return NextResponse.json(
-        { error: parsed.error.issues[0].message },
-        { status: 400 }
-      );
-    }
-
-    const { tier } = parsed.data;
-    const tierConfig = FUNDING_TIERS[tier];
-
-    // Convert USD value to sats using live BTC rate
-    const amountSats = await usdToSats(tierConfig.usdValue);
-    if (amountSats < 1) {
-      return NextResponse.json(
-        { error: "Amount too small to create invoice" },
-        { status: 400 }
-      );
-    }
-
-    console.log(
-      `[Funding] ${tier}: $${tierConfig.usdValue} → ${amountSats} sats (live rate)`
-    );
-
-    // Build webhook URL
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ugig.net";
-    const webhookUrl = `${baseUrl}/api/funding/lnbits-webhook`;
-
-    // Create LNbits invoice
-    const invoice = await createInvoice({
-      amount: amountSats,
-      memo: `ugig.net funding: ${tierConfig.label} ($${tierConfig.usdValue})`,
-      expiry: INVOICE_EXPIRY_SECONDS,
-      webhook: webhookUrl,
+  let cp;
+  try {
+    cp = await createCoinpayPayment({
+      amount_usd,
+      currency,
+      description: `ugig funding ($${amount_usd})`,
+      metadata: {
+        contributor_name: contributor_name ?? null,
+        contributor_email: contributor_email ?? null,
+        user_id: userId,
+      },
     });
+  } catch (e) {
+    console.error("[funding/create-invoice] coinpay create failed", e);
+    return NextResponse.json(
+      { error: (e as Error).message || "CoinPay request failed" },
+      { status: 502 }
+    );
+  }
 
-    const expiresAt = new Date(
-      Date.now() + INVOICE_EXPIRY_SECONDS * 1000
-    ).toISOString();
+  const payment = cp.payment ?? {};
+  const paymentId = cp.payment_id ?? payment.id;
+  const address = cp.address ?? payment.payment_address ?? null;
+  const amountCrypto =
+    cp.amount_crypto ?? payment.amount_crypto ?? payment.crypto_amount ?? null;
+  const expiresAt = cp.expires_at ?? payment.expires_at ?? null;
+  const checkoutUrl =
+    payment.stripe_checkout_url ?? cp.checkout_url ?? payment.checkout_url ?? null;
+  const respCurrency = cp.currency ?? payment.currency ?? currency;
 
-    // Persist payment record via service client (bypasses RLS for insert with computed fields)
-    const serviceClient = createServiceClient();
-    const { error: insertError } = await serviceClient
-      .from("funding_payments")
-      .insert({
-        user_id: user.id,
-        payment_hash: invoice.payment_hash,
-        bolt11: invoice.payment_request,
-        tier,
-        amount_sats: amountSats,
-        amount_usd: tierConfig.usdValue,
-        status: "pending",
-        expires_at: expiresAt,
-      });
+  if (!paymentId) {
+    return NextResponse.json(
+      { error: "CoinPay did not return a payment id" },
+      { status: 502 }
+    );
+  }
 
-    if (insertError) {
-      console.error("Failed to persist funding payment:", insertError);
+  const supabase = createServiceClient();
+  if (supabase) {
+    const { error } = await (supabase.from("funding_payments") as any).insert({
+      user_id: userId,
+      coinpay_payment_id: paymentId,
+      amount_usd,
+      amount_crypto: amountCrypto,
+      // Preserve the user's chosen rail. CoinPay returns usdc_pol for
+      // card payments (since they're routed through Stripe), but we
+      // want to render "Credit Card (via CoinPay)" not "USDC_POL".
+      currency: currency === "card" ? "card" : respCurrency,
+      status: "pending",
+      contributor_name: contributor_name ?? null,
+      contributor_email: contributor_email ?? null,
+      metadata: { checkout_url: checkoutUrl, expires_at: expiresAt },
+    });
+    if (error) {
+      console.error("[funding/create-invoice] insert failed:", error);
       return NextResponse.json(
-        { error: "Failed to create payment record" },
+        { error: "Failed to record payment" },
         { status: 500 }
       );
     }
-
-    return NextResponse.json({
-      paymentRequest: invoice.payment_request,
-      paymentHash: invoice.payment_hash,
-      expiresAt,
-      tier,
-      amountSats,
-    });
-  } catch (error) {
-    console.error("Create funding invoice error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
   }
+
+  return NextResponse.json({
+    payment_id: paymentId,
+    address,
+    amount_crypto: amountCrypto,
+    currency: respCurrency,
+    expires_at: expiresAt,
+    checkout_url: checkoutUrl,
+  });
 }

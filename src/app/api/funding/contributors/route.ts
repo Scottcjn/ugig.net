@@ -3,83 +3,56 @@ import { createServiceClient } from "@/lib/supabase/service";
 
 /**
  * GET /api/funding/contributors
- * Public endpoint — returns latest funding transactions with user info.
+ * Public — returns the latest CoinPay funding contributions.
  */
 export async function GET() {
   try {
     const supabase = createServiceClient();
 
-    // Get from both funding_payments (lightning + card) and payments (crypto via CoinPayPortal)
-    const { data: fundingPayments } = await supabase
-      .from("funding_payments")
-      .select("id, user_id, amount_usd, amount_sats, tier, payment_hash, paid_at, created_at")
-      .eq("status", "paid")
+    const { data: payments } = (await (supabase.from("funding_payments") as any)
+      .select(
+        "id, user_id, amount_usd, currency, contributor_name, paid_at, created_at"
+      )
+      .in("status", ["paid", "confirmed", "forwarded"])
+      .not("coinpay_payment_id", "is", null)
       .order("paid_at", { ascending: false })
-      .limit(10);
+      .limit(10)) as { data: any[] | null };
 
-    const { data: cryptoPayments } = await (supabase
-      .from("payments") as any)
-      .select("id, user_id, amount_usd, amount_crypto, currency, status, created_at, updated_at")
-      .in("type", ["tip", "funding"] as any)
-      .in("status", ["confirmed", "forwarded"])
-      .order("created_at", { ascending: false })
-      .limit(10);
+    const rows = payments || [];
 
-    // Merge and sort by date
-    const allPayments = [
-      ...(fundingPayments || []).map((p) => ({
+    const userIds = [
+      ...new Set(rows.map((p) => p.user_id).filter((x): x is string => !!x)),
+    ];
+    const profileMap: Record<
+      string,
+      { username: string; full_name: string | null; avatar_url: string | null }
+    > = {};
+    if (userIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, username, full_name, avatar_url")
+        .in("id", userIds);
+      for (const p of profiles || []) {
+        profileMap[p.id as string] = {
+          username: p.username as string,
+          full_name: (p.full_name as string) || null,
+          avatar_url: (p.avatar_url as string) || null,
+        };
+      }
+    }
+
+    const transactions = rows.map((p) => {
+      const profile = p.user_id ? profileMap[p.user_id] : undefined;
+      return {
         id: p.id,
-        user_id: p.user_id,
+        username: profile?.username || p.contributor_name || "Anonymous",
+        full_name: profile?.full_name || p.contributor_name || null,
+        avatar_url: profile?.avatar_url || null,
         amount_usd: p.amount_usd || 0,
-        amount_sats: p.amount_sats || 0,
-        tier: p.tier || "supporter",
-        method: (p.payment_hash?.startsWith("stripe_") ? "card" : "lightning") as "card" | "lightning" | "crypto",
+        currency: (p.currency as string) || "card",
         paid_at: p.paid_at || p.created_at,
-      })),
-      ...(cryptoPayments || []).map((p: any) => ({
-        id: p.id,
-        user_id: p.user_id,
-        amount_usd: p.amount_usd || 0,
-        amount_sats: 0,
-        tier: "crypto",
-        method: "crypto" as "card" | "lightning" | "crypto",
-        paid_at: p.updated_at || p.created_at,
-        blockchain: p.currency,
-        crypto_amount: p.amount_crypto,
-      })),
-    ]
-      .sort((a, b) => new Date(b.paid_at).getTime() - new Date(a.paid_at).getTime())
-      .slice(0, 10);
-
-    if (allPayments.length === 0) {
-      return NextResponse.json({ transactions: [] });
-    }
-
-    // Get profile info
-    const userIds = [...new Set(allPayments.map((p) => p.user_id))];
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("id, username, full_name, avatar_url")
-      .in("id", userIds);
-
-    const profileMap: Record<string, any> = {};
-    for (const p of profiles || []) {
-      profileMap[p.id] = p;
-    }
-
-    const transactions = allPayments.map((p) => ({
-      id: p.id,
-      username: profileMap[p.user_id]?.username || "Anonymous",
-      full_name: profileMap[p.user_id]?.full_name || null,
-      avatar_url: profileMap[p.user_id]?.avatar_url || null,
-      amount_usd: p.amount_usd,
-      amount_sats: p.amount_sats,
-      tier: p.tier,
-      method: p.method,
-      blockchain: (p as any).blockchain || null,
-      crypto_amount: (p as any).crypto_amount || null,
-      paid_at: p.paid_at,
-    }));
+      };
+    });
 
     return NextResponse.json(
       { transactions },

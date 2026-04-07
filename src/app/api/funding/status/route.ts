@@ -1,178 +1,60 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { checkPayment } from "@/lib/lnbits";
-import { FUNDING_TIERS, LIFETIME_THRESHOLD_USD } from "@/lib/funding";
+import { getCoinpayPaymentStatus } from "@/lib/coinpay-client";
 
 /**
- * GET /api/funding/status?paymentHash=xxx
- * Poll payment status for the current user.
- * If DB says pending, actively checks LNbits and processes payment if paid.
+ * GET /api/funding/status?payment_id=xxx
+ * Public — polls CoinPay for the latest status of a funding payment and
+ * mirrors it into funding_payments. Returns DB row.
  */
 export async function GET(request: NextRequest) {
-  try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+  const paymentId = request.nextUrl.searchParams.get("payment_id");
+  if (!paymentId) {
+    return NextResponse.json({ error: "payment_id required" }, { status: 400 });
+  }
 
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  const supabase = createServiceClient();
+  const { data: row, error } = (await (supabase.from("funding_payments") as any)
+    .select(
+      "id, coinpay_payment_id, status, amount_usd, amount_crypto, currency, paid_at, created_at, tx_hash"
+    )
+    .eq("coinpay_payment_id", paymentId)
+    .single()) as { data: any; error: any };
 
-    const paymentHash = request.nextUrl.searchParams.get("paymentHash");
-    if (!paymentHash) {
-      return NextResponse.json({ error: "paymentHash required" }, { status: 400 });
-    }
+  if (error || !row) {
+    return NextResponse.json({ error: "Payment not found" }, { status: 404 });
+  }
 
-    const { data: payment, error } = await supabase
-      .from("funding_payments")
-      .select("id, status, tier, amount_sats, amount_usd, paid_at, expires_at, created_at, user_id")
-      .eq("payment_hash", paymentHash)
-      .eq("user_id", user.id)
-      .single();
-
-    if (error || !payment) {
-      return NextResponse.json({ error: "Payment not found" }, { status: 404 });
-    }
-
-    // Check if expired
-    if (payment.status === "pending" && new Date(payment.expires_at) < new Date()) {
-      return NextResponse.json({ ...payment, status: "expired" });
-    }
-
-    // Active LNbits check: if DB still says pending, ask LNbits directly
-    if (payment.status === "pending") {
-      try {
-        const lnbitsStatus = await checkPayment(paymentHash);
-        if (lnbitsStatus.paid) {
-          // Payment confirmed by LNbits but webhook was missed — process it now
-          const serviceClient = createServiceClient();
-          const paidAt = new Date().toISOString();
-
-          const { error: updateError } = await serviceClient
-            .from("funding_payments")
-            .update({ status: "paid", paid_at: paidAt })
-            .eq("id", payment.id)
-            .eq("status", "pending"); // optimistic lock
-
-          if (!updateError) {
-            console.log(`[Funding Status] Recovered missed webhook for ${paymentHash}`);
-
-            // Apply rewards (same logic as webhook handler)
-            await applyFundingRewards(serviceClient, payment);
-
-            return NextResponse.json({
-              ...payment,
-              status: "paid",
-              paid_at: paidAt,
-            });
-          }
-        }
-      } catch (lnErr) {
-        // LNbits check failed — fall through to return DB status
-        console.error("[Funding Status] LNbits check failed:", lnErr);
+  // If still pending, ask CoinPay directly so the UI can advance even if
+  // the webhook hasn't landed yet.
+  if (row.status === "pending") {
+    try {
+      const cp = await getCoinpayPaymentStatus(paymentId);
+      const upstream = cp.status;
+      if (
+        upstream === "confirmed" ||
+        upstream === "forwarded" ||
+        upstream === "expired" ||
+        upstream === "failed"
+      ) {
+        const now = new Date().toISOString();
+        const update: Record<string, unknown> = {
+          status: upstream,
+          updated_at: now,
+          tx_hash: cp.tx_hash ?? null,
+        };
+        if (upstream === "confirmed" || upstream === "forwarded")
+          update.paid_at = now;
+        await (supabase.from("funding_payments") as any)
+          .update(update)
+          .eq("id", row.id)
+          .eq("status", "pending");
+        return NextResponse.json({ ...row, ...update });
       }
-    }
-
-    return NextResponse.json(payment);
-  } catch (error) {
-    console.error("Funding status error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-  }
-}
-
-/**
- * Apply funding rewards (credits, lifetime, badge) — mirrors webhook logic.
- */
-async function applyFundingRewards(
-  supabase: ReturnType<typeof createServiceClient>,
-  payment: { id: string; user_id: string; tier: string; amount_sats: number; amount_usd: number | null }
-) {
-  const tier = payment.tier as string;
-  const tierConfig = FUNDING_TIERS[tier as keyof typeof FUNDING_TIERS];
-  const rewards: Array<{
-    user_id: string;
-    funding_payment_id: string;
-    reward_type: string;
-    amount: number | null;
-    metadata: Record<string, string | number>;
-  }> = [];
-
-  // Credits
-  if (tierConfig && tierConfig.creditsAwarded > 0) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("credits")
-      .eq("id", payment.user_id)
-      .single();
-
-    const currentCredits = (profile?.credits as number) ?? 0;
-    await supabase
-      .from("profiles")
-      .update({ credits: currentCredits + tierConfig.creditsAwarded })
-      .eq("id", payment.user_id);
-
-    rewards.push({
-      user_id: payment.user_id,
-      funding_payment_id: payment.id,
-      reward_type: "credits",
-      amount: tierConfig.creditsAwarded,
-      metadata: { tier, sats: payment.amount_sats },
-    });
-  }
-
-  // Lifetime premium
-  const amountUsd = Number(payment.amount_usd) || 0;
-  if (amountUsd >= LIFETIME_THRESHOLD_USD) {
-    const { data: existingSub } = await supabase
-      .from("subscriptions")
-      .select("id, plan")
-      .eq("user_id", payment.user_id)
-      .single();
-
-    if (existingSub) {
-      await supabase
-        .from("subscriptions")
-        .update({ plan: "lifetime", status: "active" })
-        .eq("id", existingSub.id);
-    } else {
-      await supabase.from("subscriptions").insert({
-        user_id: payment.user_id,
-        plan: "lifetime",
-        status: "active",
-        cancel_at_period_end: false,
-      });
-    }
-
-    rewards.push({
-      user_id: payment.user_id,
-      funding_payment_id: payment.id,
-      reward_type: "lifetime",
-      amount: null,
-      metadata: { amount_usd: amountUsd, tier: tier as string },
-    });
-  }
-
-  // Supporter badge
-  if (tier === "supporter") {
-    rewards.push({
-      user_id: payment.user_id,
-      funding_payment_id: payment.id,
-      reward_type: "badge",
-      amount: null,
-      metadata: { badge: "supporter", sats: payment.amount_sats },
-    });
-  }
-
-  if (rewards.length > 0) {
-    const { error: rewardError } = await supabase
-      .from("funding_rewards_log")
-      .insert(rewards);
-
-    if (rewardError) {
-      console.error("[Funding Status] Failed to write rewards:", rewardError);
+    } catch (e) {
+      console.error("[funding/status] CoinPay check failed:", e);
     }
   }
+
+  return NextResponse.json(row);
 }
