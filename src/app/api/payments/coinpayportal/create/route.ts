@@ -83,8 +83,8 @@ export async function POST(request: NextRequest) {
     }
 
     const regularBusinessId =
-      process.env.COINPAYPORTAL_UGIG_BUSINESS_ID ||
-      process.env.COINPAYPORTAL_MERCHANT_ID;
+      process.env.COINPAY_UGIG_BUSINESS_ID ||
+      process.env.COINPAY_MERCHANT_ID;
 
     // Create payment with CoinPayPortal (regular ugig business)
     const paymentResult = await createPayment({

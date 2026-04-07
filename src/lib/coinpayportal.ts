@@ -1,6 +1,6 @@
 import crypto from "crypto";
 
-const COINPAYPORTAL_API_URL = "https://coinpayportal.com/api";
+const COINPAY_API_URL = "https://coinpayportal.com/api";
 
 export interface CoinPayWebhookPayload {
   id: string;
@@ -103,14 +103,14 @@ export function verifyWebhookSignature(
 export async function createPayment(
   options: CreatePaymentOptions
 ): Promise<CreatePaymentResponse> {
-  const apiKey = process.env.COINPAYPORTAL_API_KEY;
-  const merchantId = options.business_id || process.env.COINPAYPORTAL_MERCHANT_ID;
+  const apiKey = process.env.COINPAY_API_KEY;
+  const merchantId = options.business_id || process.env.COINPAY_MERCHANT_ID;
 
   if (!apiKey || !merchantId) {
     throw new Error("CoinPayPortal credentials not configured");
   }
 
-  const response = await fetch(`${COINPAYPORTAL_API_URL}/payments/create`, {
+  const response = await fetch(`${COINPAY_API_URL}/payments/create`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -171,13 +171,13 @@ export interface PaymentStatusResponse {
  * Get payment status from CoinPayPortal
  */
 export async function getPaymentStatus(paymentId: string): Promise<PaymentStatusResponse> {
-  const apiKey = process.env.COINPAYPORTAL_API_KEY;
+  const apiKey = process.env.COINPAY_API_KEY;
 
   if (!apiKey) {
     throw new Error("CoinPayPortal credentials not configured");
   }
 
-  const response = await fetch(`${COINPAYPORTAL_API_URL}/payments/${paymentId}`, {
+  const response = await fetch(`${COINPAY_API_URL}/payments/${paymentId}`, {
     headers: {
       Authorization: `Bearer ${apiKey}`,
     },
@@ -241,8 +241,8 @@ export interface EscrowStatusResponse {
 export async function createEscrow(
   options: CreateEscrowOptions
 ): Promise<EscrowResponse> {
-  const apiKey = process.env.COINPAYPORTAL_API_KEY;
-  const merchantId = process.env.COINPAYPORTAL_MERCHANT_ID;
+  const apiKey = process.env.COINPAY_API_KEY;
+  const merchantId = process.env.COINPAY_MERCHANT_ID;
 
   if (!apiKey || !merchantId) {
     throw new Error("CoinPayPortal credentials not configured");
@@ -250,7 +250,7 @@ export async function createEscrow(
 
   const appUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "https://ugig.net";
 
-  const response = await fetch(`${COINPAYPORTAL_API_URL}/escrow`, {
+  const response = await fetch(`${COINPAY_API_URL}/escrow`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -285,13 +285,13 @@ export async function createEscrow(
  * Release escrow funds to the beneficiary
  */
 export async function releaseEscrow(escrowId: string): Promise<EscrowStatusResponse> {
-  const apiKey = process.env.COINPAYPORTAL_API_KEY;
+  const apiKey = process.env.COINPAY_API_KEY;
 
   if (!apiKey) {
     throw new Error("CoinPayPortal credentials not configured");
   }
 
-  const response = await fetch(`${COINPAYPORTAL_API_URL}/escrow/${escrowId}/release`, {
+  const response = await fetch(`${COINPAY_API_URL}/escrow/${escrowId}/release`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -337,14 +337,14 @@ export interface InvoiceResponse {
 export async function createInvoice(
   options: CreateInvoiceOptions
 ): Promise<InvoiceResponse> {
-  const apiKey = process.env.COINPAYPORTAL_API_KEY;
-  const merchantId = process.env.COINPAYPORTAL_MERCHANT_ID;
+  const apiKey = process.env.COINPAY_API_KEY;
+  const merchantId = process.env.COINPAY_MERCHANT_ID;
 
   if (!apiKey || !merchantId) {
     throw new Error("CoinPayPortal credentials not configured");
   }
 
-  const response = await fetch(`${COINPAYPORTAL_API_URL}/invoices`, {
+  const response = await fetch(`${COINPAY_API_URL}/invoices`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -374,13 +374,13 @@ export async function createInvoice(
  * Send an invoice (generates payment link) via CoinPayPortal
  */
 export async function sendInvoice(invoiceId: string): Promise<InvoiceResponse> {
-  const apiKey = process.env.COINPAYPORTAL_API_KEY;
+  const apiKey = process.env.COINPAY_API_KEY;
 
   if (!apiKey) {
     throw new Error("CoinPayPortal credentials not configured");
   }
 
-  const response = await fetch(`${COINPAYPORTAL_API_URL}/invoices/${invoiceId}/send`, {
+  const response = await fetch(`${COINPAY_API_URL}/invoices/${invoiceId}/send`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -400,13 +400,13 @@ export async function sendInvoice(invoiceId: string): Promise<InvoiceResponse> {
  * Get escrow status from CoinPayPortal
  */
 export async function getEscrowStatus(escrowId: string): Promise<EscrowStatusResponse> {
-  const apiKey = process.env.COINPAYPORTAL_API_KEY;
+  const apiKey = process.env.COINPAY_API_KEY;
 
   if (!apiKey) {
     throw new Error("CoinPayPortal credentials not configured");
   }
 
-  const response = await fetch(`${COINPAYPORTAL_API_URL}/escrow/${escrowId}`, {
+  const response = await fetch(`${COINPAY_API_URL}/escrow/${escrowId}`, {
     headers: {
       Authorization: `Bearer ${apiKey}`,
     },

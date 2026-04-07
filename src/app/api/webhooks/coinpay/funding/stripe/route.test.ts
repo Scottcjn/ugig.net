@@ -59,7 +59,7 @@ function chainResult(result: { data: any; error: any }) {
 describe("POST /api/webhooks/coinpay/funding/stripe", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.COINPAY_STRIPE_WEBHOOK_SECRET = TEST_SECRET;
+    process.env.COINPAY_FUNDING_STRIPE_WEBHOOK_SECRET = TEST_SECRET;
     mockConstructEvent.mockReset();
   });
 
@@ -188,7 +188,7 @@ describe("POST /api/webhooks/coinpay/funding/stripe", () => {
   });
 
   it("returns 500 when webhook secret not configured", async () => {
-    delete process.env.COINPAY_STRIPE_WEBHOOK_SECRET;
+    delete process.env.COINPAY_FUNDING_STRIPE_WEBHOOK_SECRET;
     const body = JSON.stringify(makeEvent("payment_intent.succeeded"));
     const req = makeRequest(body);
     const res = await POST(req);

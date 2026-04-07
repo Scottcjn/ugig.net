@@ -9,7 +9,7 @@ interface ReputationBadgeProps {
   className?: string;
 }
 
-const COINPAY_URL = process.env.NEXT_PUBLIC_COINPAYPORTAL_URL || "https://coinpayportal.com";
+const COINPAY_URL = process.env.NEXT_PUBLIC_COINPAY_URL || "https://coinpayportal.com";
 
 /**
  * Displays a CoinPayPortal reputation badge (SVG) for a user's DID.

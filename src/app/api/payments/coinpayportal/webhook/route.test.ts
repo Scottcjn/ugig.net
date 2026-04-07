@@ -69,7 +69,7 @@ function chainResult(result: { data: any; error: any }) {
 describe("POST /api/payments/coinpayportal/webhook", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.COINPAYPORTAL_WEBHOOK_SECRET = WEBHOOK_SECRET;
+    process.env.COINPAY_UGIG_CRYPTO_WEBHOOK_SECRET = WEBHOOK_SECRET;
   });
 
   it("returns 401 without signature", async () => {
@@ -97,7 +97,7 @@ describe("POST /api/payments/coinpayportal/webhook", () => {
   });
 
   it("returns 500 when webhook secret not configured", async () => {
-    delete process.env.COINPAYPORTAL_WEBHOOK_SECRET;
+    delete process.env.COINPAY_UGIG_CRYPTO_WEBHOOK_SECRET;
     const req = new NextRequest("http://localhost/api/payments/coinpayportal/webhook", {
       method: "POST",
       headers: { "X-CoinPay-Signature": "t=1,v1=abc" },

@@ -7,7 +7,7 @@ import type Stripe from "stripe";
 const BUSINESS_EMAIL = process.env.COINPAY_BUSINESS_EMAIL || "payments@ugig.net";
 
 function getWebhookSecret(): string {
-  return process.env.COINPAY_STRIPE_WEBHOOK_SECRET || "";
+  return process.env.COINPAY_FUNDING_STRIPE_WEBHOOK_SECRET || "";
 }
 
 /**
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
 
     const webhookSecret = getWebhookSecret();
     if (!webhookSecret) {
-      console.error("[CoinPay Stripe Webhook] COINPAY_STRIPE_WEBHOOK_SECRET not configured");
+      console.error("[CoinPay Stripe Webhook] COINPAY_FUNDING_STRIPE_WEBHOOK_SECRET not configured");
       return NextResponse.json({ error: "Webhook not configured" }, { status: 500 });
     }
 

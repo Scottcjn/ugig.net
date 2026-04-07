@@ -121,8 +121,8 @@ const COINPAY_API = "https://coinpayportal.com/api";
  * Fails hard when CoinPay data is unavailable or invalid.
  */
 export async function getFundingAddresses(): Promise<FundingAddressMap> {
-  const apiKey = process.env.COINPAYPORTAL_API_KEY;
-  const businessId = process.env.COINPAYPORTAL_MERCHANT_ID;
+  const apiKey = process.env.COINPAY_API_KEY;
+  const businessId = process.env.COINPAY_MERCHANT_ID;
 
   if (!apiKey || !businessId) {
     throw new Error("CoinPay credentials are required for funding addresses");

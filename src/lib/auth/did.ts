@@ -64,8 +64,8 @@ export async function generateAndStoreDid(
   }
 
   // Register the DID on CoinPayPortal
-  const coinpayApi = process.env.COINPAYPORTAL_API_URL || "https://coinpayportal.com";
-  const coinpayKey = process.env.COINPAYPORTAL_REPUTATION_API_KEY;
+  const coinpayApi = process.env.COINPAY_API_URL || "https://coinpayportal.com";
+  const coinpayKey = process.env.COINPAY_REPUTATION_API_KEY;
 
   if (coinpayKey) {
     try {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-const COINPAYPORTAL_API_URL = "https://coinpayportal.com/api";
+const COINPAY_API_URL = "https://coinpayportal.com/api";
 
 /**
  * POST /api/funding/stripe-checkout
@@ -30,9 +30,9 @@ export async function POST(request: NextRequest) {
     }
 
     const businessId =
-      process.env.COINPAYPORTAL_UGIG_BUSINESS_ID ||
-      process.env.COINPAYPORTAL_MERCHANT_ID;
-    const apiKey = process.env.COINPAYPORTAL_API_KEY;
+      process.env.COINPAY_UGIG_BUSINESS_ID ||
+      process.env.COINPAY_MERCHANT_ID;
+    const apiKey = process.env.COINPAY_API_KEY;
 
     if (!businessId || !apiKey) {
       return NextResponse.json(
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       "https://ugig.net";
 
     // Call CoinPayPortal's Stripe checkout endpoint
-    const res = await fetch(`${COINPAYPORTAL_API_URL}/stripe/payments/create`, {
+    const res = await fetch(`${COINPAY_API_URL}/stripe/payments/create`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

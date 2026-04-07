@@ -18,7 +18,7 @@ vi.stubGlobal('fetch', mockFetch);
 
 describe('submitReputationReceipt', () => {
   beforeEach(() => {
-    vi.stubEnv('COINPAYPORTAL_REPUTATION_API_KEY', 'test-key');
+    vi.stubEnv('COINPAY_REPUTATION_API_KEY', 'test-key');
     mockFetch.mockReset();
   });
 
@@ -60,7 +60,7 @@ describe('submitReputationReceipt', () => {
   });
 
   it('returns false when no API key is set', async () => {
-    vi.stubEnv('COINPAYPORTAL_REPUTATION_API_KEY', '');
+    vi.stubEnv('COINPAY_REPUTATION_API_KEY', '');
     const result = await submitReputationReceipt({
       agent_did: 'did:key:z6MkTest',
       merchant_did: UGIG_PLATFORM_DID,
@@ -110,7 +110,7 @@ describe('submitReputationReceipt', () => {
 
 describe('reputation hooks', () => {
   beforeEach(() => {
-    vi.stubEnv('COINPAYPORTAL_REPUTATION_API_KEY', 'test-key');
+    vi.stubEnv('COINPAY_REPUTATION_API_KEY', 'test-key');
     mockFetch.mockReset();
     mockFetch.mockResolvedValue({ ok: true });
   });

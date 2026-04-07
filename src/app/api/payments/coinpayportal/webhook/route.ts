@@ -8,14 +8,16 @@ import { LIFETIME_THRESHOLD_USD } from "@/lib/funding";
 
 // POST /api/payments/coinpayportal/webhook - Handle CoinPayPortal webhooks
 export async function POST(request: NextRequest) {
+  return processCoinPayWebhook(request, process.env.COINPAY_UGIG_CRYPTO_WEBHOOK_SECRET);
+}
+
+export async function processCoinPayWebhook(request: NextRequest, webhookSecret: string | undefined) {
   try {
     const signature = request.headers.get("X-CoinPay-Signature");
     const rawBody = await request.text();
 
-    // Verify signature
-    const webhookSecret = process.env.COINPAYPORTAL_WEBHOOK_SECRET;
     if (!webhookSecret) {
-      console.error("COINPAYPORTAL_WEBHOOK_SECRET not configured");
+      console.error("CoinPay webhook secret not configured");
       return NextResponse.json(
         { error: "Webhook not configured" },
         { status: 500 }

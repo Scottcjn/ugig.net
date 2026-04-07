@@ -7,8 +7,8 @@ interface PlatformAction {
 }
 
 export async function submitReputationAction(action: PlatformAction): Promise<boolean> {
-  const COINPAY_API = process.env.COINPAYPORTAL_API_URL || 'https://coinpayportal.com';
-  const COINPAY_REPUTATION_KEY = process.env.COINPAYPORTAL_REPUTATION_API_KEY || '';
+  const COINPAY_API = process.env.COINPAY_API_URL || 'https://coinpayportal.com';
+  const COINPAY_REPUTATION_KEY = process.env.COINPAY_REPUTATION_API_KEY || '';
   if (!COINPAY_REPUTATION_KEY) return false;
   try {
     const res = await fetch(`${COINPAY_API}/api/reputation/platform-action`, {

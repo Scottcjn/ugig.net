@@ -98,8 +98,8 @@ describe("POST /api/auth/confirmed", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.AUTH_WEBHOOK_SECRET = "test-webhook-secret";
-    delete process.env.COINPAYPORTAL_API_URL;
-    delete process.env.COINPAYPORTAL_REPUTATION_API_KEY;
+    delete process.env.COINPAY_API_URL;
+    delete process.env.COINPAY_REPUTATION_API_KEY;
     mockUpdateEq.mockResolvedValue({ error: null });
   });
 
@@ -268,8 +268,8 @@ describe("POST /api/auth/confirmed", () => {
 
   describe("CoinPayPortal DID registration", () => {
     it("registers DID on CoinPayPortal when API key is set", async () => {
-      process.env.COINPAYPORTAL_API_URL = "https://coinpayportal.com";
-      process.env.COINPAYPORTAL_REPUTATION_API_KEY = "test-api-key";
+      process.env.COINPAY_API_URL = "https://coinpayportal.com";
+      process.env.COINPAY_REPUTATION_API_KEY = "test-api-key";
 
       mockSingle.mockResolvedValue({
         data: { username: "newuser", full_name: null, account_type: "human", did: null },
@@ -298,7 +298,7 @@ describe("POST /api/auth/confirmed", () => {
     });
 
     it("skips CoinPayPortal registration when no API key", async () => {
-      // No COINPAYPORTAL_REPUTATION_API_KEY set
+      // No COINPAY_REPUTATION_API_KEY set
       mockSingle.mockResolvedValue({
         data: { username: "newuser", full_name: null, account_type: "human", did: null },
         error: null,
@@ -314,8 +314,8 @@ describe("POST /api/auth/confirmed", () => {
     });
 
     it("does not block signup if CoinPayPortal registration fails", async () => {
-      process.env.COINPAYPORTAL_API_URL = "https://coinpayportal.com";
-      process.env.COINPAYPORTAL_REPUTATION_API_KEY = "test-api-key";
+      process.env.COINPAY_API_URL = "https://coinpayportal.com";
+      process.env.COINPAY_REPUTATION_API_KEY = "test-api-key";
       mockFetch.mockRejectedValueOnce(new Error("Network error"));
 
       mockSingle.mockResolvedValue({
