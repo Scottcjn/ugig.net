@@ -43,7 +43,9 @@ export async function updateSession(request: NextRequest) {
   if (isProtectedPath && !user) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    url.searchParams.set("redirect", request.nextUrl.pathname);
+    // Sanitize the redirect path to prevent XSS via URL parameter
+    const safePath = request.nextUrl.pathname.replace(/[<>"']/g, "");
+    url.searchParams.set("redirect", safePath);
     return NextResponse.redirect(url);
   }
 

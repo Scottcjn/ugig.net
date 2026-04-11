@@ -4,6 +4,7 @@ import { getAuthContext } from "@/lib/auth/get-user";
 import { createServiceClient } from "@/lib/supabase/service";
 import { mcpListingSchema, slugify } from "@/lib/mcp/validation";
 import { combinedScan, MCP_SCANNER_VERSION } from "@/lib/mcp/security-scan";
+import { sanitizeSearchParams } from "@/lib/security/sanitize";
 
 /**
  * GET /api/mcp - Public listing of active MCP servers
@@ -13,7 +14,7 @@ export async function GET(request: NextRequest) {
     const url = new URL(request.url);
     const search = url.searchParams.get("search") || "";
     const category = url.searchParams.get("category") || "";
-    const tag = url.searchParams.get("tag") || "";
+    const tag = sanitizeSearchParams(url, "tag");
     const sort = url.searchParams.get("sort") || "newest";
     const page = parseInt(url.searchParams.get("page") || "1");
     const limit = 20;
