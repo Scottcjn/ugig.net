@@ -76,16 +76,45 @@ export async function POST(request: NextRequest) {
       );
     } catch (err: any) {
       console.error("[Zap] Transfer to recipient failed:", err);
-      console.error("[Zap] Error details:", JSON.stringify(err, Object.getOwnPropertyNames(err)));
       const msg = err?.message?.toLowerCase() || "";
+
+      // Insufficient funds
       if (msg.includes("insufficient") || msg.includes("balance") || msg.includes("enough")) {
         const currentBalance = await getLnBalance(senderWallet.invoice_key).catch(() => 0);
         return NextResponse.json({ error: "Insufficient balance", balance_sats: currentBalance }, { status: 400 });
       }
+
+      // Lightning node / backend unavailable
+      if (
+        msg.includes("voidwallet") ||
+        msg.includes("node is down") ||
+        msg.includes("connection refused") ||
+        msg.includes("network is unreachable") ||
+        msg.includes("unreachable") ||
+        msg.includes("fetch failed")
+      ) {
+        return NextResponse.json({
+          error: "Lightning network is temporarily unavailable. Please try again later.",
+        }, { status: 503 });
+      }
+
+      // Payment timeout
+      if (msg.includes("timeout") || msg.includes("timed out")) {
+        return NextResponse.json({
+          error: "Payment timed out. Please try again.",
+        }, { status: 504 });
+      }
+
+      // Route not found / no path
+      if (msg.includes("route") || msg.includes("no path")) {
+        return NextResponse.json({
+          error: "Could not find a Lightning path to this recipient. Try again later.",
+        }, { status: 502 });
+      }
+
+      // Generic LNbits error — expose the actual message
       return NextResponse.json({
-        error: "Zap transfer failed",
-        error_message: err?.message || "unknown",
-        error_type: err?.constructor?.name || "unknown",
+        error: err?.message || "Zap transfer failed",
       }, { status: 502 });
     }
 
