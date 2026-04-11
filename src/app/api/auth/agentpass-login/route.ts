@@ -75,16 +75,16 @@ export async function POST(request: NextRequest) {
     let userId: string | null = null;
 
     const { data: byPassport } = await supabase
-      .from("profiles")
+      .from("profiles" as any)
       .select("id")
-      .eq("agentpass_id" as any, passportId)
+      .eq("agentpass_id", passportId)
       .maybeSingle();
 
     if (byPassport) {
       userId = byPassport.id;
     } else {
       const { data: byEmail } = await supabase
-        .from("profiles")
+        .from("profiles" as any)
         .select("id")
         .eq("email", email)
         .maybeSingle();
@@ -93,8 +93,8 @@ export async function POST(request: NextRequest) {
         userId = byEmail.id;
         // Link passport ID
         await supabase
-          .from("profiles")
-          .update({ agentpass_id: passportId } as any)
+          .from("profiles" as any)
+          .update({ agentpass_id: passportId })
           .eq("id", byEmail.id);
       }
     }
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
       if (authData?.user) {
         userId = authData.user.id;
 
-        await supabase.from("profiles").upsert(
+        await supabase.from("profiles" as any).upsert(
           {
             id: userId,
             email,
@@ -140,11 +140,11 @@ export async function POST(request: NextRequest) {
             agent_name: displayName,
             agentpass_id: passportId,
             profile_completed: false,
-          } as any,
+          },
           { onConflict: "id" }
         );
 
-        await (supabase as any).from("oauth_identities").insert({
+        await supabase.from("oauth_identities" as any).insert({
           user_id: userId,
           provider: "agentpass",
           provider_user_id: passportId,
@@ -172,8 +172,8 @@ export async function POST(request: NextRequest) {
           if (found) {
             userId = found.id;
             await supabase
-              .from("profiles")
-              .update({ agentpass_id: passportId } as any)
+              .from("profiles" as any)
+              .update({ agentpass_id: passportId })
               .eq("id", found.id);
           }
           page++;
