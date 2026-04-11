@@ -76,13 +76,17 @@ export async function POST(request: NextRequest) {
       );
     } catch (err: any) {
       console.error("[Zap] Transfer to recipient failed:", err);
-      // Check if this is an insufficient funds error from LNbits
+      console.error("[Zap] Error details:", JSON.stringify(err, Object.getOwnPropertyNames(err)));
       const msg = err?.message?.toLowerCase() || "";
       if (msg.includes("insufficient") || msg.includes("balance") || msg.includes("enough")) {
         const currentBalance = await getLnBalance(senderWallet.invoice_key).catch(() => 0);
         return NextResponse.json({ error: "Insufficient balance", balance_sats: currentBalance }, { status: 400 });
       }
-      return NextResponse.json({ error: "Zap transfer failed", debug: err?.message ?? String(err) }, { status: 502 });
+      return NextResponse.json({
+        error: "Zap transfer failed",
+        error_message: err?.message || "unknown",
+        error_type: err?.constructor?.name || "unknown",
+      }, { status: 502 });
     }
 
     // Transfer platform fee: sender → platform wallet (retry up to 3 times)
