@@ -6,6 +6,7 @@ import { skillListingSchema } from "@/lib/skills/validation";
 import { slugify } from "@/lib/skills/validation";
 import { importSkillFromUrl } from "@/lib/skills/url-import";
 import { isScanAcceptable } from "@/lib/skills/security-scan";
+import { sanitizeSearchParams } from "@/lib/security/sanitize";
 
 /**
  * Detect whether a submission looks like an MCP server listing based on title/tags.
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest) {
     const url = new URL(request.url);
     const search = url.searchParams.get("search") || "";
     const category = url.searchParams.get("category") || "";
-    const tag = url.searchParams.get("tag") || "";
+    const tag = sanitizeSearchParams(url, "tag");
     const sort = url.searchParams.get("sort") || "newest";
     const page = parseInt(url.searchParams.get("page") || "1");
     const limit = 20;

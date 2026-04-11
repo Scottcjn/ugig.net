@@ -12,6 +12,7 @@ import {
   internalTransfer,
   syncBalanceCache,
 } from "@/lib/lightning/wallet-utils";
+import { sanitizeSearchParams } from "@/lib/security/sanitize";
 
 const LNBITS_INVOICE_KEY = process.env.LNBITS_INVOICE_KEY || "";
 
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
   try {
     const url = new URL(request.url);
     const search = url.searchParams.get("search") || "";
-    const tag = url.searchParams.get("tag") || "";
+    const tag = sanitizeSearchParams(url, "tag");
     const page = parseInt(url.searchParams.get("page") || "1");
     const limit = 20;
     const offset = (page - 1) * limit;
