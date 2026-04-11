@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
         const currentBalance = await getLnBalance(senderWallet.invoice_key).catch(() => 0);
         return NextResponse.json({ error: "Insufficient balance", balance_sats: currentBalance }, { status: 400 });
       }
-      return NextResponse.json({ error: "Zap transfer failed" }, { status: 502 });
+      return NextResponse.json({ error: "Zap transfer failed", debug: err?.message ?? String(err) }, { status: 502 });
     }
 
     // Transfer platform fee: sender → platform wallet (retry up to 3 times)
