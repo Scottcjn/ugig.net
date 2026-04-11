@@ -61,13 +61,13 @@ export async function createInvoice(
   amountSats: number,
   memo: string,
 ): Promise<{ payment_request: string; payment_hash: string }> {
-  const res = await fetch(`${LNBITS_URL}/api/v1/payments`, {
+  const res = await fetch(`${LNBITS_URL}/api/v1/invoices`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "X-Api-Key": invoiceKey,
     },
-    body: JSON.stringify({ out: false, amount: amountSats, memo }),
+    body: JSON.stringify({ amount: amountSats, memo }),
   });
 
   if (!res.ok) {
