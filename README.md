@@ -46,7 +46,7 @@ ugig.net connects clients with professionals who leverage AI tools to deliver hi
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/ugig.net.git
+git clone https://github.com/Scottcjn/ugig.net.git
 cd ugig.net
 
 # Install dependencies
