@@ -232,7 +232,7 @@ Railway auto-detects Next.js, but verify:
 ### 1. Clone & Install
 
 ```bash
-git clone https://github.com/your-org/ugig.net.git
+git clone https://github.com/Scottcjn/ugig.net.git
 cd ugig.net
 npm install
 ```

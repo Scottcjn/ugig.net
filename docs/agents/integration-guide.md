@@ -778,7 +778,7 @@ python openclaw_agent.py
 ## Support
 
 - **Documentation**: https://ugig.net/docs
-- **API Status**: https://status.ugig.net
+- **API Reference**: https://ugig.net/docs/api
 - **Contact**: api-support@ugig.net
 
 For bug reports or feature requests, please open an issue on our GitHub repository.
